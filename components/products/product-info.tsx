@@ -40,14 +40,7 @@ export function ProductInfo({ product }: ProductInfoProps) {
         <p className="text-sm leading-relaxed text-white/70">
           {currentProduct.description}
         </p>
-        <VoteButtons
-          votes={currentProduct.votes}
-          userVote={currentProduct.userVote || null}
-          onVote={vote}
-          size="sm"
-          showLabel={true}
-          showStatus={true}
-        />
+        <VoteButtons product={currentProduct} />
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { ErrorFallback } from "@/components/error-fallback"
 import { FC } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { products as localProducts } from "@/lib/data"
+import { generateSlug } from "@/lib/utils"
 
 function slugToName(url_slug: string): string {
   // Convert url_slug like "pulsar-x2" to "Pulsar X2"
@@ -17,15 +18,6 @@ function slugToName(url_slug: string): string {
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
-}
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
 }
 
 async function fetchProduct(supabase: ReturnType<typeof createClientComponentClient<Database>>, url_slug: string) {
@@ -40,15 +32,25 @@ async function fetchProduct(supabase: ReturnType<typeof createClientComponentCli
 
     if (error) {
       console.error('Error fetching products:', error)
-      throw new Error('Failed to fetch products')
+      throw new Error('Failed to fetch products. Please try again later.')
+    }
+
+    if (!products || products.length === 0) {
+      console.error('No products found in the database')
+      throw new Error('No products available. Please try again later.')
     }
 
     // Find the product by matching the generated slug
-    const product = products?.find(p => generateSlug(p.name || '') === url_slug)
+    const product = products.find(p => generateSlug(p.name || '') === url_slug)
 
     if (!product) {
       console.error('No product found with slug:', url_slug)
-      throw new Error('Product not found')
+      throw new Error(`Product "${url_slug}" not found. Please check the URL and try again.`)
+    }
+
+    if (!product.name || !product.id) {
+      console.error('Invalid product data:', product)
+      throw new Error('Invalid product data. Please try again later.')
     }
 
     // Transform the database product to match our Product type
@@ -63,13 +65,16 @@ async function fetchProduct(supabase: ReturnType<typeof createClientComponentCli
       rank: product.rank || 0,
       specs: {},
       userVote: null,
-      url_slug: generateSlug(product.name || '')
+      url_slug: generateSlug(product.name)
     }
 
     return transformedProduct
   } catch (error) {
     console.error('Error in fetchProduct:', error)
-    throw error
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('An unexpected error occurred. Please try again later.')
   }
 }
 
@@ -79,8 +84,9 @@ function useProduct(url_slug: string) {
   return useQuery({
     queryKey: ['product', url_slug],
     queryFn: () => fetchProduct(supabase, url_slug),
-    retry: 1, // Only retry once to avoid too many retries on 404s
+    retry: 1,
     staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
   })
 }
 
@@ -109,7 +115,7 @@ const ProductContent: FC<ProductContentProps> = ({ url_slug }) => {
 
   if (!product) {
     console.error('No product data available')
-    throw new Error('Product not found')
+    throw new Error('Product not found. Please check the URL and try again.')
   }
 
   return <ProductDetailLayout product={product} />
@@ -122,7 +128,15 @@ interface ProductClientProps {
 export const ProductClient: FC<ProductClientProps> = ({ url_slug }) => {
   if (!url_slug) return null
 
-  const queryClient = new QueryClient()
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 30,
+      },
+    },
+  })
 
   return (
     <QueryClientProvider client={queryClient}>

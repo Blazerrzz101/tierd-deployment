@@ -60,14 +60,7 @@ export function RankingCard({ rank, product }: RankingCardProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-8">
-        <VoteButtons
-          votes={currentProduct.votes}
-          userVote={currentProduct.userVote || null}
-          onVote={vote}
-          size="sm"
-          showLabel={false}
-          showStatus={false}
-        />
+        <VoteButtons product={currentProduct} />
         <Link href={`/products/${currentProduct.url_slug}`}>
           <Button 
             variant="ghost" 

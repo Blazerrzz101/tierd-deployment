@@ -1,37 +1,26 @@
 "use client";
 
-import { createBrowserClient } from '@supabase/ssr'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Database } from './database.types'
-import { SupabaseClient } from '@supabase/supabase-js'
 
-// Ensure environment variables are defined
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL')
-}
-if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY')
+let supabaseInstance: ReturnType<typeof createClientComponentClient<Database>> | null = null;
+
+// Get or create the Supabase client instance
+export function getSupabaseClient() {
+  if (supabaseInstance) return supabaseInstance;
+
+  supabaseInstance = createClientComponentClient<Database>();
+  return supabaseInstance;
 }
 
-// Initialize the Supabase client
-export const supabase = createBrowserClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    },
-    db: {
-      schema: 'public'
-    }
-  }
-)
+// Export a singleton instance
+export const supabase = getSupabaseClient();
 
 // Simple connection test that doesn't require auth
 export async function testDatabaseConnection(): Promise<boolean> {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('products')
       .select('id')
       .limit(1)
@@ -56,8 +45,9 @@ export async function fetchProducts(options: {
 } = {}) {
   try {
     console.log('Fetching products with options:', options);
+    const client = getSupabaseClient();
     
-    let query = supabase
+    let query = client
       .from('products')
       .select(`
         *,
@@ -99,20 +89,18 @@ export async function fetchProducts(options: {
     return data || [];
   } catch (error) {
     console.error('Error in fetchProducts:', error);
-    throw error;  // Re-throw to let the caller handle it
+    throw error;
   }
 }
 
-export async function getProducts(
-  supabase: SupabaseClient<Database>,
-  options: {
-    category?: string;
-    url_slug?: string;
-    limit?: number;
-    offset?: number;
-  } = {}
-) {
-  let query = supabase
+export async function getProducts(options: {
+  category?: string;
+  url_slug?: string;
+  limit?: number;
+  offset?: number;
+} = {}) {
+  const client = getSupabaseClient();
+  let query = client
     .from('products')
     .select('*')
 
