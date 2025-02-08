@@ -1,0 +1,48 @@
+/* Product Card */
+.product-card {
+  @apply relative overflow-hidden transition-all duration-300;
+  @apply hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5;
+  @apply bg-card/95 backdrop-blur-sm;
+}
+
+/* Vote Buttons */
+.vote-button {
+  @apply h-10 w-10 rounded-full transition-colors;
+}
+
+.vote-button-down {
+  @apply hover:border-red-500 hover:bg-red-500/10 hover:text-red-500;
+  @apply data-[active=true]:border-red-500 data-[active=true]:bg-red-500/10 data-[active=true]:text-red-500;
+}
+
+.vote-button-up {
+  @apply hover:border-green-500 hover:bg-green-500/10 hover:text-green-500;
+  @apply data-[active=true]:border-green-500 data-[active=true]:bg-green-500/10 data-[active=true]:text-green-500;
+}
+
+/* Rank Numbers */
+.rank-1 { @apply text-[#ffd700]; }
+.rank-2 { @apply text-[#c0c0c0]; }
+.rank-3 { @apply text-[#cd7f32]; }
+
+/* Product Image */
+.product-image {
+  @apply relative overflow-hidden rounded-lg transition-transform duration-300;
+  @apply group-hover:scale-105;
+}
+
+/* Product Info */
+.product-title {
+  @apply font-bold truncate transition-colors;
+  @apply group-hover:text-primary;
+}
+
+.product-description {
+  @apply text-muted-foreground line-clamp-2;
+}
+
+/* Hover Effects */
+.hover-overlay {
+  @apply absolute inset-0 bg-gradient-to-t from-background/5 to-transparent;
+  @apply opacity-0 transition-opacity group-hover:opacity-100;
+}

@@ -1,0 +1,66 @@
+```css
+/* Hero Section */
+.hero-container {
+  @apply relative min-h-screen;
+}
+
+.hero-video {
+  @apply absolute inset-0 h-full w-full object-cover;
+}
+
+.hero-overlay {
+  @apply absolute inset-0 z-20 flex items-center justify-center bg-black/50;
+}
+
+.hero-content {
+  @apply container mx-auto max-w-4xl px-4 text-center;
+}
+
+.hero-title {
+  @apply text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl;
+}
+
+.hero-tagline {
+  @apply bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent;
+}
+
+.hero-description {
+  @apply mx-auto mt-6 max-w-2xl text-lg text-gray-300;
+}
+
+.hero-button {
+  @apply mt-8 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 text-xl 
+         hover:from-red-600 hover:via-orange-600 hover:to-yellow-600;
+}
+
+.scroll-indicator {
+  @apply absolute bottom-8 left-1/2 -translate-x-1/2;
+}
+
+.scroll-indicator-dot {
+  @apply h-16 w-8 rounded-full border-2 border-white/30;
+}
+
+.scroll-indicator-dot::after {
+  @apply mx-auto mt-2 h-3 w-1 rounded-full bg-white/50;
+  content: '';
+}
+
+/* 3D Scene */
+.scene-overlay {
+  @apply absolute inset-0 z-10 opacity-30;
+}
+
+.floating-mouse {
+  @apply animate-float;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+```

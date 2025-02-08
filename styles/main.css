@@ -1,0 +1,113 @@
+```css
+@import 'tailwind.css';
+@import 'components/product.css';
+@import 'components/rankings.css';
+@import 'components/reviews.css';
+@import 'components/community.css';
+@import 'components/animations.css';
+@import 'components/layout.css';
+@import 'components/utils.css';
+
+/* Base Styles */
+:root {
+  --warm-gradient: linear-gradient(to right, #ff4d4d, #ff8533, #ffbf00);
+}
+
+/* Global Styles */
+body {
+  @apply antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  @apply w-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/50;
+}
+
+/* Enhanced Focus Styles */
+:focus-visible {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+/* Loading States */
+.loading-shimmer {
+  @apply animate-[shimmer_1.5s_infinite];
+  background: linear-gradient(
+    90deg,
+    var(--background) 25%,
+    var(--muted) 50%,
+    var(--background) 75%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Warm Gradient Elements */
+.warm-gradient {
+  background: var(--warm-gradient);
+}
+
+.warm-text-gradient {
+  background: var(--warm-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Interactive Elements */
+.interactive-hover {
+  @apply transition-all duration-200 hover:scale-105;
+}
+
+.interactive-press {
+  @apply active:scale-95 transition-all duration-200;
+}
+
+/* Layout Helpers */
+.center-absolute {
+  @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2;
+}
+
+.center-flex {
+  @apply flex items-center justify-center;
+}
+
+/* Typography */
+.heading-1 {
+  @apply text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl;
+}
+
+.heading-2 {
+  @apply text-3xl font-bold tracking-tight;
+}
+
+.heading-3 {
+  @apply text-2xl font-bold;
+}
+
+.body-large {
+  @apply text-lg text-muted-foreground;
+}
+
+.body-base {
+  @apply text-base text-muted-foreground;
+}
+
+.body-small {
+  @apply text-sm text-muted-foreground;
+}
+```
