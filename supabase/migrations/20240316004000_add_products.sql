@@ -8,11 +8,11 @@ INSERT INTO public.products (name, description, category, price, url_slug, image
 
 -- Insert Mice
 INSERT INTO public.products (name, description, category, price, url_slug, image_url) VALUES
-('Logitech G Pro X Superlight', 'Ultra-lightweight wireless gaming mouse with HERO sensor', 'mice', 149.99, 'gpro-x-superlight', 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46'),
-('Razer Viper Ultimate', 'Ambidextrous wireless gaming mouse with optical switches', 'mice', 129.99, 'viper-ultimate', 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46'),
-('Zowie EC2', 'Ergonomic esports mouse with flawless sensor', 'mice', 69.99, 'zowie-ec2', 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46'),
-('Pulsar X2', 'Ultra-lightweight symmetrical gaming mouse', 'mice', 89.99, 'pulsar-x2', 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46'),
-('Endgame Gear XM1r', 'Professional gaming mouse with low click latency', 'mice', 79.99, 'xm1r', 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46');
+('Logitech G Pro X Superlight', 'Ultra-lightweight wireless gaming mouse with HERO sensor', 'gaming-mice', 149.99, 'logitech-gpro-x-superlight', 'https://gaming-gear.com/images/mice/gpro-x-superlight.webp'),
+('Razer Viper Ultimate', 'Ambidextrous wireless gaming mouse with optical switches', 'gaming-mice', 129.99, 'razer-viper-ultimate', 'https://gaming-gear.com/images/mice/viper-ultimate.webp'),
+('Zowie EC2', 'Ergonomic esports mouse with flawless sensor', 'gaming-mice', 69.99, 'zowie-ec2-mouse', 'https://gaming-gear.com/images/mice/zowie-ec2.webp'),
+('Pulsar X2', 'Ultra-lightweight symmetrical gaming mouse', 'gaming-mice', 89.99, 'pulsar-x2-mouse', 'https://gaming-gear.com/images/mice/pulsar-x2.webp'),
+('Endgame Gear XM1r', 'Professional gaming mouse with low click latency', 'gaming-mice', 79.99, 'endgame-xm1r', 'https://gaming-gear.com/images/mice/xm1r.webp');
 
 -- Insert Headsets
 INSERT INTO public.products (name, description, category, price, url_slug, image_url) VALUES

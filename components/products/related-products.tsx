@@ -1,30 +1,58 @@
 "use client"
 
-import { products } from "@/lib/data"
-import { ProductCard } from "@/components/rankings/product-card"
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/lib/supabase/client"
+import { Product } from "@/hooks/use-product"
+import { ProductCard } from "@/components/products/product-card"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 interface RelatedProductsProps {
+  categoryId: string
   currentProductId: string
-  category: string
 }
 
-export function RelatedProducts({ currentProductId, category }: RelatedProductsProps) {
-  // Get related products from the same category
-  const relatedProducts = products
-    .filter(p => p.category === category && p.id !== currentProductId)
-    .sort((a, b) => b.votes - a.votes)
-    .slice(0, 3)
+export function RelatedProducts({ categoryId, currentProductId }: RelatedProductsProps) {
+  const { data: relatedProducts, isLoading } = useQuery<Product[]>({
+    queryKey: ['related-products', categoryId, currentProductId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('category', categoryId)
+        .neq('id', currentProductId)
+        .limit(4)
 
-  if (relatedProducts.length === 0) return null
+      if (error) throw error
+      return data
+    },
+    staleTime: 1000 * 60 * 5 // Consider data fresh for 5 minutes
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <LoadingSpinner />
+      </div>
+    )
+  }
+
+  if (!relatedProducts?.length) {
+    return (
+      <p className="text-center text-gray-500">
+        No related products found
+      </p>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Similar Products</h2>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {relatedProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {relatedProducts.map((product) => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          className="h-full"
+        />
+      ))}
     </div>
   )
 }

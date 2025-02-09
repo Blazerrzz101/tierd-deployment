@@ -1,5 +1,19 @@
--- Enable RLS on product_votes table
+-- Create product_votes table
+CREATE TABLE IF NOT EXISTS public.product_votes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    vote_type TEXT CHECK (vote_type IN ('up', 'down')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(product_id, user_id)
+);
+
+-- Enable RLS
 ALTER TABLE public.product_votes ENABLE ROW LEVEL SECURITY;
+
+-- Grant access to authenticated users
+GRANT SELECT ON public.product_votes TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.product_votes TO authenticated;
 
 -- Create policies for product_votes
 CREATE POLICY "Users can view all votes"
@@ -58,8 +72,4 @@ CREATE TRIGGER prevent_duplicate_votes
 -- Ensure product_votes table has proper indexes
 CREATE INDEX IF NOT EXISTS idx_product_votes_user_id ON public.product_votes(user_id);
 CREATE INDEX IF NOT EXISTS idx_product_votes_product_id ON public.product_votes(product_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_product_votes_user_product ON public.product_votes(user_id, product_id);
-
--- Grant necessary permissions
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.product_votes TO authenticated;
-GRANT USAGE ON SEQUENCE public.product_votes_id_seq TO authenticated; 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_product_votes_user_product ON public.product_votes(user_id, product_id); 

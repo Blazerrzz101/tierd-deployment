@@ -8,6 +8,8 @@ import { BackgroundGradient } from "@/components/background-gradient"
 import { BetaBanner } from "@/components/beta-banner"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
 import { VoteNotifications } from "@/components/notifications/vote-notifications"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { Particles } from "@/components/ui/particles"
 import type { Metadata } from "next"
 import { SupabaseErrorBoundary } from "@/components/supabase-error-boundary"
 import { Providers } from "./providers"
@@ -36,17 +38,20 @@ export default function RootLayout({
               enableSystem={false}
               disableTransitionOnChange
             >
-              <RealtimeProvider>
-                <div className="relative flex min-h-screen flex-col">
-                  <BetaBanner />
-                  <BackgroundGradient />
-                  <div className="relative z-10">
-                    <Header />
-                    {children}
+              <TooltipProvider>
+                <RealtimeProvider>
+                  <div className="relative flex min-h-screen flex-col">
+                    <BetaBanner />
+                    <BackgroundGradient />
+                    <Particles />
+                    <div className="relative z-10">
+                      <Header />
+                      {children}
+                    </div>
+                    <VoteNotifications />
                   </div>
-                  <VoteNotifications />
-                </div>
-              </RealtimeProvider>
+                </RealtimeProvider>
+              </TooltipProvider>
               <Toaster />
             </ThemeProvider>
           </SupabaseErrorBoundary>

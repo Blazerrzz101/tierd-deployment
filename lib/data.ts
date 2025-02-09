@@ -289,61 +289,58 @@ export interface Category {
   count: number
 }
 
-export const categories: Category[] = [
+export const categories = [
   {
     id: 'gaming-mice',
     name: 'Gaming Mice',
     description: 'High-performance gaming mice with precision sensors',
-    icon: '\u{1F5B1}',  // 🖱
+    icon: '🖱️',
     count: 156
   },
   {
     id: 'keyboards',
     name: 'Keyboards',
     description: 'Mechanical and gaming keyboards for every style',
-    icon: '\u{2328}',   // ⌨
+    icon: '⌨️',
     count: 203
   },
   {
     id: 'headsets',
     name: 'Headsets',
     description: 'Gaming headsets with immersive audio',
-    icon: '\u{1F3A7}',  // 🎧
+    icon: '🎧',
     count: 178
   },
   {
     id: 'monitors',
     name: 'Monitors',
     description: 'High refresh rate gaming monitors',
-    icon: '\u{1F5A5}',  // 🖥
+    icon: '🖥️',
     count: 142
-  },
-  {
-    id: 'controllers',
-    name: 'Controllers',
-    description: 'Gaming controllers for PC and consoles',
-    icon: '\u{1F3AE}',  // 🎮
-    count: 98
-  },
-  {
-    id: 'chairs',
-    name: 'Gaming Chairs',
-    description: 'Ergonomic chairs for comfortable gaming sessions',
-    icon: '\u{1F4BA}',  // 💺
-    count: 87
-  },
-  {
-    id: 'mousepads',
-    name: 'Mousepads',
-    description: 'Gaming mousepads for precise tracking',
-    icon: '\u{1F4CB}',  // 📋
-    count: 64
-  },
-  {
-    id: 'microphones',
-    name: 'Microphones',
-    description: 'High-quality microphones for streaming and gaming',
-    icon: '\u{1F399}',  // 🎙
-    count: 73
   }
 ]
+
+// Update product images to use real product images
+export const productImages = {
+  'gaming-mice': {
+    'logitech-g502': 'https://assets3.razerzone.com/GNqauRJJqyCVgxJqxvBYXCGX_bQ=/1500x1000/https%3A%2F%2Fhybrismediaprod.blob.core.windows.net%2Fsys-master-phoenix-images-container%2Fh78%2Fh24%2F9419340873758%2Fg502x-plus-black-1500x1000-1.jpg',
+    'razer-viper-v2': 'https://assets2.razerzone.com/images/pnx.assets/d3c009aecbd4ab7e404d91f253178c54/razer-viper-v2-pro-white-500x500.png',
+    'glorious-model-o': 'https://cdn.shopify.com/s/files/1/0549/2681/products/glorious_model_o_matte_black_01_1800x1800.png',
+    'finalmouse-starlight': 'https://finalmouse.com/cdn/shop/products/25_1024x.png'
+  },
+  'keyboards': {
+    'ducky-one-3': 'https://mechanicalkeyboards.com/shop/images/products/large_DKON2087ST-USPDZZT1_10.jpg',
+    'keychron-q1': 'https://cdn.shopify.com/s/files/1/0059/0630/1017/products/Keychron-Q1-QMK-custom-mechanical-keyboard-fully-assembled-version-navy-blue-with-knob-angle-view_1800x1800.jpg',
+    'gmmk-pro': 'https://cdn.shopify.com/s/files/1/0549/2681/products/gmmk_pro_black_01_1800x1800.png'
+  },
+  'monitors': {
+    'asus-pg279qm': 'https://dlcdnwebimgs.asus.com/gain/36e05589-1dd4-4d8d-8fc9-36a34797d895/',
+    'lg-27gp950': 'https://www.lg.com/us/images/monitors/md07529604/gallery/desktop-01.jpg',
+    'samsung-g7': 'https://images.samsung.com/is/image/samsung/p6pim/uk/lc32g75tqsrxxu/gallery/uk-odyssey-g7-lc32g75tqsrxxu-359315134'
+  },
+  'headsets': {
+    'hyperx-cloud-alpha': 'https://media.kingston.com/hyperx/features/hx-features-headset-cloud-alpha-black-1.jpg',
+    'steelseries-arctis-7': 'https://media.steelseriescdn.com/thumbs/catalogue/products/01115-arctis-7-plus-wireless/f2208d1f05d24dc69e5e3fbc5d05d4c7.png.500x400_q100_crop-fit_optimize.png',
+    'sennheiser-pc38x': 'https://assets2.sennheiser.com/wp-content/uploads/2020/09/08111632/PC38X_1.jpg'
+  }
+}

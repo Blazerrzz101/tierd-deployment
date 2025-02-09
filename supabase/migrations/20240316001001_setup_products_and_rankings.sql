@@ -138,4 +138,28 @@ CREATE TABLE reviews (
 );
 
 -- Grant permissions
-GRANT INSERT, UPDATE ON reviews TO authenticated; 
+GRANT INSERT, UPDATE ON reviews TO authenticated;
+
+-- Create product rankings table
+CREATE TABLE IF NOT EXISTS public.product_rankings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
+    upvotes INTEGER DEFAULT 0,
+    downvotes INTEGER DEFAULT 0,
+    net_score INTEGER DEFAULT 0,
+    rank INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(product_id)
+);
+
+-- Enable RLS
+ALTER TABLE public.product_rankings ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Enable read access for all users" ON public.product_rankings
+    FOR SELECT USING (true);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_product_rankings_product_id ON public.product_rankings(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_rankings_rank ON public.product_rankings(rank); 

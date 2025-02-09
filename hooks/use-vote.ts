@@ -1,144 +1,127 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types/product";
-import { toast } from "sonner";
-import { useAuth } from "./use-auth";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-type VoteType = 'up' | 'down' | null;
+type VoteType = "up" | "down" | null;
+
+interface Vote {
+  id: string;
+  user_id: string;
+  product_id: string;
+  type: VoteType;
+}
 
 export function useVote(initialProduct: Product) {
-  const [product, setProduct] = useState(initialProduct);
-  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const supabase = createClientComponentClient();
-
-  // Load initial vote state
-  useEffect(() => {
-    let isMounted = true;
-    
-    async function loadUserVote() {
-      if (!user) return;
-
-      try {
-        const { data, error } = await supabase
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Fetch current product with votes
+  const { data: product } = useQuery<Product & { userVote?: VoteType }>({
+    queryKey: ['product', initialProduct.id, 'votes', user?.id],
+    queryFn: async () => {
+      const [productVote] = await Promise.all([
+        // Get user's vote if logged in
+        user ? supabase
           .from('product_votes')
-          .select('vote_type')
-          .eq('product_id', product.id)
+          .select('type')
+          .eq('product_id', initialProduct.id)
           .eq('user_id', user.id)
-          .single();
+          .single()
+          .then(({ data }) => data?.type)
+          : null,
+      ]);
 
-        if (error) {
-          if (error.code !== 'PGRST116') { // Not found error is expected
-            console.error("Error loading vote:", error);
-          }
-          return;
-        }
+      return {
+        ...initialProduct,
+        userVote: productVote || null
+      };
+    },
+    initialData: { ...initialProduct, userVote: null },
+    enabled: !!initialProduct.id
+  });
 
-        if (data && isMounted) {
-          setProduct(prev => ({
-            ...prev,
-            userVote: data.vote_type as VoteType
-          }));
-        }
-      } catch (err) {
-        console.error("Error loading user vote:", err);
+  // Vote mutation
+  const { mutate: vote, isLoading } = useMutation({
+    mutationFn: async (voteType: VoteType) => {
+      if (!user) {
+        throw new Error('Must be logged in to vote');
       }
-    }
 
-    loadUserVote();
-    return () => {
-      isMounted = false;
-    };
-  }, [user, product.id, supabase]);
-
-  const vote = async (voteType: VoteType) => {
-    if (!user) {
-      toast.error("Please sign in to vote", {
-        description: "Create an account or sign in to vote on products"
-      });
-      return;
-    }
-
-    if (isLoading) {
-      toast.error("Please wait", {
-        description: "Your previous vote is still being processed"
-      });
-      return;
-    }
-
-    // Store the current state for rollback
-    const previousState = { ...product };
-    setIsLoading(true);
-
-    try {
-      const previousVote = product.userVote;
-      const voteChange = voteType === "up" ? 1 : voteType === "down" ? -1 : 0;
-      const previousVoteChange = previousVote === "up" ? -1 : previousVote === "down" ? 1 : 0;
-
-      // Optimistic update
-      setProduct(prev => ({
-        ...prev,
-        votes: prev.votes + voteChange + previousVoteChange,
-        userVote: voteType
-      }));
-
-      if (voteType === null) {
+      if (voteType === product?.userVote) {
         // Remove vote
-        const { error } = await supabase
+        await supabase
           .from('product_votes')
           .delete()
           .eq('product_id', product.id)
           .eq('user_id', user.id);
-
-        if (error) throw error;
       } else {
         // Upsert vote
-        const { error } = await supabase
+        await supabase
           .from('product_votes')
           .upsert({
             product_id: product.id,
             user_id: user.id,
-            vote_type: voteType,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'product_id,user_id'
+            type: voteType
           });
-
-        if (error) throw error;
+      }
+    },
+    onMutate: async (newVoteType) => {
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to vote.",
+          variant: "destructive"
+        });
+        return;
       }
 
-      // Update product rankings
-      const { error: rankingError } = await supabase.rpc('update_product_rankings', {
-        product_id: product.id
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['product', product?.id] });
+
+      // Optimistically update the product
+      const previousProduct = queryClient.getQueryData(['product', product?.id]);
+      
+      queryClient.setQueryData(['product', product?.id], {
+        ...product,
+        votes: (product?.votes || 0) + (
+          newVoteType === 'up' ? 1 : 
+          newVoteType === 'down' ? -1 : 
+          product?.userVote === 'up' ? -1 :
+          product?.userVote === 'down' ? 1 : 0
+        ),
+        userVote: newVoteType
       });
 
-      if (rankingError) throw rankingError;
-
-      toast.success(
-        voteType === "up"
-          ? "Upvoted successfully!"
-          : voteType === "down"
-          ? "Downvoted successfully!"
-          : "Vote removed successfully!"
-      );
-    } catch (error) {
+      return { previousProduct };
+    },
+    onError: (err, newVoteType, context) => {
       // Revert optimistic update
-      setProduct(previousState);
-      console.error("Error submitting vote:", error);
-      toast.error("Failed to submit vote", {
-        description: "Please try again. If the problem persists, contact support."
+      queryClient.setQueryData(
+        ['product', product?.id],
+        context?.previousProduct
+      );
+      
+      toast({
+        title: "Error",
+        description: "Failed to save vote. Please try again.",
+        variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
+    },
+    onSettled: () => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['product', product?.id] });
     }
-  };
+  });
 
   return {
-    product,
-    isLoading,
+    product: product || initialProduct,
     vote,
+    isLoading
   };
 }

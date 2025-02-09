@@ -204,43 +204,46 @@ export function SearchBar() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-lg rounded-xl border border-white/10 overflow-hidden"
+            className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-lg rounded-xl border border-white/10 overflow-hidden z-50 shadow-xl"
+            style={{ maxHeight: "60vh", overflowY: "auto" }}
           >
-            {suggestions.map((suggestion, index) => (
-              <motion.button
-                key={suggestion.id}
-                onClick={() => router.push(`/products/${suggestion.id}`)}
-                className={`w-full px-4 py-3 flex items-center gap-4 transition-colors
-                          ${index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <div className="flex-1 text-left">
-                  <div className="font-medium text-white">
-                    <HighlightedText text={suggestion.name} />
+            <div className="relative">
+              {suggestions.map((suggestion, index) => (
+                <motion.button
+                  key={suggestion.id}
+                  onClick={() => router.push(`/products/${suggestion.id}`)}
+                  className={`w-full px-4 py-3 flex items-center gap-4 transition-colors
+                            ${index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-white">
+                      <HighlightedText text={suggestion.name} />
+                    </div>
+                    <div className="text-sm text-white/50 flex items-center gap-2">
+                      <span className="capitalize">{suggestion.category.replace('-', ' ')}</span>
+                      <span className="h-1 w-1 rounded-full bg-white/20" />
+                      <motion.span
+                        key={suggestion.votes}
+                        initial={{ scale: 1.2, color: '#ff4b26' }}
+                        animate={{ scale: 1, color: 'rgb(255 255 255 / 0.5)' }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        {suggestion.votes} votes
+                      </motion.span>
+                    </div>
                   </div>
-                  <div className="text-sm text-white/50 flex items-center gap-2">
-                    <span className="capitalize">{suggestion.category.replace('-', ' ')}</span>
-                    <span className="h-1 w-1 rounded-full bg-white/20" />
-                    <motion.span
-                      key={suggestion.votes}
-                      initial={{ scale: 1.2, color: '#ff4b26' }}
-                      animate={{ scale: 1, color: 'rgb(255 255 255 / 0.5)' }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {suggestion.votes} votes
-                    </motion.span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center
+                                 transition-colors duration-300
+                                 ${index === selectedIndex ? 'bg-[#ff4b26]/20' : 'bg-white/5'}`}>
+                    <Search className={`h-4 w-4 transition-colors duration-300
+                                     ${index === selectedIndex ? 'text-[#ff4b26]' : 'text-white/50'}`} />
                   </div>
-                </div>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center
-                               transition-colors duration-300
-                               ${index === selectedIndex ? 'bg-[#ff4b26]/20' : 'bg-white/5'}`}>
-                  <Search className={`h-4 w-4 transition-colors duration-300
-                                   ${index === selectedIndex ? 'text-[#ff4b26]' : 'text-white/50'}`} />
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

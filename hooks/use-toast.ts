@@ -2,6 +2,7 @@
 
 // Inspired by react-hot-toast library
 import * as React from 'react';
+import { toast as sonnerToast } from "sonner"
 
 import type { ToastActionElement, ToastProps } from '@/components/ui/toast';
 
@@ -180,6 +181,16 @@ function useToast() {
       }
     };
   }, [state]);
+
+  const toast = ({ title, description, variant = "default" }: ToastProps) => {
+    const toastFn = variant === "destructive" ? sonnerToast.error : sonnerToast
+
+    toastFn(title, {
+      description,
+      className: "bg-background text-foreground",
+      descriptionClassName: "text-muted-foreground"
+    })
+  }
 
   return {
     ...state,

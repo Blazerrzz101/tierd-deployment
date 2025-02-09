@@ -1,3 +1,6 @@
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "pg_cron";
+
 -- Add last_ranked_at column to products
 ALTER TABLE products ADD COLUMN IF NOT EXISTS last_ranked_at TIMESTAMP WITH TIME ZONE;
 
