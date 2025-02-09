@@ -3,15 +3,17 @@
 export interface Product {
   id: string
   name: string
+  description: string | null
   category: string
-  description: string
-  imageUrl: string
-  votes: number
-  rank: number
-  price: number
-  userVote?: 'up' | 'down' | null
-  specs: Record<string, string>
+  price: number | null
+  image_url: string | null
   url_slug: string
+  created_at: string
+  updated_at: string
+  rank?: number
+  votes?: number
+  userVote?: 'up' | 'down' | null
+  specs?: Record<string, unknown>
 }
 
 export interface Category {

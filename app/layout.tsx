@@ -1,11 +1,12 @@
 import './globals.css'
+import '@/styles/animations.css'  // Import animations
 import '@/lib/env'  // Import environment validation
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
-import { Footer } from "@/components/footer"
+import { Footer } from "@/components/layout/footer"
 import { Toaster } from "@/components/ui/toaster"
 import { BackgroundGradient } from "@/components/background-gradient"
-import { BetaBanner } from "@/components/beta/BetaBanner"
+import { BetaBanner } from "@/components/beta-banner"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
 import type { Metadata } from "next"
 import { SupabaseErrorBoundary } from "@/components/supabase-error-boundary"

@@ -44,39 +44,60 @@ export function RankingList({ categoryId }: RankingListProps) {
         setIsLoading(true)
         setError(null)
 
-        // Fetch products from the rankings view for the category
+        // First fetch products
         const { data: productsData, error: productsError } = await supabase
-          .from('product_rankings')
+          .from('products')
           .select('*')
           .eq('category', categoryId)
-          .order('rank')
-          .limit(5)
+          .order('created_at', { ascending: false })
 
         if (productsError) {
           console.error('Error fetching products:', productsError)
           throw productsError
         }
 
+        // Then fetch rankings separately
+        const { data: rankingsData, error: rankingsError } = await supabase
+          .from('product_rankings')
+          .select('*')
+          .in('product_id', productsData.map(p => p.id))
+
+        if (rankingsError) {
+          console.error('Error fetching rankings:', rankingsError)
+          throw rankingsError
+        }
+
+        // Create a map of rankings by product_id
+        const rankingsMap = new Map(
+          rankingsData.map(ranking => [ranking.product_id, ranking])
+        )
+
         // Transform products into client-safe format
         const transformedProducts = productsData
-          .filter(product => product.id && product.name) // Filter out any products with null id or name
+          .filter(product => product.id && product.name)
           .map(product => {
-            // Create a plain object with only the fields needed by the client
-            const clientProduct = {
+            const ranking = rankingsMap.get(product.id) || {
+              upvotes: 0,
+              downvotes: 0,
+              net_score: 0,
+              rank: 0
+            }
+
+            return {
               id: String(product.id),
               name: String(product.name),
               description: product.description || '',
               category: product.category || '',
               price: product.price || 0,
-              imageUrl: product.image_url || PLACEHOLDER_IMAGE,
-              votes: (product.upvotes || 0) - (product.downvotes || 0),
-              rank: product.rank || 0,
+              image_url: product.image_url || PLACEHOLDER_IMAGE,
+              votes: (ranking.upvotes || 0) - (ranking.downvotes || 0),
+              rank: ranking.rank || 0,
               specs: {},
               userVote: null,
-              url_slug: generateSlug(product.name)
+              url_slug: product.url_slug || generateSlug(product.name),
+              created_at: product.created_at || new Date().toISOString(),
+              updated_at: product.updated_at || new Date().toISOString()
             } satisfies Product
-
-            return clientProduct
           })
 
         console.log('Transformed products:', transformedProducts.map(p => ({
