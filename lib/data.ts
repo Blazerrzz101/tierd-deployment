@@ -1,4 +1,4 @@
-import { Product, Category } from "@/types"
+import { Product } from "@/types"
 
 // Generate a large catalog of products
 function generateProducts(): Product[] {
@@ -281,29 +281,69 @@ function generateProducts(): Product[] {
 
 export const products = generateProducts()
 
+export interface Category {
+  id: string
+  name: string
+  description: string
+  icon: string
+  count: number
+}
+
 export const categories: Category[] = [
   {
-    id: "gaming-mice",
-    name: "Gaming Mice",
-    slug: "gaming-mice",
-    description: "High-performance gaming mice for precise control"
+    id: 'gaming-mice',
+    name: 'Gaming Mice',
+    description: 'High-performance gaming mice with precision sensors',
+    icon: '\u{1F5B1}',  // 🖱
+    count: 156
   },
   {
-    id: "keyboards",
-    name: "Keyboards",
-    slug: "keyboards",
-    description: "Mechanical and gaming keyboards for every style"
+    id: 'keyboards',
+    name: 'Keyboards',
+    description: 'Mechanical and gaming keyboards for every style',
+    icon: '\u{2328}',   // ⌨
+    count: 203
   },
   {
-    id: "monitors",
-    name: "Monitors",
-    slug: "monitors",
-    description: "Gaming monitors for immersive experience"
+    id: 'headsets',
+    name: 'Headsets',
+    description: 'Gaming headsets with immersive audio',
+    icon: '\u{1F3A7}',  // 🎧
+    count: 178
   },
   {
-    id: "headsets",
-    name: "Headsets",
-    slug: "headsets",
-    description: "Gaming headsets for crystal-clear audio"
+    id: 'monitors',
+    name: 'Monitors',
+    description: 'High refresh rate gaming monitors',
+    icon: '\u{1F5A5}',  // 🖥
+    count: 142
+  },
+  {
+    id: 'controllers',
+    name: 'Controllers',
+    description: 'Gaming controllers for PC and consoles',
+    icon: '\u{1F3AE}',  // 🎮
+    count: 98
+  },
+  {
+    id: 'chairs',
+    name: 'Gaming Chairs',
+    description: 'Ergonomic chairs for comfortable gaming sessions',
+    icon: '\u{1F4BA}',  // 💺
+    count: 87
+  },
+  {
+    id: 'mousepads',
+    name: 'Mousepads',
+    description: 'Gaming mousepads for precise tracking',
+    icon: '\u{1F4CB}',  // 📋
+    count: 64
+  },
+  {
+    id: 'microphones',
+    name: 'Microphones',
+    description: 'High-quality microphones for streaming and gaming',
+    icon: '\u{1F399}',  // 🎙
+    count: 73
   }
 ]

@@ -1,4 +1,5 @@
 import { getKnownUsernames, getServerUser } from "@/lib/server/user"
+import { MainLayout } from "@/components/home/main-layout"
 import { ProfilePage } from "@/components/profile/profile-page"
 import { notFound } from "next/navigation"
 
@@ -20,5 +21,9 @@ export default async function Page({
     return notFound()
   }
 
-  return <ProfilePage user={user} />
+  return (
+    <MainLayout>
+      <ProfilePage user={user} />
+    </MainLayout>
+  )
 }

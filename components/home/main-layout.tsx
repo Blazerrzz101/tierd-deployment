@@ -15,7 +15,12 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
       {showNavbar && <Navbar />}
-      <main className="flex-1 flex flex-col">{children}</main>
+      <main className="flex-1 flex flex-col items-center">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {children}
+        </div>
+      </main>
+      <Footer />
     </div>
   )
 }

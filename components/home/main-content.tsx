@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import { MainLayout } from "@/components/home/main-layout"
@@ -27,6 +27,16 @@ const categoryGradients: Record<CategoryId, string> = {
   'headsets': 'from-amber-900/50 to-amber-800/10',
 }
 
+// Add mouse-following particle system
+interface Particle {
+  x: number
+  y: number
+  size: number
+  speedX: number
+  speedY: number
+  life: number
+}
+
 export function MainContent() {
   const [selectedCategory, setSelectedCategory] = useState(categories[0].id)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
@@ -39,16 +49,56 @@ export function MainContent() {
   const heroScale = useTransform(scrollY, [0, 300], [1, 0.95])
   const heroY = useTransform(scrollY, [0, 300], [0, 50])
   
-  // Enhanced mouse gradient effect with pulse
+  const [particles, setParticles] = useState<Particle[]>([])
+  const [mouseTrail, setMouseTrail] = useState<{ x: number; y: number }[]>([])
+
+  // Enhanced mouse tracking with particle generation
+  const generateParticle = useCallback((x: number, y: number): Particle => ({
+    x,
+    y,
+    size: Math.random() * 3 + 1,
+    speedX: (Math.random() - 0.5) * 2,
+    speedY: (Math.random() - 0.5) * 2,
+    life: 1
+  }), [])
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const x = (e.clientX / window.innerWidth) * 100
       const y = (e.clientY / window.innerHeight) * 100
       setMousePosition({ x, y })
+
+      // Add particles on mouse move
+      if (Math.random() > 0.8) { // Only add particles sometimes for performance
+        setParticles(prev => [...prev, generateParticle(e.clientX, e.clientY)]
+          .slice(-20)) // Limit number of particles
+      }
+
+      // Update mouse trail
+      setMouseTrail(prev => [...prev, { x: e.clientX, y: e.clientY }]
+        .slice(-10)) // Keep last 10 positions
     }
+
+    // Update particles
+    const updateParticles = () => {
+      setParticles(prev => 
+        prev.map(p => ({
+          ...p,
+          x: p.x + p.speedX,
+          y: p.y + p.speedY,
+          life: p.life - 0.02
+        })).filter(p => p.life > 0)
+      )
+    }
+
+    const particleInterval = setInterval(updateParticles, 16) // 60fps
+
     window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      clearInterval(particleInterval)
+    }
+  }, [generateParticle])
 
   // Search focus handler
   useEffect(() => {
@@ -82,23 +132,48 @@ export function MainContent() {
           }}
         />
         
-        {/* Enhanced animated particles */}
-        <div className="absolute inset-0 opacity-30">
-          {[...Array(5)].map((_, i) => (
+        {/* Mouse trail effect */}
+        <div className="absolute inset-0 pointer-events-none">
+          {mouseTrail.map((pos, i) => (
             <motion.div
               key={i}
-              className="firefly"
-              initial={{ opacity: 0 }}
+              className="absolute w-1 h-1 rounded-full bg-[#ff4b26]"
+              style={{ 
+                left: pos.x, 
+                top: pos.y,
+                opacity: (i + 1) / mouseTrail.length * 0.3
+              }}
+              initial={false}
               animate={{
-                opacity: [0, 0.5, 0],
-                scale: [1, 1.2, 1],
-                x: [0, Math.random() * 100 - 50],
-                y: [0, Math.random() * 100 - 50]
+                scale: [1, 0],
+                opacity: [0.3, 0]
               }}
               transition={{
-                duration: 3 + Math.random() * 2,
-                repeat: Infinity,
-                delay: i * 0.8
+                duration: 0.5,
+                ease: "easeOut"
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Interactive particles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {particles.map((particle, i) => (
+            <motion.div
+              key={`p-${i}`}
+              className="absolute w-1 h-1 rounded-full bg-[#ff4b26]"
+              style={{
+                left: particle.x,
+                top: particle.y,
+                width: particle.size,
+                height: particle.size
+              }}
+              animate={{
+                opacity: particle.life
+              }}
+              transition={{
+                duration: 0.016, // Smooth 60fps animation
+                ease: "linear"
               }}
             />
           ))}

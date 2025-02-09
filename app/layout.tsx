@@ -3,11 +3,11 @@ import '@/styles/animations.css'  // Import animations
 import '@/lib/env'  // Import environment validation
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
-import { Footer } from "@/components/layout/footer"
 import { Toaster } from "@/components/ui/toaster"
 import { BackgroundGradient } from "@/components/background-gradient"
 import { BetaBanner } from "@/components/beta-banner"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
+import { VoteNotifications } from "@/components/notifications/vote-notifications"
 import type { Metadata } from "next"
 import { SupabaseErrorBoundary } from "@/components/supabase-error-boundary"
 import { Providers } from "./providers"
@@ -43,8 +43,8 @@ export default function RootLayout({
                   <div className="relative z-10">
                     <Header />
                     {children}
-                    <Footer />
                   </div>
+                  <VoteNotifications />
                 </div>
               </RealtimeProvider>
               <Toaster />

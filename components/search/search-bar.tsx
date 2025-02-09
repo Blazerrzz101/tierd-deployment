@@ -1,164 +1,249 @@
 "use client"
 
-import * as React from "react"
-import { Search, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useRef, KeyboardEvent } from "react"
+import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { products } from "@/lib/data"
+import { motion, AnimatePresence } from "framer-motion"
+import { useDebounce } from "@/app/hooks/use-debounce"
+import { supabase } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
+import { fuzzySearch, highlightMatches } from "@/lib/search/fuzzy-search"
+import { categories } from "@/lib/data"
 import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Filter } from "lucide-react"
+
+interface SearchSuggestion {
+  id: string
+  name: string
+  category: string
+  votes: number
+  highlight?: {
+    start: number
+    end: number
+  }
+}
 
 export function SearchBar() {
-  const [open, setOpen] = React.useState(false)
-  const [query, setQuery] = React.useState("")
-  const [sortAlphabetically, setSortAlphabetically] = React.useState(false)
-  const [sortByPrice, setSortByPrice] = React.useState<'asc' | 'desc' | null>(null)
-  const inputRef = React.useRef<HTMLInputElement>(null)
+  const [query, setQuery] = useState("")
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [isLoading, setIsLoading] = useState(false)
+  const debouncedQuery = useDebounce(query, 300)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
-  React.useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        setOpen((open) => !open)
+  // Fetch and process suggestions
+  useEffect(() => {
+    async function fetchSuggestions() {
+      if (!debouncedQuery.trim() && selectedCategories.length === 0) {
+        setSuggestions([])
+        return
+      }
+
+      setIsLoading(true)
+      try {
+        // Fetch all products for the selected categories
+        const categoryFilter = selectedCategories.length > 0
+          ? selectedCategories
+          : categories.map(c => c.id)
+
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, category, votes')
+          .in('category', categoryFilter)
+          .order('votes', { ascending: false })
+
+        if (error) throw error
+
+        // Apply fuzzy search if there's a query
+        let processedData = data
+        if (debouncedQuery.trim()) {
+          processedData = fuzzySearch(data, debouncedQuery, {
+            keys: ['name', 'category'],
+            weights: {
+              name: 2,    // Name matches are more important
+              category: 1  // Category matches are less important
+            },
+            threshold: 0.2 // Lower threshold for more forgiving matching
+          })
+        }
+
+        // Add highlighting information
+        const suggestionsWithHighlights = processedData.slice(0, 5).map(item => ({
+          ...item,
+          highlight: {
+            start: item.name.toLowerCase().indexOf(debouncedQuery.toLowerCase()),
+            end: item.name.toLowerCase().indexOf(debouncedQuery.toLowerCase()) + debouncedQuery.length
+          }
+        }))
+
+        setSuggestions(suggestionsWithHighlights)
+      } catch (error) {
+        console.error('Error fetching suggestions:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
-    document.addEventListener("keydown", down)
-    return () => document.removeEventListener("keydown", down)
-  }, [])
 
-  const filteredProducts = React.useMemo(() => {
-    let results = !query 
-      ? products.slice(0, 5)
-      : products.filter((product) =>
-          product.name.toLowerCase().includes(query.toLowerCase()) ||
-          product.description.toLowerCase().includes(query.toLowerCase()) ||
-          product.category.toLowerCase().includes(query.toLowerCase())
+    fetchSuggestions()
+  }, [debouncedQuery, selectedCategories])
+
+  // Toggle category filter
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories(prev => {
+      const isSelected = prev.includes(categoryId)
+      if (isSelected) {
+        return prev.filter(id => id !== categoryId)
+      } else {
+        return [...prev, categoryId]
+      }
+    })
+  }
+
+  // Enhanced text highlighting using fuzzy match
+  const HighlightedText = ({ text }: { text: string }) => {
+    const parts = highlightMatches(text, debouncedQuery)
+    
+    return (
+      <>
+        {parts.map((part, i) => (
+          <span
+            key={i}
+            className={part.isMatch ? "bg-[#ff4b26]/20 text-[#ff4b26] px-1 rounded" : ""}
+          >
+            {part.text}
+          </span>
+        ))}
+      </>
+    )
+  }
+
+  // Keyboard navigation
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (!suggestions.length) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : prev
         )
-
-    // Apply sorting
-    if (sortAlphabetically) {
-      results = [...results].sort((a, b) => a.name.localeCompare(b.name))
-    } else if (sortByPrice === 'asc') {
-      results = [...results].sort((a, b) => a.price - b.price)
-    } else if (sortByPrice === 'desc') {
-      results = [...results].sort((a, b) => b.price - a.price)
-    } else {
-      results = results.sort((a, b) => a.rank - b.rank)
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : -1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (selectedIndex >= 0) {
+          const selected = suggestions[selectedIndex]
+          router.push(`/products/${selected.id}`)
+        }
+        break
+      case 'Escape':
+        e.preventDefault()
+        setSelectedIndex(-1)
+        inputRef.current?.blur()
+        break
     }
-
-    return results.slice(0, 10)
-  }, [query, sortAlphabetically, sortByPrice])
-
-  const clearSearch = () => {
-    setQuery("")
-    setSortAlphabetically(false)
-    setSortByPrice(null)
-    inputRef.current?.focus()
   }
 
   return (
-    <>
-      <Button
-        variant="outline"
-        role="combobox"
-        aria-expanded={open}
-        onClick={() => setOpen(true)}
-        className="relative h-16 w-full justify-start border-2 bg-background/5 px-6 text-lg shadow-lg hover:bg-accent sm:text-xl"
-      >
-        <Search className="mr-2 h-5 w-5 shrink-0 opacity-50" />
-        <span className="inline-flex">Search gaming accessories...</span>
-        <kbd className="pointer-events-none absolute right-6 top-[50%] hidden h-8 -translate-y-1/2 select-none items-center gap-1 rounded border bg-muted px-2 font-mono text-[10px] font-medium opacity-100 sm:flex">
-          <span className="text-xs">⌘</span>K
-        </kbd>
-      </Button>
+    <div className="relative w-full">
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          type="text"
+          placeholder="Search for gaming gear..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-full h-12 pl-12 pr-4 bg-white/5 border-white/10 rounded-xl
+                     text-white placeholder:text-white/50
+                     focus:ring-2 focus:ring-[#ff4b26]/20 focus:border-[#ff4b26]
+                     transition-all duration-300"
+        />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50" />
+        
+        {isLoading && (
+          <motion.div
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 border-2 border-[#ff4b26] border-t-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+        )}
+      </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85vh] w-[90vw] max-w-3xl overflow-hidden rounded-lg border-0 bg-black p-0 shadow-lg">
-          <DialogHeader>
-            <DialogTitle className="px-4 pt-4">Search Products</DialogTitle>
-          </DialogHeader>
-          
-          <div className="flex items-center justify-between border-b border-border/10 px-3">
-            <div className="flex flex-1 items-center">
-              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-              <Input
-                ref={inputRef}
-                placeholder="Search gaming accessories..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="h-14 border-0 bg-transparent text-lg outline-none placeholder:text-muted-foreground focus:border-0 focus:outline-none focus:ring-0"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSortAlphabetically(!sortAlphabetically)}
-                className={sortAlphabetically ? "text-primary" : ""}
-              >
-                A-Z
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (!sortByPrice) setSortByPrice('asc')
-                  else if (sortByPrice === 'asc') setSortByPrice('desc')
-                  else setSortByPrice(null)
-                }}
-                className={sortByPrice ? "text-primary" : ""}
-              >
-                ${sortByPrice === 'asc' ? '↑' : sortByPrice === 'desc' ? '↓' : ''}
-              </Button>
-              {(query || sortAlphabetically || sortByPrice) && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={clearSearch}
-                  className="h-8 w-8"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
+      {/* Category filters */}
+      <div className="mt-2 flex flex-wrap gap-2">
+        {categories.map(category => (
+          <Badge
+            key={category.id}
+            variant="outline"
+            className={`cursor-pointer transition-all duration-300 ${
+              selectedCategories.includes(category.id)
+                ? "bg-[#ff4b26]/20 text-[#ff4b26] border-[#ff4b26]"
+                : "hover:bg-white/5"
+            }`}
+            onClick={() => toggleCategory(category.id)}
+          >
+            <Filter className={`mr-1 h-3 w-3 transition-colors duration-300 ${
+              selectedCategories.includes(category.id)
+                ? "text-[#ff4b26]"
+                : "text-white/50"
+            }`} />
+            {category.name}
+          </Badge>
+        ))}
+      </div>
 
-          <div className="max-h-[60vh] overflow-y-auto p-4">
-            {filteredProducts.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No products found.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {filteredProducts.map((product) => (
-                  <Link
-                    key={product.id}
-                    href={`/products/${product.id}`}
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-between rounded-lg p-4 transition-colors hover:bg-accent"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{product.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {product.category} • ${product.price}
-                      </span>
-                    </div>
-                    <Badge variant="secondary">
-                      Rank #{product.rank}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+      <AnimatePresence>
+        {suggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-lg rounded-xl border border-white/10 overflow-hidden"
+          >
+            {suggestions.map((suggestion, index) => (
+              <motion.button
+                key={suggestion.id}
+                onClick={() => router.push(`/products/${suggestion.id}`)}
+                className={`w-full px-4 py-3 flex items-center gap-4 transition-colors
+                          ${index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <div className="flex-1 text-left">
+                  <div className="font-medium text-white">
+                    <HighlightedText text={suggestion.name} />
+                  </div>
+                  <div className="text-sm text-white/50 flex items-center gap-2">
+                    <span className="capitalize">{suggestion.category.replace('-', ' ')}</span>
+                    <span className="h-1 w-1 rounded-full bg-white/20" />
+                    <motion.span
+                      key={suggestion.votes}
+                      initial={{ scale: 1.2, color: '#ff4b26' }}
+                      animate={{ scale: 1, color: 'rgb(255 255 255 / 0.5)' }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {suggestion.votes} votes
+                    </motion.span>
+                  </div>
+                </div>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center
+                               transition-colors duration-300
+                               ${index === selectedIndex ? 'bg-[#ff4b26]/20' : 'bg-white/5'}`}>
+                  <Search className={`h-4 w-4 transition-colors duration-300
+                                   ${index === selectedIndex ? 'text-[#ff4b26]' : 'text-white/50'}`} />
+                </div>
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
