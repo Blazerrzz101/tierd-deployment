@@ -1,55 +1,33 @@
-"use client"
-
-import { useEffect } from "react"
-import { useParams } from "next/navigation"
-import { MainLayout } from "@/components/home/main-layout"
+import { Suspense } from "react"
 import { ProductDetails } from "@/components/products/product-details"
 import { RelatedProducts } from "@/components/products/related-products"
 import { ProductReviews } from "@/components/products/product-reviews"
-import { useProduct } from "@/hooks/use-product"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { NotFound } from "@/components/not-found"
+import { getProduct } from "@/lib/supabase/server"
 
-export default function ProductPage() {
-  const { slug } = useParams()
-  const { product, isLoading, error } = useProduct(slug as string)
-
-  // Track product view
-  useEffect(() => {
-    if (product?.id) {
-      // Increment view count in analytics
-      fetch('/api/products/track-view', {
-        method: 'POST',
-        body: JSON.stringify({ productId: product.id })
-      })
-    }
-  }, [product?.id])
-
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <LoadingSpinner />
-        </div>
-      </MainLayout>
-    )
+interface Props {
+  params: {
+    slug: string
   }
+}
 
-  if (error || !product) {
+export default async function ProductPage({ params }: Props) {
+  const product = await getProduct(params.slug)
+
+  if (!product) {
     return (
-      <MainLayout>
-        <NotFound 
-          title="Product Not Found"
-          description="The product you're looking for doesn't exist or has been removed."
-        />
-      </MainLayout>
+      <NotFound 
+        title="Product Not Found"
+        description="The product you're looking for doesn't exist or has been removed."
+      />
     )
   }
 
   return (
-    <MainLayout>
-      <div className="py-8">
-        <div className="container mx-auto px-4">
+    <div className="py-8">
+      <div className="container mx-auto px-4">
+        <Suspense fallback={<LoadingSpinner />}>
           {/* Product Details */}
           <ProductDetails product={product} />
 
@@ -67,8 +45,8 @@ export default function ProductPage() {
             <h2 className="text-2xl font-bold mb-8">Reviews</h2>
             <ProductReviews productId={product.id} />
           </div>
-        </div>
+        </Suspense>
       </div>
-    </MainLayout>
+    </div>
   )
 } 

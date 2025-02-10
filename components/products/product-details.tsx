@@ -11,8 +11,8 @@ import { Product } from "@/hooks/use-product"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/hooks/use-cart"
 import { useWishlist } from "@/hooks/use-wishlist"
-import { ProductReviews } from "@/components/product-reviews"
-import { ProductThreads } from "@/components/product-threads"
+import { ProductReviews } from "@/components/products/product-reviews"
+import { ProductThreads } from "@/components/products/product-threads"
 import { useRouter } from "next/navigation"
 
 interface ProductDetailsProps {
@@ -26,7 +26,10 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const { addToWishlist } = useWishlist()
   const router = useRouter()
 
-  const images = [product.image_url, ...Object.values(product.specs.images || {})]
+  const images = [
+    product.image_url,
+    ...(product.details?.images ? Object.values(product.details.images) : [])
+  ].filter(Boolean) as string[]
 
   const handleAddToCart = () => {
     addToCart(product)
@@ -95,7 +98,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 <Star
                   key={i}
                   className={`h-5 w-5 ${
-                    i < Math.floor(product.rating)
+                    i < Math.floor(product.rating || 0)
                       ? "text-yellow-400 fill-current"
                       : "text-gray-300"
                   }`}
@@ -103,7 +106,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               ))}
             </div>
             <span className="text-sm text-gray-500">
-              ({product.review_count} reviews)
+              ({product.review_count || 0} reviews)
             </span>
           </div>
         </div>
@@ -112,14 +115,14 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <p className="text-2xl font-bold">${product.price.toFixed(2)}</p>
           <Badge
             variant={
-              product.stock_status === "in_stock"
+              (product.stock_status || "in_stock") === "in_stock"
                 ? "default"
-                : product.stock_status === "low_stock"
+                : (product.stock_status || "in_stock") === "low_stock"
                 ? "warning"
                 : "destructive"
             }
           >
-            {product.stock_status.replace("_", " ").toUpperCase()}
+            {(product.stock_status || "in_stock").replace("_", " ").toUpperCase()}
           </Badge>
         </div>
 
@@ -156,14 +159,14 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </TabsContent>
           <TabsContent value="specifications" className="mt-4">
             <div className="space-y-4">
-              {Object.entries(product.specs)
+              {Object.entries(product.details)
                 .filter(([key]) => key !== "images")
                 .map(([key, value]) => (
                   <div key={key} className="grid grid-cols-2 gap-4">
                     <div className="font-medium capitalize">
                       {key.replace(/_/g, " ")}
                     </div>
-                    <div>{value}</div>
+                    <div>{String(value)}</div>
                   </div>
                 ))}
             </div>
