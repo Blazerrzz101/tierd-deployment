@@ -4,8 +4,8 @@ interface VoteActionsProps {
   threadId: string
   upvotes: number
   downvotes: number
-  userVote?: "upvote" | "downvote" | null
-  onVote: (type: "upvote" | "downvote") => Promise<void>
+  userVote?: "up" | "down" | null
+  onVote: (type: "up" | "down") => Promise<void>
   className?: string
 }
 
@@ -21,15 +21,15 @@ export function VoteActions({
     <div className={className}>
       <div className="flex items-center space-x-1">
         <VoteButton
-          type="upvote"
+          type="up"
           count={upvotes}
-          isVoted={userVote === "upvote"}
+          isVoted={userVote === "up"}
           onVote={onVote}
         />
         <VoteButton
-          type="downvote"
+          type="down"
           count={downvotes}
-          isVoted={userVote === "downvote"}
+          isVoted={userVote === "down"}
           onVote={onVote}
         />
       </div>

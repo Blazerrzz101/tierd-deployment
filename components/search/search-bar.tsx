@@ -150,7 +150,7 @@ export function SearchBar() {
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative z-50">
       <div className="relative">
         <Input
           ref={inputRef}
@@ -159,12 +159,11 @@ export function SearchBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-full h-12 pl-12 pr-4 bg-white/5 border-white/10 rounded-xl
-                     text-white placeholder:text-white/50
-                     focus:ring-2 focus:ring-[#ff4b26]/20 focus:border-[#ff4b26]
+          className="w-full pl-10 pr-4 py-3 bg-black/50 backdrop-blur-sm border border-white/10 
+                     rounded-lg focus:border-[#ff4b26]/50 focus:ring-2 focus:ring-[#ff4b26]/20
                      transition-all duration-300"
         />
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50" />
         
         {isLoading && (
           <motion.div

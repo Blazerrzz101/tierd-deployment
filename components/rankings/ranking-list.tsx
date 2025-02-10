@@ -44,74 +44,45 @@ export function RankingList({ categoryId }: RankingListProps) {
         setIsLoading(true)
         setError(null)
 
-        // First fetch products
-        const { data: productsData, error: productsError } = await supabase
+        // Simple query to test permissions
+        const { data, error: queryError } = await supabase
           .from('products')
           .select('*')
-          .eq('category', categoryId)
-          .order('created_at', { ascending: false })
+          .limit(10)
 
-        if (productsError) {
-          console.error('Error fetching products:', productsError)
-          throw productsError
+        if (queryError) {
+          console.error('Database error:', queryError)
+          setError(queryError.message)
+          return
         }
 
-        // Then fetch rankings separately
-        const { data: rankingsData, error: rankingsError } = await supabase
-          .from('product_rankings')
-          .select('*')
-          .in('product_id', productsData.map(p => p.id))
+        console.log('Raw products data:', data)
 
-        if (rankingsError) {
-          console.error('Error fetching rankings:', rankingsError)
-          throw rankingsError
+        if (!data || data.length === 0) {
+          setProducts([])
+          return
         }
 
-        // Create a map of rankings by product_id
-        const rankingsMap = new Map(
-          rankingsData.map(ranking => [ranking.product_id, ranking])
-        )
-
-        // Transform products into client-safe format
-        const transformedProducts = productsData
-          .filter(product => product.id && product.name)
-          .map(product => {
-            const ranking = rankingsMap.get(product.id) || {
-              upvotes: 0,
-              downvotes: 0,
-              net_score: 0,
-              rank: 0
-            }
-
-            return {
-              id: String(product.id),
-              name: String(product.name),
-              description: product.description || '',
-              category: product.category || '',
-              price: product.price || 0,
-              image_url: product.image_url || PLACEHOLDER_IMAGE,
-              votes: (ranking.upvotes || 0) - (ranking.downvotes || 0),
-              rank: ranking.rank || 0,
-              specs: {},
-              userVote: null,
-              url_slug: product.url_slug || generateSlug(product.name),
-              created_at: product.created_at || new Date().toISOString(),
-              updated_at: product.updated_at || new Date().toISOString()
-            } satisfies Product
-          })
-
-        console.log('Transformed products:', transformedProducts.map(p => ({
-          id: p.id,
-          name: p.name,
-          votes: p.votes,
-          rank: p.rank,
-          url_slug: p.url_slug
-        })))
+        const transformedProducts = data.map(product => ({
+          id: String(product.id),
+          name: String(product.name || 'Unnamed Product'),
+          description: product.description || '',
+          category: product.category || '',
+          price: product.price || 0,
+          image_url: product.image_url || '/placeholder.png',
+          votes: 0,
+          rank: 0,
+          specs: {},
+          userVote: null,
+          url_slug: product.url_slug || '',
+          created_at: product.created_at || new Date().toISOString(),
+          updated_at: product.updated_at || new Date().toISOString()
+        } as Product))
 
         setProducts(transformedProducts)
-      } catch (err: any) {
-        console.error('Unexpected error:', err)
-        setError(`An unexpected error occurred: ${err.message}`)
+      } catch (err) {
+        console.error('Error fetching products:', err)
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       } finally {
         setIsLoading(false)
       }
@@ -129,6 +100,12 @@ export function RankingList({ categoryId }: RankingListProps) {
       <div className="text-center py-8 text-red-500">
         <div>Error loading products:</div>
         <div className="text-sm">{error}</div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-md text-sm"
+        >
+          Try Again
+        </button>
       </div>
     )
   }

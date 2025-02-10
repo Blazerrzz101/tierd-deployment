@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 interface VoteButtonProps {
-  type: "upvote" | "downvote"
+  type: "up" | "down"
   count: number
   isVoted: boolean
-  onVote: (type: "upvote" | "downvote") => Promise<void>
+  onVote: (type: "up" | "down") => Promise<void>
   className?: string
 }
 
@@ -29,7 +29,7 @@ export function VoteButton({
       // Only show toast when voting, not when removing vote
       if (!isVoted) {
         toast.success(
-          type === "upvote" 
+          type === "up" 
             ? "Thanks for the upvote!" 
             : "Thanks for the feedback!"
         )
@@ -41,7 +41,7 @@ export function VoteButton({
     }
   }
 
-  const Icon = type === "upvote" ? ArrowBigUp : ArrowBigDown
+  const Icon = type === "up" ? ArrowBigUp : ArrowBigDown
   
   return (
     <Button
@@ -58,8 +58,8 @@ export function VoteButton({
     >
       <Icon className={cn(
         "h-5 w-5 transition-transform",
-        isVoted && type === "upvote" && "animate-bounce",
-        isVoted && type === "downvote" && "animate-bounce"
+        isVoted && type === "up" && "animate-bounce",
+        isVoted && type === "down" && "animate-bounce"
       )} />
       <span className="text-sm font-medium">{count}</span>
     </Button>

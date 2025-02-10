@@ -12,14 +12,17 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Particles } from "@/components/ui/particles"
 import type { Metadata } from "next"
 import { SupabaseErrorBoundary } from "@/components/supabase-error-boundary"
-import { Providers } from "./providers"
+import { Providers } from "@/app/providers"
 import { Header } from "@/components/layout/header"
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "Tier'd - Gaming Gear Ranked by Streamers",
-  description: "Discover and rank the best gaming gear, curated by streamers.",
+  title: "Tier'd - Gaming Gear Rankings",
+  description: "Community-driven gaming gear rankings and reviews",
+  icons: {
+    icon: "/favicon.ico",
+  },
 }
 
 export default function RootLayout({
@@ -29,7 +32,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <head />
+      <body className={`${inter.className} min-h-screen bg-black text-white antialiased`}>
         <Providers>
           <SupabaseErrorBoundary>
             <ThemeProvider
@@ -41,13 +45,17 @@ export default function RootLayout({
               <TooltipProvider>
                 <RealtimeProvider>
                   <div className="relative flex min-h-screen flex-col">
-                    <BetaBanner />
-                    <BackgroundGradient />
-                    <Particles />
-                    <div className="relative z-10">
-                      <Header />
-                      {children}
+                    <div className="fixed inset-0 overflow-hidden">
+                      <Particles />
                     </div>
+                    <main className="relative flex-1">
+                      <BetaBanner />
+                      <BackgroundGradient />
+                      <div className="relative z-10">
+                        <Header />
+                        {children}
+                      </div>
+                    </main>
                     <VoteNotifications />
                   </div>
                 </RealtimeProvider>

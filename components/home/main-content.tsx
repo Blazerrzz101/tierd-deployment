@@ -10,6 +10,7 @@ import { categories } from "@/lib/data"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles, Search, TrendingUp, Monitor, Keyboard, Mouse, Headphones } from "lucide-react"
 import { LucideIcon } from "lucide-react"
+import { supabase } from "@/lib/supabase/client"
 
 type CategoryId = 'gaming-mice' | 'keyboards' | 'monitors' | 'headsets'
 
@@ -51,6 +52,8 @@ export function MainContent() {
   
   const [particles, setParticles] = useState<Particle[]>([])
   const [mouseTrail, setMouseTrail] = useState<{ x: number; y: number }[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
 
   // Enhanced mouse tracking with particle generation
   const generateParticle = useCallback((x: number, y: number): Particle => ({
@@ -111,8 +114,40 @@ export function MainContent() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const handleRetry = async () => {
+    setIsRetrying(true)
+    try {
+      const response = await fetch('/api/fix-permissions', { method: 'POST' })
+      if (!response.ok) {
+        throw new Error('Failed to fix permissions')
+      }
+      window.location.reload()
+    } catch (err) {
+      console.error('Error retrying:', err)
+      setError('Failed to fix the issue. Please try again later.')
+    } finally {
+      setIsRetrying(false)
+    }
+  }
+
   return (
     <MainLayout>
+      {error && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-card p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold mb-2">Error Loading Data</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button 
+              onClick={handleRetry}
+              disabled={isRetrying}
+              className="w-full"
+            >
+              {isRetrying ? 'Fixing...' : 'Try to Fix'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section with Enhanced Parallax */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         {/* Dynamic background gradient with pulse */}
