@@ -13,9 +13,17 @@ interface Props {
 }
 
 export default async function ProductPage({ params }: Props) {
-  // Normalize the slug to match database format
-  const normalizedSlug = params.slug.replace(/-g-pro-/, '-gpro-')
+  // Try both slug formats
+  const normalizedSlug = params.slug.replace(/-gpro-/, '-g-pro-')
   const product = await getProduct(normalizedSlug)
+
+  // If not found, try the original slug
+  if (!product && params.slug !== normalizedSlug) {
+    const originalProduct = await getProduct(params.slug)
+    if (originalProduct) {
+      return originalProduct
+    }
+  }
 
   if (!product) {
     return (
