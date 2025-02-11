@@ -1,82 +1,68 @@
 "use client"
 
+import { ThumbsUp, ThumbsDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown } from "lucide-react"
 import { useVote } from "@/hooks/use-vote"
-import { Product } from "@/types/product"
 import { cn } from "@/lib/utils"
-import { motion, AnimatePresence } from "framer-motion"
+import { VoteType } from "@/types/vote"
 
 interface VoteButtonsProps {
-  product: Product
+  productId: string
+  upvotes: number
+  downvotes: number
+  userVote?: VoteType | null
   className?: string
 }
 
-export function VoteButtons({ product, className }: VoteButtonsProps) {
-  const { product: votedProduct, vote, isLoading } = useVote(product)
+export function VoteButtons({ 
+  productId, 
+  upvotes = 0, 
+  downvotes = 0, 
+  userVote = null,
+  className 
+}: VoteButtonsProps) {
+  const { vote, isLoading } = useVote()
+
+  const handleVote = (type: VoteType) => {
+    if (!isLoading) {
+      vote(productId, type)
+    }
+  }
 
   return (
-    <div className={cn("flex items-center gap-1", className)}>
+    <div className={cn("flex items-center gap-2", className)}>
       <Button
         variant="ghost"
         size="sm"
         className={cn(
-          "h-8 w-8 rounded-md p-0",
-          votedProduct.userVote === 'up' 
-            ? "text-[#ff4b26] bg-[#ff4b26]/5" 
-            : "text-white/50 hover:text-white hover:bg-white/5"
+          "flex items-center gap-1",
+          userVote === 'up' && "bg-green-100 hover:bg-green-200"
         )}
+        onClick={() => handleVote('up')}
         disabled={isLoading}
-        onClick={() => vote(votedProduct.userVote === 'up' ? null : 'up')}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={votedProduct.userVote === 'up' ? 'voted' : 'not-voted'}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <ChevronUp className="h-4 w-4" />
-          </motion.div>
-        </AnimatePresence>
+        <ThumbsUp className={cn(
+          "h-4 w-4",
+          userVote === 'up' && "text-green-600"
+        )} />
+        <span>{upvotes}</span>
       </Button>
 
-      <AnimatePresence mode="wait">
-        <motion.span
-          key={votedProduct.votes}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="min-w-[2rem] text-center text-sm font-medium text-white/50"
-        >
-          {votedProduct.votes ?? 0}
-        </motion.span>
-      </AnimatePresence>
-
       <Button
         variant="ghost"
         size="sm"
         className={cn(
-          "h-8 w-8 rounded-md p-0",
-          votedProduct.userVote === 'down' 
-            ? "text-red-500 bg-red-500/5" 
-            : "text-white/50 hover:text-white hover:bg-white/5"
+          "flex items-center gap-1",
+          userVote === 'down' && "bg-red-100 hover:bg-red-200"
         )}
+        onClick={() => handleVote('down')}
         disabled={isLoading}
-        onClick={() => vote(votedProduct.userVote === 'down' ? null : 'down')}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={votedProduct.userVote === 'down' ? 'voted' : 'not-voted'}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <ChevronDown className="h-4 w-4" />
-          </motion.div>
-        </AnimatePresence>
+        <ThumbsDown className={cn(
+          "h-4 w-4",
+          userVote === 'down' && "text-red-600"
+        )} />
+        <span>{downvotes}</span>
       </Button>
     </div>
   )

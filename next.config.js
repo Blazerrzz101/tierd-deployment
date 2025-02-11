@@ -5,29 +5,35 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   },
   images: {
-    unoptimized: true,
+    unoptimized: false,
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'source.unsplash.com'
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co'
       }
-    ]
+    ],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ['image/webp']
   },
   eslint: {
-    ignoreDuringBuilds: true
+    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
+    dirs: ['app', 'components', 'lib', 'hooks']
   },
   typescript: {
-    ignoreBuildErrors: true
+    ignoreBuildErrors: process.env.NODE_ENV === 'production'
   },
   webpack: (config, { dev, isServer }) => {
     config.resolve.fallback = {
-      ...config.resolve.fallback,
       fs: false,
       net: false,
-      tls: false
+      tls: false,
     }
 
-    // Only enable optimization in production
     if (!dev) {
       config.optimization = {
         ...config.optimization,
@@ -43,7 +49,14 @@ const nextConfig = {
             defaultVendors: {
               test: /[\\/]node_modules[\\/]/,
               priority: -10,
-              reuseExistingChunk: true
+              reuseExistingChunk: true,
+              chunks: 'all',
+              name(module) {
+                const packageName = module.context.match(
+                  /[\\/]node_modules[\\/](.*?)([\\/]|$)/
+                )[1]
+                return `vendor.${packageName.replace('@', '')}`
+              }
             },
             default: {
               minChunks: 2,
@@ -53,38 +66,83 @@ const nextConfig = {
           }
         }
       }
+
+      if (config.optimization.minimizer) {
+        config.optimization.minimizer.forEach((minimizer) => {
+          if (minimizer.constructor.name === 'TerserPlugin') {
+            minimizer.options.terserOptions = {
+              ...minimizer.options.terserOptions,
+              compress: {
+                drop_console: true,
+                drop_debugger: true
+              },
+              output: {
+                comments: false
+              }
+            }
+          }
+        })
+      }
     }
 
-    // Suppress warnings
     config.ignoreWarnings = [
-      { module: /node_modules\/punycode/ },
-      { message: /Critical dependency|Required package/ }
+      { message: /Critical dependency: the request of a dependency is an expression/ }
     ]
 
     return config
   },
-  // Disable powered by header
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin'
+          }
+        ]
+      }
+    ]
+  },
   poweredByHeader: false,
-  // Enable compression
   compress: true,
-  // Enable React strict mode
   reactStrictMode: true,
-  // Enable SWC minification
   swcMinify: true,
-  // Experimental features
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons']
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      '@heroicons/react'
+    ],
+    turbotrace: {
+      logLevel: 'error',
+      contextDirectory: __dirname,
+      processCwd: __dirname
+    }
   },
-  // Server configuration
   serverRuntimeConfig: {
-    // Will only be available on the server side
     PORT: process.env.PORT || 3000
   },
-  // Both client and server
   publicRuntimeConfig: {
-    // Will be available on both server and client
     staticFolder: '/static',
+    isDevelopment: process.env.NODE_ENV === 'development'
   }
 }
 

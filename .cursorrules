@@ -1,0 +1,74 @@
+# Lessons
+## User Specified Lessons
+- You have a python venv in ./venv. Use it.
+- Include info useful for debugging in the program output.
+- Read the file before you try to edit it.
+- Due to Cursor's limit, when you use `git` and `gh` and need to submit a multiline commit message, first write the message in a file, and then use `git commit -F <filename>` or similar command to commit. And then remove the file. Include "[Cursor] " in the commit message and PR title.
+
+## Cursor learned
+- For search results, ensure proper handling of different character encodings (UTF-8) for international queries
+- Add debug information to stderr while keeping the main output clean in stdout for better pipeline integration
+- When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
+- Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
+- When working with Supabase, ensure database types are properly defined in types/supabase.ts before implementing realtime features
+- In Next.js, enable ESLint and TypeScript type checking only in development for faster production builds
+- Use specific vendor chunks in webpack configuration to optimize bundle sizes for frequently used packages
+
+# Scratchpad
+
+## Current Task: Documentation and Testing
+
+### Overview
+Completed documentation for SQL migrations and project documentation.
+
+### Progress Tracking
+
+1. SQL Migration Documentation
+[X] Document initial schema setup
+[X] Document vote management migration
+[X] Document product categories migration
+[X] Document analytics tracking migration
+[X] Document thread product mentions migration
+[X] Add inline comments for complex SQL functions
+[X] Document database triggers and policies
+
+2. Project Documentation
+[X] Update README.md with:
+  - Project overview and features
+  - Tech stack details
+  - Setup instructions
+  - Development commands
+  - Testing instructions
+  - Deployment guide
+  - Documentation links
+[X] Create CONTRIBUTING.md with:
+  - Code of conduct
+  - Development workflow
+  - Pull request process
+  - Testing guidelines
+[X] Create API documentation with:
+  - Authentication endpoints
+  - Product endpoints
+  - Vote endpoints
+  - Thread endpoints
+  - Real-time subscriptions
+  - Error handling
+  - Rate limiting
+[X] Create database schema documentation with:
+  - Table definitions
+  - Relationships
+  - Indexes
+  - Security policies
+  - Maintenance procedures
+[X] Create component library documentation with:
+  - Component usage examples
+  - Props documentation
+  - Hooks documentation
+  - Best practices
+
+### Current Step
+Documentation tasks completed. Next steps:
+1. Review all documentation for consistency
+2. Add code examples to API documentation
+3. Create diagrams for database schema
+4. Add testing coverage report 

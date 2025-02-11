@@ -13,6 +13,7 @@ import { useCart } from "@/hooks/use-cart"
 import { useWishlist } from "@/hooks/use-wishlist"
 import { ProductReviews } from "@/components/products/product-reviews"
 import { ProductThreads } from "@/components/products/product-threads"
+import { VoteButtons } from "@/components/products/vote-buttons"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 
@@ -157,7 +158,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">{product.name}</h1>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-4">
             <div className="flex items-center">
               {[...Array(5)].map((_, i) => (
                 <Star
@@ -173,6 +174,12 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             <span className="text-sm text-gray-500">
               ({product.review_count || 0} reviews)
             </span>
+            <VoteButtons
+              productId={product.id}
+              upvotes={product.metadata?.upvotes || 0}
+              downvotes={product.metadata?.downvotes || 0}
+              userVote={product.metadata?.userVote}
+            />
           </div>
         </div>
 

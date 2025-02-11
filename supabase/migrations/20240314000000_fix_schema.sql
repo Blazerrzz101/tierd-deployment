@@ -1,3 +1,175 @@
+-- Migration: Initial Schema Setup
+-- Description: Sets up the initial database schema with core tables and functions
+-- Author: James Montgomery
+-- Date: 2024-03-14
+
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";      -- For UUID generation
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";        -- For text search functionality
+CREATE EXTENSION IF NOT EXISTS "pgjwt";          -- For JWT handling
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";       -- For cryptographic functions
+
+-- Set up search configuration
+ALTER DATABASE postgres SET search_path TO public;
+
+-- Create custom types
+DO $$ BEGIN
+    -- Enum for vote types (up/down)
+    CREATE TYPE vote_type AS ENUM ('up', 'down');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Create base tables
+CREATE TABLE IF NOT EXISTS public.users (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email text UNIQUE NOT NULL,
+    username text UNIQUE NOT NULL,
+    avatar_url text,
+    is_online boolean DEFAULT false,
+    is_public boolean DEFAULT true,
+    created_at timestamptz DEFAULT now(),
+    last_seen timestamptz DEFAULT now(),
+    CONSTRAINT username_length CHECK (char_length(username) >= 3 AND char_length(username) <= 30),
+    CONSTRAINT email_valid CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
+);
+
+-- Products table for storing product information
+CREATE TABLE IF NOT EXISTS public.products (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name text NOT NULL,
+    description text,
+    category text NOT NULL,
+    price numeric(10,2) NOT NULL,
+    image_url text,
+    url_slug text UNIQUE,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    CONSTRAINT name_not_empty CHECK (char_length(name) > 0),
+    CONSTRAINT price_positive CHECK (price >= 0),
+    CONSTRAINT category_not_empty CHECK (char_length(category) > 0)
+);
+
+-- Votes table for tracking user votes on products
+CREATE TABLE IF NOT EXISTS public.votes (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
+    vote_type vote_type NOT NULL,
+    created_at timestamptz DEFAULT now(),
+    UNIQUE(user_id, product_id)
+);
+
+-- Product rankings materialized view
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.product_rankings AS
+WITH vote_counts AS (
+    SELECT 
+        product_id,
+        COUNT(CASE WHEN vote_type = 'up' THEN 1 END) as upvotes,
+        COUNT(CASE WHEN vote_type = 'down' THEN 1 END) as downvotes
+    FROM public.votes
+    GROUP BY product_id
+)
+SELECT 
+    p.id,
+    p.name,
+    p.category,
+    p.price,
+    p.image_url,
+    p.url_slug,
+    COALESCE(v.upvotes, 0) as upvotes,
+    COALESCE(v.downvotes, 0) as downvotes,
+    COALESCE(v.upvotes, 0) - COALESCE(v.downvotes, 0) as score,
+    p.created_at
+FROM public.products p
+LEFT JOIN vote_counts v ON p.id = v.product_id
+ORDER BY score DESC, p.created_at DESC;
+
+-- Create index for faster ranking lookups
+CREATE UNIQUE INDEX IF NOT EXISTS product_rankings_id_idx ON public.product_rankings (id);
+
+-- Function to refresh product rankings
+CREATE OR REPLACE FUNCTION public.refresh_product_rankings()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.product_rankings;
+END;
+$$;
+
+-- Set up Row Level Security (RLS)
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.votes ENABLE ROW LEVEL SECURITY;
+
+-- User policies
+CREATE POLICY "Users can view public profiles"
+    ON public.users FOR SELECT
+    USING (is_public = true OR auth.uid() = id);
+
+CREATE POLICY "Users can update own profile"
+    ON public.users FOR UPDATE
+    USING (auth.uid() = id);
+
+-- Product policies
+CREATE POLICY "Anyone can view products"
+    ON public.products FOR SELECT
+    TO PUBLIC
+    USING (true);
+
+CREATE POLICY "Authenticated users can create products"
+    ON public.products FOR INSERT
+    TO authenticated
+    WITH CHECK (true);
+
+CREATE POLICY "Product owners can update their products"
+    ON public.products FOR UPDATE
+    USING (auth.uid() IN (
+        SELECT user_id
+        FROM public.products_users
+        WHERE product_id = id
+    ));
+
+-- Vote policies
+CREATE POLICY "Anyone can view votes"
+    ON public.votes FOR SELECT
+    TO PUBLIC
+    USING (true);
+
+CREATE POLICY "Authenticated users can vote"
+    ON public.votes FOR INSERT
+    TO authenticated
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can modify their own votes"
+    ON public.votes FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own votes"
+    ON public.votes FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Create function to handle vote updates
+CREATE OR REPLACE FUNCTION public.handle_vote_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Refresh rankings when votes change
+    PERFORM public.refresh_product_rankings();
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger for vote changes
+CREATE TRIGGER on_vote_change
+    AFTER INSERT OR UPDATE OR DELETE ON public.votes
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION public.handle_vote_change();
+
 -- Drop existing objects in correct dependency order
 DO $$ 
 BEGIN

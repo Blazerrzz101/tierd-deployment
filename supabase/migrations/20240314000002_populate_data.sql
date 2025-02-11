@@ -1,3 +1,8 @@
+-- Migration: Populate Initial Data
+-- Description: Populates the database with initial product data and categories
+-- Author: James Montgomery
+-- Date: 2024-03-14
+
 -- Start transaction for atomic operations
 BEGIN;
 
@@ -43,59 +48,102 @@ WITH inserted_users AS (
 INSERT INTO test_users (id, email)
 SELECT id, email FROM inserted_users;
 
+-- Create initial product categories
+INSERT INTO public.product_categories (name, description, slug)
+VALUES
+    ('Keyboards', 'Mechanical and membrane keyboards for all typing needs', 'keyboards'),
+    ('Mice', 'Gaming and productivity mice with various sensor types', 'mice'),
+    ('Monitors', 'High refresh rate and professional displays', 'monitors'),
+    ('Audio', 'Headphones, speakers, and audio interfaces', 'audio'),
+    ('Storage', 'SSDs, HDDs, and external storage solutions', 'storage'),
+    ('Networking', 'Routers, switches, and networking equipment', 'networking'),
+    ('Accessories', 'Various computer and desk accessories', 'accessories')
+ON CONFLICT (slug) DO UPDATE
+SET 
+    name = EXCLUDED.name,
+    description = EXCLUDED.description;
+
 -- Insert sample products
-INSERT INTO products (
-    name, brand, category, price, rating, details, image_url, description, url_slug,
-    upvotes, downvotes, neutral_votes, score, controversy_score
-) VALUES
+INSERT INTO public.products (
+    name,
+    description,
+    category,
+    price,
+    image_url,
+    url_slug
+)
+VALUES
     (
         'Logitech G Pro X Superlight',
-        'Logitech',
-        'Gaming Mice',
+        'Ultra-lightweight wireless gaming mouse with HERO 25K sensor',
+        'Mice',
         149.99,
-        4.8,
-        '{"weight": "63g", "sensor": "HERO 25K", "connection": "Wireless"}',
-        'https://example.com/gpro.jpg',
-        'Ultra-lightweight professional gaming mouse',
-        'logitech-g-pro-x-superlight',
-        100,
-        10,
-        5,
-        90.0,
-        0.91
+        'https://source.unsplash.com/random/800x600/?mouse',
+        'logitech-g-pro-x-superlight'
     ),
     (
-        'Razer Viper V2 Pro',
-        'Razer',
-        'Gaming Mice',
-        149.99,
-        4.7,
-        '{"weight": "58g", "sensor": "Focus Pro 30K", "connection": "Wireless"}',
-        'https://example.com/viper.jpg',
-        'High-performance wireless gaming mouse',
-        'razer-viper-v2-pro',
-        90,
-        15,
-        8,
-        75.0,
-        0.86
+        'Keychron Q1',
+        'Customizable mechanical keyboard with QMK/VIA support',
+        'Keyboards',
+        169.99,
+        'https://source.unsplash.com/random/800x600/?keyboard',
+        'keychron-q1'
     ),
     (
-        'Pulsar X2',
-        'Pulsar',
-        'Gaming Mice',
-        94.99,
-        4.6,
-        '{"weight": "52g", "sensor": "PAW3395", "connection": "Wireless"}',
-        'https://example.com/x2.jpg',
-        'Lightweight symmetrical gaming mouse',
-        'pulsar-x2',
-        80,
-        20,
-        10,
-        60.0,
-        0.80
-    );
+        'LG 27GP950-B',
+        '27" 4K UHD Nano IPS Gaming Monitor with 144Hz refresh rate',
+        'Monitors',
+        799.99,
+        'https://source.unsplash.com/random/800x600/?monitor',
+        'lg-27gp950-b'
+    ),
+    (
+        'Samsung 970 EVO Plus',
+        '1TB NVMe M.2 SSD with up to 3,500 MB/s read speeds',
+        'Storage',
+        109.99,
+        'https://source.unsplash.com/random/800x600/?ssd',
+        'samsung-970-evo-plus'
+    ),
+    (
+        'Audio-Technica ATH-M50x',
+        'Professional studio monitor headphones',
+        'Audio',
+        149.99,
+        'https://source.unsplash.com/random/800x600/?headphones',
+        'audio-technica-ath-m50x'
+    ),
+    (
+        'ASUS RT-AX86U',
+        'Wi-Fi 6 gaming router with 2.5G port',
+        'Networking',
+        249.99,
+        'https://source.unsplash.com/random/800x600/?router',
+        'asus-rt-ax86u'
+    ),
+    (
+        'Glorious Model O',
+        'Ultra-lightweight gaming mouse with honeycomb design',
+        'Mice',
+        59.99,
+        'https://source.unsplash.com/random/800x600/?gaming_mouse',
+        'glorious-model-o'
+    ),
+    (
+        'Ducky One 2 Mini',
+        '60% mechanical keyboard with Cherry MX switches',
+        'Keyboards',
+        99.99,
+        'https://source.unsplash.com/random/800x600/?mechanical_keyboard',
+        'ducky-one-2-mini'
+    )
+ON CONFLICT (url_slug) DO UPDATE
+SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    category = EXCLUDED.category,
+    price = EXCLUDED.price,
+    image_url = EXCLUDED.image_url;
 
 -- Generate reviews and votes
 DO $$
@@ -141,7 +189,26 @@ BEGIN
     END LOOP;
 END $$;
 
--- Refresh the materialized view
-REFRESH MATERIALIZED VIEW product_rankings;
+-- Create initial product rankings
+REFRESH MATERIALIZED VIEW CONCURRENTLY public.product_rankings;
+
+-- Create function to periodically update rankings
+CREATE OR REPLACE FUNCTION public.update_rankings_hourly()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Refresh rankings
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.product_rankings;
+END;
+$$;
+
+-- Set up scheduled task to update rankings
+SELECT cron.schedule(
+    'update-rankings',
+    '0 * * * *', -- Every hour
+    'SELECT public.update_rankings_hourly()'
+);
 
 COMMIT; 

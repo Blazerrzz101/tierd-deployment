@@ -2,9 +2,10 @@
 
 import { motion, useScroll, useTransform } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Star, Search } from "lucide-react"
+import { ArrowRight, Star } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { SearchBar } from "./search-bar"
 
 export function HeroSection() {
   const { scrollY } = useScroll()
@@ -30,6 +31,11 @@ export function HeroSection() {
     <div className="relative min-h-screen overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 animated-gradient" />
+      
+      {/* Search Bar - Persistent */}
+      <div className="relative z-50">
+        <SearchBar />
+      </div>
       
       {/* Animated Gradient Orbs */}
       <motion.div
@@ -116,27 +122,6 @@ export function HeroSection() {
               >
                 Discover and compare the best gaming gear, ranked by real streamers and pro gamers. Make informed decisions with authentic reviews and real-time rankings.
               </motion.p>
-
-              {/* Search Bar */}
-              <motion.div
-                variants={fadeInUp}
-                className="mt-8"
-              >
-                <div className="search-bar">
-                  <Search className="h-6 w-6 text-muted-foreground" />
-                  <input 
-                    type="text" 
-                    placeholder="Find the best gaming mouse, keyboard, etc."
-                    className="flex-1"
-                  />
-                  <Button 
-                    size="sm"
-                    className="interactive bg-primary text-primary-foreground"
-                  >
-                    Search
-                  </Button>
-                </div>
-              </motion.div>
 
               <motion.div 
                 variants={fadeInUp}

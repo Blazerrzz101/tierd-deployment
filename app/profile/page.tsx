@@ -6,81 +6,44 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Suspense } from "react"
+import { redirect } from "next/navigation"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ProfileHeader } from "@/components/profile/profile-header"
+import { ProfileActivity } from "@/components/profile/profile-activity"
+import { ProfileSettings } from "@/components/profile/profile-settings"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { getUser } from "@/lib/supabase/server"
 
-export default function ProfilePage() {
-  const { user, userDetails, isLoading } = useAuth()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/auth/sign-in')
-    }
-  }, [isLoading, user, router])
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-10">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-12 w-[250px]" />
-            <Skeleton className="h-4 w-[200px]" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-              <Skeleton className="h-4 w-[300px]" />
-              <Skeleton className="h-4 w-[250px]" />
-              <Skeleton className="h-4 w-[200px]" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (!user || !userDetails) {
-    return null
+export default async function ProfilePage() {
+  const user = await getUser()
+  
+  if (!user) {
+    redirect('/auth/sign-in')
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={userDetails.avatar_url || undefined} />
-              <AvatarFallback>
-                {userDetails.username?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle>{userDetails.username || 'Anonymous User'}</CardTitle>
-              <CardDescription>{user.email}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium">Member since</p>
-              <p className="text-sm text-muted-foreground">
-                {userDetails.created_at ? new Date(userDetails.created_at).toLocaleDateString() : 'Unknown'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Last seen</p>
-              <p className="text-sm text-muted-foreground">
-                {userDetails.last_seen ? new Date(userDetails.last_seen).toLocaleDateString() : 'Unknown'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Status</p>
-              <p className="text-sm text-muted-foreground">
-                {userDetails.is_online ? 'Online' : 'Offline'}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="container mx-auto px-4 py-8">
+      <ProfileHeader user={user} />
+      
+      <Tabs defaultValue="activity" className="mt-8">
+        <TabsList className="w-full">
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="activity" className="mt-6">
+          <Suspense fallback={<LoadingSpinner />}>
+            <ProfileActivity userId={user.id} />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-6">
+          <Suspense fallback={<LoadingSpinner />}>
+            <ProfileSettings user={user} />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

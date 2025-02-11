@@ -19,10 +19,10 @@ interface RankingCardProps {
 }
 
 export function RankingCard({ rank, product }: RankingCardProps) {
-  const { product: currentProduct, vote } = useVote(product)
+  const { vote, isLoading } = useVote()
 
   // Get the image URL, falling back to placeholder
-  const imageUrl = currentProduct.image_url || PLACEHOLDER_IMAGE
+  const imageUrl = product.image_url || PLACEHOLDER_IMAGE
 
   return (
     <motion.div
@@ -49,7 +49,7 @@ export function RankingCard({ rank, product }: RankingCardProps) {
           <div className="relative aspect-square w-20 overflow-hidden rounded-lg bg-black/20">
             <Image
               src={imageUrl}
-              alt={currentProduct.name}
+              alt={product.name}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {
@@ -65,27 +65,32 @@ export function RankingCard({ rank, product }: RankingCardProps) {
           <div className="flex flex-1 flex-col gap-2">
             <div className="flex items-center gap-3">
               <h3 className="text-lg font-medium text-white/90 transition-colors group-hover:text-white">
-                {currentProduct.name}
+                {product.name}
               </h3>
               <div className="flex items-center gap-1.5 rounded-full bg-white/5 px-2 py-0.5">
                 <Star className="h-3.5 w-3.5 fill-[#ff4b26] text-[#ff4b26]" />
                 <span className="text-sm font-medium text-white/70">
-                  {(currentProduct.votes ?? 0) > 0 ? `+${currentProduct.votes}` : currentProduct.votes ?? 0}
+                  {(product.votes ?? 0) > 0 ? `+${product.votes}` : product.votes ?? 0}
                 </span>
               </div>
             </div>
             
             <div className="flex items-center gap-4 text-sm text-white/50">
-              <span className="capitalize">{currentProduct.category.replace('-', ' ')}</span>
+              <span className="capitalize">{product.category.replace('-', ' ')}</span>
               <span className="h-1 w-1 rounded-full bg-white/20" />
-              <span>${currentProduct.price?.toFixed(2) ?? '0.00'}</span>
+              <span>${product.price?.toFixed(2) ?? '0.00'}</span>
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-6">
-            <VoteButtons product={currentProduct} />
-            <Link href={`/products/${currentProduct.url_slug}`}>
+            <VoteButtons 
+              productId={product.id}
+              upvotes={product.votes ?? 0}
+              downvotes={0}
+              userVote={product.userVote}
+            />
+            <Link href={`/products/${product.url_slug}`}>
               <Button 
                 variant="ghost" 
                 size="sm"

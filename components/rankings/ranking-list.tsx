@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { RankingCard } from "./ranking-card"
 import { Product } from "@/types/product"
 import { supabase } from "@/lib/supabase/client"
@@ -36,6 +37,8 @@ export function RankingList({ categoryId }: RankingListProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const searchQuery = searchParams.get('search')
 
   useEffect(() => {
     async function fetchProducts() {
@@ -44,11 +47,22 @@ export function RankingList({ categoryId }: RankingListProps) {
         setIsLoading(true)
         setError(null)
 
-        // Simple query to test permissions
-        const { data, error: queryError } = await supabase
+        let query = supabase
           .from('products')
           .select('*')
-          .limit(10)
+          .order('votes', { ascending: false })
+
+        // Apply category filter if specified
+        if (categoryId !== 'all') {
+          query = query.eq('category', categoryId)
+        }
+
+        // Apply search filter if specified
+        if (searchQuery) {
+          query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+        }
+
+        const { data, error: queryError } = await query.limit(50)
 
         if (queryError) {
           console.error('Database error:', queryError)
@@ -70,10 +84,10 @@ export function RankingList({ categoryId }: RankingListProps) {
           category: product.category || '',
           price: product.price || 0,
           image_url: product.image_url || '/placeholder.png',
-          votes: 0,
-          rank: 0,
-          specs: {},
-          userVote: null,
+          votes: product.votes || 0,
+          rank: product.rank || 0,
+          specs: product.specs || {},
+          userVote: product.user_vote || null,
           url_slug: product.url_slug || '',
           created_at: product.created_at || new Date().toISOString(),
           updated_at: product.updated_at || new Date().toISOString()
@@ -89,10 +103,14 @@ export function RankingList({ categoryId }: RankingListProps) {
     }
 
     fetchProducts()
-  }, [categoryId])
+  }, [categoryId, searchQuery])
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading products...</div>
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   if (error) {
@@ -113,7 +131,10 @@ export function RankingList({ categoryId }: RankingListProps) {
   if (products.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        No products found in this category.
+        {searchQuery 
+          ? `No products found matching "${searchQuery}"`
+          : 'No products found in this category.'
+        }
       </div>
     )
   }

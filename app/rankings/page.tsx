@@ -18,18 +18,23 @@ export default function RankingsPage() {
           <SearchBar />
         </div>
 
-        {/* Category Buttons */}
-        <div className="mb-8 flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <Button
-              key={category.id}
-              variant={selectedCategory === category.id ? "default" : "outline"}
-              onClick={() => setSelectedCategory(category.id)}
-              className="min-w-[100px]"
-            >
-              {category.name}
-            </Button>
-          ))}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold">Top Ranked Products</h1>
+          
+          {/* Category Tabs */}
+          <div className="flex gap-1">
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                variant={selectedCategory === category.id ? "default" : "ghost"}
+                onClick={() => setSelectedCategory(category.id)}
+                className="px-3 h-9"
+                size="sm"
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Rankings */}

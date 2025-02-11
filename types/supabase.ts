@@ -143,6 +143,49 @@ export type Database = {
           last_seen?: string
         }
       }
+      votes: {
+        Row: {
+          id: string
+          user_id: string
+          product_id: string
+          vote_type: 'up' | 'down'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          product_id: string
+          vote_type: 'up' | 'down'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          product_id?: string
+          vote_type?: 'up' | 'down'
+          created_at?: string
+        }
+      }
+      product_mentions: {
+        Row: {
+          id: string
+          thread_id: string
+          product_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          thread_id: string
+          product_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          thread_id?: string
+          product_id?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       reddit_threads_view: {

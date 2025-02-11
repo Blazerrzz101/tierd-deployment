@@ -1,134 +1,108 @@
 "use client"
 
 import { useState } from "react"
-import { UserProfile } from "@/types/user"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"
-import { toast } from "sonner"
+import { useToast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabase/client"
 
 interface ProfileSettingsProps {
-  user: UserProfile
+  userId: string
+  initialUsername?: string
 }
 
-export function ProfileSettings({ user }: ProfileSettingsProps) {
-  const [email, setEmail] = useState(user.email)
-  const [notifications, setNotifications] = useState(true)
-  const [publicProfile, setPublicProfile] = useState(user.isPublic)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [pendingChange, setPendingChange] = useState<{ type: string; value: boolean } | null>(null)
+export function ProfileSettings({ userId, initialUsername }: ProfileSettingsProps) {
+  const [username, setUsername] = useState(initialUsername || '')
+  const [isLoading, setIsLoading] = useState(false)
+  const { toast } = useToast()
+  const router = useRouter()
 
-  const handlePrivacyChange = (value: boolean) => {
-    setPendingChange({ type: 'privacy', value })
-    setShowConfirmDialog(true)
-  }
+  const handleUpdateProfile = async () => {
+    try {
+      setIsLoading(true)
 
-  const handleConfirmChange = () => {
-    if (!pendingChange) return
+      const { error } = await supabase
+        .from('user_details')
+        .update({ username })
+        .eq('id', userId)
 
-    if (pendingChange.type === 'privacy') {
-      setPublicProfile(pendingChange.value)
-      toast.success(`Profile visibility changed to ${pendingChange.value ? 'public' : 'private'}`)
+      if (error) throw error
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      })
+
+      router.refresh()
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
-
-    setShowConfirmDialog(false)
-    setPendingChange(null)
   }
 
-  const handleSave = () => {
-    // TODO: Implement settings update
-    toast.success("Settings saved successfully!")
+  const handleSignOut = async () => {
+    try {
+      setIsLoading(true)
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      console.error('Error signing out:', error)
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <>
-      <Card className="border-2">
-        <CardHeader>
-          <CardTitle className="text-xl">Profile Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="username" className="text-sm font-semibold">
-              Username
-            </Label>
-            <Input 
-              id="username" 
-              value={user.username} 
-              disabled 
-              className="bg-muted/50 text-sm"
-            />
-          </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Settings</CardTitle>
+        <CardDescription>Manage your account settings</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="username">Username</Label>
+          <Input
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-semibold">
-              Email
-            </Label>
-            <Input 
-              id="email" 
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-semibold">Public Profile</Label>
-              <div className="text-xs text-muted-foreground">
-                Make your profile visible to everyone
-              </div>
-            </div>
-            <Switch
-              checked={publicProfile}
-              onCheckedChange={handlePrivacyChange}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-semibold">Email Notifications</Label>
-              <div className="text-xs text-muted-foreground">
-                Receive updates about your activity
-              </div>
-            </div>
-            <Switch
-              checked={notifications}
-              onCheckedChange={setNotifications}
-            />
-          </div>
-
-          <Button 
-            onClick={handleSave} 
-            className="w-full bg-primary font-medium hover:bg-primary/90"
+        <div className="flex flex-col gap-4">
+          <Button
+            onClick={handleUpdateProfile}
+            disabled={isLoading || !username || username === initialUsername}
           >
-            Save Changes
+            {isLoading ? "Updating..." : "Update Profile"}
           </Button>
-        </CardContent>
-      </Card>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Change Profile Visibility</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingChange?.value 
-                ? "Making your profile public will allow anyone to see your activity and preferences."
-                : "Making your profile private will hide your activity and preferences from other users."
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmChange}>
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+          <Button
+            variant="destructive"
+            onClick={handleSignOut}
+            disabled={isLoading}
+          >
+            {isLoading ? "Signing out..." : "Sign Out"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

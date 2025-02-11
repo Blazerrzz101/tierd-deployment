@@ -1,264 +1,219 @@
-# Tier'd - Community-Driven Gaming Gear Rankings
+# Tier'd
 
-A Next.js application with Supabase backend for community-driven gaming gear rankings, reviews, and discussions.
+Tier'd is a modern product discovery and discussion platform built with Next.js, Supabase, and Tailwind CSS. It allows users to discover, discuss, and vote on tech products, creating a community-driven ranking system.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.0-black)](https://nextjs.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-2.0-green)](https://supabase.io/)
 
 ## Features
 
-- User authentication
-- Real-time voting system
-- Product reviews with ratings
-- Real-time updates
-- Rate limiting for votes and reviews
+- 🔒 **Authentication**
+  - Email/password and OAuth (GitHub, Google) sign-in
+  - Password reset functionality
+  - Profile management
+
+- 🗳️ **Voting System**
+  - Upvote/downvote products
+  - Anonymous voting with daily limits
+  - Vote tracking and analytics
+  - Real-time vote updates
+
+- 💬 **Discussion System**
+  - Thread creation and management
+  - Product mentions with @ syntax
+  - Real-time updates
+  - Rich text formatting
+
+- 🏷️ **Product Management**
+  - Product categories and tags
+  - Product rankings based on votes
+  - Product search and filtering
+  - SEO-friendly URLs
+
+- 🎨 **Modern UI/UX**
+  - Responsive design
+  - Dark/light mode
+  - Accessibility features
+  - Loading states and animations
+
+## Tech Stack
+
+- **Frontend**
+  - Next.js 14 (App Router)
+  - TypeScript
+  - Tailwind CSS
+  - shadcn/ui components
+  - Zustand for state management
+
+- **Backend**
+  - Supabase (PostgreSQL)
+  - Row Level Security
+  - Real-time subscriptions
+  - Edge Functions
+
+- **Infrastructure**
+  - Vercel deployment
+  - Supabase hosting
+  - Image optimization
+  - Edge caching
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
-- Supabase account
+- Node.js (v18 or higher)
+- npm (v9 or higher)
+- Supabase account and CLI
 
-### Environment Setup
+### Installation
 
-1. Create a `.env` file in the root directory:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/tierd.git
+   cd tierd
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Fill in your Supabase credentials and other required variables.
+
+4. Run database migrations:
+   ```bash
+   supabase db reset
+   ```
+
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+Visit `http://localhost:3000` to see the app running.
+
+## Environment Variables
+
+Create a `.env.local` file with the following variables:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-2. Install dependencies:
+## Project Structure
 
-```bash
-npm install
+```
+tierd/
+├── app/                    # Next.js app directory
+├── components/             # React components
+│   ├── ui/                # Shared UI components
+│   ├── products/          # Product-related components
+│   └── thread/            # Thread-related components
+├── hooks/                 # Custom React hooks
+├── lib/                   # Utility functions
+├── public/               # Static assets
+├── styles/              # Global styles
+├── supabase/            # Supabase config
+└── types/               # TypeScript types
 ```
 
-3. Start the development server:
+## Development
+
+### Commands
 
 ```bash
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Run tests
+npm test
+
+# Run linting
+npm run lint
+
+# Run type checking
+npm run typecheck
 ```
 
-## Authentication System
+### Testing
 
-The authentication system uses Supabase Auth with email/password sign-in.
+We use Vitest and Testing Library for testing. Run tests with:
 
-### Usage
-
-```typescript
-import { useAuth } from "@/hooks/use-auth"
-
-function MyComponent() {
-  const { user, signIn, signUp, signOut } = useAuth()
-
-  // Sign in
-  await signIn(email, password)
-
-  // Sign up
-  await signUp(email, password, username)
-
-  // Sign out
-  await signOut()
-}
-```
-
-### Protected Routes
-
-Use the AuthGuard component to protect routes:
-
-```typescript
-import { AuthGuard } from "@/components/auth/auth-guard"
-
-function ProtectedPage() {
-  return (
-    <AuthGuard>
-      <YourComponent />
-    </AuthGuard>
-  )
-}
-```
-
-## Voting System
-
-The voting system allows authenticated users to upvote or downvote products with rate limiting.
-
-### Usage
-
-```typescript
-import { useVote } from "@/hooks/use-vote"
-
-function ProductVoting({ product }) {
-  const { product: currentProduct, vote } = useVote(product)
-
-  // Handle vote
-  const handleVote = (type: 'up' | 'down') => {
-    vote(type)
-  }
-}
-```
-
-### Rate Limiting
-
-Vote rate limiting is handled by `use-vote-limiter`:
-- Cooldown period between votes
-- Maximum votes per time window
-- Persistent tracking using localStorage
-
-## Review System
-
-The review system allows users to submit, edit, and delete reviews with ratings.
-
-### Usage
-
-```typescript
-import { useReview } from "@/hooks/use-review"
-
-function ProductReviews({ productId }) {
-  const { reviews, submitReview, deleteReview } = useReview(productId)
-
-  // Submit review
-  await submitReview({
-    title: "Great Product",
-    content: "Detailed review...",
-    rating: 5
-  })
-
-  // Delete review
-  await deleteReview(reviewId)
-}
-```
-
-### Review Components
-
-1. Review Form:
-```typescript
-import { ReviewForm } from "@/components/products/review-form"
-
-<ReviewForm 
-  onSubmit={handleSubmit}
-  initialData={existingReview} // Optional, for editing
-/>
-```
-
-2. Review List:
-```typescript
-import { ReviewList } from "@/components/products/review-list"
-
-<ReviewList
-  reviews={reviews}
-  onDelete={handleDelete}
-  onEdit={handleEdit}
-  onHelpful={handleHelpfulVote}
-/>
-```
-
-### Rate Limiting
-
-Review submissions are rate-limited:
-- Maximum 3 reviews per day
-- 24-hour cooldown between reviews per product
-- Tracked using `use-review-limiter`
-
-## Real-Time Updates
-
-Real-time updates are handled through Supabase subscriptions:
-
-```typescript
-// hooks/use-realtime-updates.ts
-useEffect(() => {
-  const channel = supabase
-    .channel('product_votes')
-    .on('postgres_changes', 
-      { event: '*', schema: 'public', table: 'product_votes' },
-      (payload) => {
-        window.dispatchEvent(new CustomEvent('vote-update', {
-          detail: payload.new
-        }))
-      }
-    )
-    .subscribe()
-
-  return () => {
-    channel.unsubscribe()
-  }
-}, [])
-```
-
-## Testing
-
-### Local Testing
-
-1. Test Authentication:
 ```bash
-# Test sign up
-- Fill out sign-up form with email and password
-- Verify email verification flow
-- Test login with credentials
+# Run all tests
+npm test
 
-# Test protected routes
-- Attempt to access protected routes while logged out
-- Verify redirect to login
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
 ```
 
-2. Test Voting:
-```bash
-# Test vote submission
-- Vote on a product while logged in
-- Verify rate limiting
-- Test vote toggling
+## Contributing
 
-# Test real-time updates
-- Open multiple browsers/tabs
-- Verify vote counts update in real-time
-```
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-3. Test Reviews:
-```bash
-# Test review submission
-- Submit a review with rating
-- Verify rate limiting
-- Test editing and deletion
-- Verify helpful vote system
-```
+### Development Process
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## Deployment
 
-1. Create a production Supabase project
+The app is configured for deployment on Vercel with Supabase as the backend.
 
-2. Configure environment variables in your hosting platform (e.g., Vercel):
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_production_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_production_key
-```
+### Vercel Deployment
 
-3. Deploy using your preferred hosting service:
+1. Push your changes to GitHub
+2. Import your repository in Vercel
+3. Configure environment variables
+4. Deploy
+
+### Database Migrations
+
+Run migrations on your Supabase instance:
+
 ```bash
-# Example for Vercel
-vercel
+supabase db reset
 ```
 
-### Security Considerations
+## Documentation
 
-- Never expose the `service_role` key
-- Use Row Level Security (RLS) policies
-- Enable email verification for new accounts
-- Implement proper CORS policies
+- [API Documentation](docs/api.md)
+- [Database Schema](docs/schema.md)
+- [Component Library](docs/components.md)
 
-## Troubleshooting
+## Support
 
-Common issues and solutions:
+- [Discord Community](https://discord.gg/tierd)
+- [GitHub Issues](https://github.com/yourusername/tierd/issues)
+- [Email Support](mailto:support@tierd.com)
 
-1. Real-time updates not working:
-- Check Supabase connection
-- Verify channel subscription
-- Check browser console for errors
+## License
 
-2. Authentication issues:
-- Clear browser storage
-- Check environment variables
-- Verify email confirmation settings
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-3. Rate limiting issues:
-- Clear localStorage
-- Check browser console
-- Verify timing calculations
+## Acknowledgments
+
+- [Next.js](https://nextjs.org/)
+- [Supabase](https://supabase.io/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [Vercel](https://vercel.com/)

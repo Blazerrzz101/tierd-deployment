@@ -37,9 +37,12 @@ interface AuthState {
   user: User | null
   userDetails: UserDetails | null
   isLoading: boolean
-  signIn: (provider: "github" | "google") => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<void>
+  signInWithProvider: (provider: "github" | "google") => Promise<void>
+  signUp: (email: string, password: string, username: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (data: Partial<User>) => Promise<void>
+  resetPassword: (email: string) => Promise<void>
 }
 
 export const useAuth = create<AuthState>((
@@ -50,7 +53,44 @@ export const useAuth = create<AuthState>((
   userDetails: null,
   isLoading: true,
 
-  signIn: async (provider: "github" | "google") => {
+  signInWithEmail: async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) throw error
+
+      // Fetch user profile after successful sign-in
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single()
+
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError)
+        throw profileError
+      }
+
+      set({
+        user: {
+          id: data.user.id,
+          email: data.user.email!,
+          ...profile
+        }
+      })
+
+      toast.success("Signed in successfully")
+    } catch (error: any) {
+      console.error("Error signing in:", error)
+      toast.error(error.message || "Failed to sign in")
+      throw error
+    }
+  },
+
+  signInWithProvider: async (provider: "github" | "google") => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -60,9 +100,48 @@ export const useAuth = create<AuthState>((
       })
 
       if (error) throw error
-    } catch (error) {
-      console.error("Error signing in:", error)
-      toast.error("Failed to sign in")
+    } catch (error: any) {
+      console.error("Error signing in with provider:", error)
+      toast.error(error.message || "Failed to sign in")
+      throw error
+    }
+  },
+
+  signUp: async (email: string, password: string, username: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username
+          }
+        }
+      })
+
+      if (error) throw error
+
+      // Create user profile
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert([
+          {
+            id: data.user!.id,
+            email,
+            username,
+            display_name: username,
+            created_at: new Date().toISOString()
+          }
+        ])
+
+      if (profileError) throw profileError
+
+      toast.success("Account created successfully", {
+        description: "Please check your email to verify your account."
+      })
+    } catch (error: any) {
+      console.error("Error signing up:", error)
+      toast.error(error.message || "Failed to create account")
       throw error
     }
   },
@@ -83,9 +162,9 @@ export const useAuth = create<AuthState>((
 
       set({ user: null, userDetails: null })
       toast.success("Signed out successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing out:", error)
-      toast.error("Failed to sign out")
+      toast.error(error.message || "Failed to sign out")
       throw error
     }
   },
@@ -103,20 +182,41 @@ export const useAuth = create<AuthState>((
         ...state,
         user: state.user ? { ...state.user, ...data } : null
       }))
-    } catch (error) {
+
+      toast.success("Profile updated successfully")
+    } catch (error: any) {
       console.error("Error updating profile:", error)
-      toast.error("Failed to update profile")
+      toast.error(error.message || "Failed to update profile")
+      throw error
+    }
+  },
+
+  resetPassword: async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`
+      })
+
+      if (error) throw error
+
+      toast.success("Password reset email sent", {
+        description: "Please check your email for further instructions."
+      })
+    } catch (error: any) {
+      console.error("Error resetting password:", error)
+      toast.error(error.message || "Failed to send reset email")
       throw error
     }
   }
 }))
 
-// Initialize auth state
+// Initialize auth state with improved error handling and logging
 supabase.auth.onAuthStateChange(async (event, session) => {
   useAuth.setState({ isLoading: true })
+  console.log(`Auth state changed: ${event}`)
 
-  if (session?.user) {
-    try {
+  try {
+    if (session?.user) {
       // Fetch user profile and preferences
       const [{ data: profile }, { data: preferences }] = await Promise.all([
         supabase
@@ -150,11 +250,13 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         })
         .eq('id', session.user.id)
 
-    } catch (error) {
-      console.error("Error fetching user data:", error)
+      console.log('User session restored and profile updated')
+    } else {
       useAuth.setState({ user: null, isLoading: false })
+      console.log('No active session found')
     }
-  } else {
+  } catch (error) {
+    console.error("Error in auth state change handler:", error)
     useAuth.setState({ user: null, isLoading: false })
   }
 })
