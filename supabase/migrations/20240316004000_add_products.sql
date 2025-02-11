@@ -8,7 +8,7 @@ INSERT INTO public.products (name, description, category, price, url_slug, image
 
 -- Insert Mice
 INSERT INTO public.products (name, description, category, price, url_slug, image_url) VALUES
-('Logitech G Pro X Superlight', 'Ultra-lightweight wireless gaming mouse with HERO sensor', 'gaming-mice', 149.99, 'logitech-gpro-x-superlight', 'https://gaming-gear.com/images/mice/gpro-x-superlight.webp'),
+('Logitech G Pro X Superlight', 'Ultra-lightweight wireless gaming mouse with HERO sensor', 'gaming-mice', 149.99, 'logitech-g-pro-x-superlight', 'https://gaming-gear.com/images/mice/gpro-x-superlight.webp'),
 ('Razer Viper Ultimate', 'Ambidextrous wireless gaming mouse with optical switches', 'gaming-mice', 129.99, 'razer-viper-ultimate', 'https://gaming-gear.com/images/mice/viper-ultimate.webp'),
 ('Zowie EC2', 'Ergonomic esports mouse with flawless sensor', 'gaming-mice', 69.99, 'zowie-ec2-mouse', 'https://gaming-gear.com/images/mice/zowie-ec2.webp'),
 ('Pulsar X2', 'Ultra-lightweight symmetrical gaming mouse', 'gaming-mice', 89.99, 'pulsar-x2-mouse', 'https://gaming-gear.com/images/mice/pulsar-x2.webp'),

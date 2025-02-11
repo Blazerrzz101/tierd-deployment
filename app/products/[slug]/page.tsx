@@ -13,7 +13,9 @@ interface Props {
 }
 
 export default async function ProductPage({ params }: Props) {
-  const product = await getProduct(params.slug)
+  // Normalize the slug to match database format
+  const normalizedSlug = params.slug.replace(/-g-pro-/, '-gpro-')
+  const product = await getProduct(normalizedSlug)
 
   if (!product) {
     return (
