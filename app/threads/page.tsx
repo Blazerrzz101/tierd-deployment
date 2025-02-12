@@ -96,30 +96,42 @@ export default function ThreadsPage() {
   }
 
   return (
-    <div className="container max-w-4xl py-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="container mx-auto max-w-4xl px-4 py-12">
+      <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
         <div>
-          <h1 className="text-3xl font-bold">Discussions</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold tracking-tight">Discussions</h1>
+          <p className="mt-2 text-lg text-muted-foreground">
             Join the conversation about gaming gear
           </p>
         </div>
-        <Button onClick={handleCreateClick}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button 
+          onClick={handleCreateClick}
+          className="mt-4 sm:mt-0"
+          size="lg"
+        >
+          <Plus className="mr-2 h-5 w-5" />
           New Thread
         </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {threads.map(thread => (
           <ThreadCard key={thread.id} thread={thread} />
         ))}
         {threads.length === 0 && (
-          <div className="rounded-lg border p-8 text-center">
-            <h2 className="text-lg font-semibold">No threads yet</h2>
-            <p className="text-muted-foreground">
+          <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+            <h2 className="text-xl font-semibold">No threads yet</h2>
+            <p className="mt-2 text-muted-foreground">
               Be the first to start a discussion
             </p>
+            <Button 
+              onClick={handleCreateClick}
+              variant="outline" 
+              className="mt-4"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Thread
+            </Button>
           </div>
         )}
       </div>

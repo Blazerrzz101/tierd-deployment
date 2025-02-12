@@ -9,7 +9,6 @@ import { BetaBanner } from "@/components/beta-banner"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
 import { VoteNotifications } from "@/components/notifications/vote-notifications"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Particles } from "@/components/ui/particles"
 import type { Metadata } from "next"
 import { SupabaseErrorBoundary } from "@/components/supabase-error-boundary"
 import { Providers } from "@/app/providers"
@@ -33,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={`${inter.className} min-h-screen bg-black text-white antialiased`}>
+      <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
         <Providers>
           <SupabaseErrorBoundary>
             <ThemeProvider
@@ -45,9 +44,6 @@ export default function RootLayout({
               <TooltipProvider>
                 <RealtimeProvider>
                   <div className="relative flex min-h-screen flex-col">
-                    <div className="fixed inset-0 overflow-hidden">
-                      <Particles />
-                    </div>
                     <main className="relative flex-1">
                       <BetaBanner />
                       <BackgroundGradient />

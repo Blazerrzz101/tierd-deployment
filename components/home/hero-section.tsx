@@ -29,12 +29,14 @@ export function HeroSection() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Animated Background */}
+      {/* Animated Background - Only on home page */}
       <div className="absolute inset-0 animated-gradient" />
       
       {/* Search Bar - Persistent */}
-      <div className="relative z-50">
-        <SearchBar />
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto">
+          <SearchBar />
+        </div>
       </div>
       
       {/* Animated Gradient Orbs */}

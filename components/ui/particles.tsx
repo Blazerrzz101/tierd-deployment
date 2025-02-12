@@ -2,6 +2,11 @@
 
 import { useEffect, useRef } from 'react'
 import { motion, useAnimation, useInView } from 'framer-motion'
+import { cn } from '@/lib/utils'
+
+interface ParticlesProps {
+  className?: string
+}
 
 interface Particle {
   x: number
@@ -11,7 +16,7 @@ interface Particle {
   speed: number
 }
 
-export function Particles() {
+export function Particles({ className }: ParticlesProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(containerRef)
   const controls = useAnimation()
@@ -29,8 +34,8 @@ export function Particles() {
 
     particles.forEach((particle, i) => {
       controls.start(`particle${i}`, {
-        y: [particle.y, particle.y - 20],
         opacity: [particle.alpha, 0],
+        translateY: [-20, -40],
         transition: {
           duration: particle.speed * 10,
           repeat: Infinity,
@@ -42,7 +47,10 @@ export function Particles() {
   }, [isInView, controls])
 
   return (
-    <div ref={containerRef} className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div 
+      ref={containerRef} 
+      className={cn("absolute inset-0 overflow-hidden pointer-events-none", className)}
+    >
       {Array.from({ length: 50 }).map((_, i) => (
         <motion.div
           key={i}
