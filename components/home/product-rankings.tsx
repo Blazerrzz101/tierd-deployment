@@ -22,10 +22,21 @@ export function ProductRankings() {
   // Get products for the selected category
   const categoryProducts = products
     .filter(product => product.category === selectedCategory)
-    .sort((a, b) => b.votes - a.votes)
+    .sort((a, b) => {
+      // First sort by votes
+      if (b.votes !== a.votes) return b.votes - a.votes
+      // Then by rank if votes are equal
+      return (a.rank || Infinity) - (b.rank || Infinity)
+    })
 
-  const displayedProducts = categoryProducts.slice(0, displayCount)
-  const hasMore = displayCount < categoryProducts.length
+  // Update ranks based on current sorting
+  const rankedProducts = categoryProducts.map((product, index) => ({
+    ...product,
+    currentRank: index + 1
+  }))
+
+  const displayedProducts = rankedProducts.slice(0, displayCount)
+  const hasMore = displayCount < rankedProducts.length
 
   const handleVote = async (productId: string, voteType: VoteType) => {
     await vote(productId, voteType)
@@ -69,7 +80,7 @@ export function ProductRankings() {
               index === 1 && "text-[#c0c0c0]",
               index === 2 && "text-[#cd7f32]",
             )}>
-              #{index + 1}
+              #{product.currentRank}
             </div>
 
             {/* Product Image */}
@@ -84,7 +95,19 @@ export function ProductRankings() {
 
             {/* Product Info */}
             <div className="flex flex-1 flex-col gap-2">
-              <h3 className="text-xl font-semibold">{product.name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-semibold">{product.name}</h3>
+                {product.currentRank <= 3 && (
+                  <span className={cn(
+                    "rounded-full px-2 py-1 text-xs font-medium",
+                    product.currentRank === 1 && "bg-yellow-500/20 text-yellow-500",
+                    product.currentRank === 2 && "bg-gray-400/20 text-gray-400",
+                    product.currentRank === 3 && "bg-orange-700/20 text-orange-700",
+                  )}>
+                    #{product.currentRank} in {categories.find(c => c.id === selectedCategory)?.name}
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{product.description}</p>
               <div className="mt-2 flex items-center gap-4">
                 {product.price && (
@@ -126,7 +149,7 @@ export function ProductRankings() {
                   <ThumbsUp className="h-4 w-4" />
                 </Button>
               </div>
-              <Link href={`/products/${product.url_slug || '#'}`}>
+              <Link href={`/rankings/${product.category}/${product.url_slug}`}>
                 <Button 
                   variant="secondary" 
                   size="sm"
