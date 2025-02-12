@@ -149,7 +149,7 @@ export function ProductRankings() {
                   <ThumbsUp className="h-4 w-4" />
                 </Button>
               </div>
-              <Link href={`/rankings/${product.category}/${product.url_slug}`}>
+              <Link href={`/products/${product.url_slug}`}>
                 <Button 
                   variant="secondary" 
                   size="sm"
