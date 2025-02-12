@@ -36,49 +36,28 @@ export function SearchBar() {
   // Fetch and process suggestions
   useEffect(() => {
     async function fetchSuggestions() {
-      if (!debouncedQuery.trim() && selectedCategories.length === 0) {
+      if (!debouncedQuery.trim()) {
         setSuggestions([])
         return
       }
 
       setIsLoading(true)
       try {
-        // Fetch all products for the selected categories
-        const categoryFilter = selectedCategories.length > 0
-          ? selectedCategories
-          : categories.map(c => c.id)
-
         const { data, error } = await supabase
           .from('products')
           .select('id, name, category, votes')
-          .in('category', categoryFilter)
           .order('votes', { ascending: false })
+          .limit(5)
 
         if (error) throw error
 
-        // Apply fuzzy search if there's a query
-        let processedData = data
-        if (debouncedQuery.trim()) {
-          processedData = fuzzySearch(data, debouncedQuery, {
-            keys: ['name', 'category'],
-            weights: {
-              name: 2,    // Name matches are more important
-              category: 1  // Category matches are less important
-            },
-            threshold: 0.2 // Lower threshold for more forgiving matching
-          })
-        }
-
-        // Add highlighting information
-        const suggestionsWithHighlights = processedData.slice(0, 5).map(item => ({
+        setSuggestions(data.map(item => ({
           ...item,
           highlight: {
             start: item.name.toLowerCase().indexOf(debouncedQuery.toLowerCase()),
             end: item.name.toLowerCase().indexOf(debouncedQuery.toLowerCase()) + debouncedQuery.length
           }
-        }))
-
-        setSuggestions(suggestionsWithHighlights)
+        })))
       } catch (error) {
         console.error('Error fetching suggestions:', error)
       } finally {
@@ -87,7 +66,7 @@ export function SearchBar() {
     }
 
     fetchSuggestions()
-  }, [debouncedQuery, selectedCategories])
+  }, [debouncedQuery])
 
   // Toggle category filter
   const toggleCategory = (categoryId: string) => {
@@ -150,7 +129,7 @@ export function SearchBar() {
   }
 
   return (
-    <div className="relative z-50">
+    <div className="relative w-full">
       <div className="relative">
         <Input
           ref={inputRef}
@@ -161,16 +140,12 @@ export function SearchBar() {
           onKeyDown={handleKeyDown}
           className="w-full pl-10 pr-4 py-3 bg-black/50 backdrop-blur-sm border border-white/10 
                      rounded-lg focus:border-[#ff4b26]/50 focus:ring-2 focus:ring-[#ff4b26]/20
-                     transition-all duration-300"
+                     transition-colors duration-300"
         />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50" />
         
         {isLoading && (
-          <motion.div
-            className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 border-2 border-[#ff4b26] border-t-transparent rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 border-2 border-[#ff4b26] border-t-transparent rounded-full animate-spin" />
         )}
       </div>
 
@@ -197,55 +172,28 @@ export function SearchBar() {
         ))}
       </div>
 
-      <AnimatePresence>
-        {suggestions.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-lg rounded-xl border border-white/10 overflow-hidden z-50 shadow-xl"
-            style={{ maxHeight: "60vh", overflowY: "auto" }}
-          >
-            <div className="relative">
-              {suggestions.map((suggestion, index) => (
-                <motion.button
-                  key={suggestion.id}
-                  onClick={() => router.push(`/products/${suggestion.id}`)}
-                  className={`w-full px-4 py-3 flex items-center gap-4 transition-colors
-                            ${index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <div className="flex-1 text-left">
-                    <div className="font-medium text-white">
-                      <HighlightedText text={suggestion.name} />
-                    </div>
-                    <div className="text-sm text-white/50 flex items-center gap-2">
-                      <span className="capitalize">{suggestion.category.replace('-', ' ')}</span>
-                      <span className="h-1 w-1 rounded-full bg-white/20" />
-                      <motion.span
-                        key={suggestion.votes}
-                        initial={{ scale: 1.2, color: '#ff4b26' }}
-                        animate={{ scale: 1, color: 'rgb(255 255 255 / 0.5)' }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        {suggestion.votes} votes
-                      </motion.span>
-                    </div>
-                  </div>
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center
-                                 transition-colors duration-300
-                                 ${index === selectedIndex ? 'bg-[#ff4b26]/20' : 'bg-white/5'}`}>
-                    <Search className={`h-4 w-4 transition-colors duration-300
-                                     ${index === selectedIndex ? 'text-[#ff4b26]' : 'text-white/50'}`} />
-                  </div>
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-lg rounded-xl border border-white/10 overflow-hidden shadow-xl">
+          {suggestions.map((suggestion, index) => (
+            <button
+              key={suggestion.id}
+              onClick={() => router.push(`/products/${suggestion.id}`)}
+              className={`w-full px-4 py-3 flex items-center gap-4 transition-colors
+                        ${index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'}`}
+            >
+              <div className="flex-1 text-left">
+                <div className="font-medium text-white">
+                  {suggestion.name}
+                </div>
+                <div className="text-sm text-white/50">
+                  {suggestion.category} · {suggestion.votes} votes
+                </div>
+              </div>
+              <Search className={`h-4 w-4 ${index === selectedIndex ? 'text-[#ff4b26]' : 'text-white/50'}`} />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

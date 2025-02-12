@@ -9,9 +9,7 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { VoteButtons } from "@/components/products/vote-buttons"
 import { useVote } from "@/hooks/use-vote"
-
-// High-quality placeholder with gradient background
-const PLACEHOLDER_IMAGE = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMjAyMDIwO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMDEwMTA7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0idXJsKCNncmFkKSIvPgogIDxwYXRoIGQ9Ik0xNjAgMjAwQzE4MCAxNjAgMjAwIDE0MCAyMjAgMTQwQzI0MCAxNDAgMjYwIDE2MCAyODAgMjAwQzMwMCAxNjAgMzIwIDE0MCAzNDAgMTQwQzM2MCAxNDAgMzgwIDE2MCA0MDAgMjAwIiBzdHJva2U9IiNmZjRiMjYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjIiLz4KPC9zdmc+"
+import { PLACEHOLDER_IMAGE } from "@/lib/constants"
 
 interface RankingCardProps {
   rank: number
@@ -90,7 +88,7 @@ export function RankingCard({ rank, product }: RankingCardProps) {
               downvotes={0}
               userVote={product.userVote}
             />
-            <Link href={`/products/${product.url_slug}`}>
+            <Link href={`/products/${product.url_slug || product.id}`}>
               <Button 
                 variant="ghost" 
                 size="sm"

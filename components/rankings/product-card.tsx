@@ -5,7 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { Product } from '@/types'
+import { Product } from '@/types/product'
+import { PLACEHOLDER_IMAGE } from "@/lib/constants"
 
 interface ProductCardProps {
   product: Product
@@ -19,18 +20,21 @@ export function ProductCard({ product, variant = 'default' }: ProductCardProps) 
   const {
     name = 'Product Name',
     description = 'No description available',
-    imageUrl = '/placeholder.png',
-    image_url = '/placeholder.png', // Fallback for both image field names
+    image_url,
     price = 0,
     votes = 0,
     rank = 0,
     category = '',
-    url_slug = ''
+    url_slug = '',
+    id = ''
   } = product || {}
+
+  // Ensure image_url is a valid string
+  const imageSource = typeof image_url === 'string' && image_url ? image_url : PLACEHOLDER_IMAGE
 
   return (
     <Link 
-      href={`/products/${url_slug}`}
+      href={`/products/${url_slug || id}`}
       className="block cursor-pointer"
     >
       <Card className={cn(
@@ -44,15 +48,21 @@ export function ProductCard({ product, variant = 'default' }: ProductCardProps) 
         )}>
           {/* Product Image */}
           <div className={cn(
-            "relative shrink-0 overflow-hidden rounded-lg",
+            "relative shrink-0 overflow-hidden rounded-lg bg-black/20",
             isCompact ? "h-16 w-16" : "h-24 w-24"
           )}>
             <Image
-              src={imageUrl || image_url}
+              src={imageSource}
               alt={name}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement
+                img.src = PLACEHOLDER_IMAGE
+              }}
             />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           </div>
 
           {/* Product Info */}

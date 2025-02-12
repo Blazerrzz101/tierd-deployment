@@ -5,12 +5,15 @@ import { useSearchParams } from "next/navigation"
 import { RankingCard } from "./ranking-card"
 import { Product } from "@/types/product"
 import { supabase } from "@/lib/supabase/client"
+import { CATEGORY_IDS } from "@/lib/constants"
 
 // Base64 encoded SVG placeholder
 const PLACEHOLDER_IMAGE = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiMyMDIwMjAiLz48cGF0aCBkPSJNMTgyIDIwMkMyMDAgMTY2IDIxNSAxNDUgMjM1IDE0NUMyNTUgMTQ1IDI2NSAxNjYgMjcwIDIwMkMzMDAgMTY2IDMxNSAxNDUgMzM1IDE0NUMzNTUgMTQ1IDM2NSAxNjYgMzcwIDIwMiIgc3Ryb2tlPSIjNDA0MDQwIiBzdHJva2Utd2lkdGg9IjIwIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4="
 
+type CategoryId = typeof CATEGORY_IDS[keyof typeof CATEGORY_IDS] | 'all'
+
 interface RankingListProps {
-  categoryId: string
+  categoryId: CategoryId
 }
 
 interface DatabaseProduct {
@@ -47,22 +50,24 @@ export function RankingList({ categoryId }: RankingListProps) {
         setIsLoading(true)
         setError(null)
 
-        let query = supabase
+        let baseQuery = supabase
           .from('products')
-          .select('*')
-          .order('votes', { ascending: false })
+          .select('*', { count: 'exact' })
 
-        // Apply category filter if specified
-        if (categoryId !== 'all') {
-          query = query.eq('category', categoryId)
+        // Apply category filter if specified and valid
+        if (categoryId && categoryId !== 'all') {
+          baseQuery = baseQuery.eq('category', categoryId)
         }
 
         // Apply search filter if specified
         if (searchQuery) {
-          query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+          baseQuery = baseQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
         }
 
-        const { data, error: queryError } = await query.limit(50)
+        // Get the products with proper ordering
+        const { data, error: queryError, count } = await baseQuery
+          .order('votes', { ascending: false })
+          .limit(50)
 
         if (queryError) {
           console.error('Database error:', queryError)
@@ -70,6 +75,7 @@ export function RankingList({ categoryId }: RankingListProps) {
           return
         }
 
+        console.log(`Found ${count} products in category ${categoryId}`)
         console.log('Raw products data:', data)
 
         if (!data || data.length === 0) {
@@ -77,21 +83,21 @@ export function RankingList({ categoryId }: RankingListProps) {
           return
         }
 
-        const transformedProducts = data.map(product => ({
+        const transformedProducts = data.map((product, index) => ({
           id: String(product.id),
           name: String(product.name || 'Unnamed Product'),
           description: product.description || '',
           category: product.category || '',
           price: product.price || 0,
-          image_url: product.image_url || '/placeholder.png',
+          image_url: product.image_url || null,
           votes: product.votes || 0,
-          rank: product.rank || 0,
+          rank: index + 1, // Set rank based on the sorted order
           specs: product.specs || {},
           userVote: product.user_vote || null,
           url_slug: product.url_slug || '',
           created_at: product.created_at || new Date().toISOString(),
           updated_at: product.updated_at || new Date().toISOString()
-        } as Product))
+        }))
 
         setProducts(transformedProducts)
       } catch (err) {
