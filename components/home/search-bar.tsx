@@ -130,7 +130,7 @@ export function SearchBar() {
                   >
                     <div className="relative h-12 w-12 overflow-hidden rounded-md bg-muted">
                       <Image
-                        src={product.imageUrl || PLACEHOLDER_IMAGE}
+                        src={product.image_url || PLACEHOLDER_IMAGE}
                         alt={product.name}
                         fill
                         className="object-cover"

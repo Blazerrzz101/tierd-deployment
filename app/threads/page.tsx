@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation"
 import { CreateThreadDialog } from "@/components/threads/create-thread-dialog"
 import { useAuth } from "@/hooks/use-auth"
 import { Product } from "@/types/product"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { categories } from "@/lib/data"
 
 interface ThreadResponse {
   id: string
@@ -36,6 +38,7 @@ export default function ThreadsPage() {
   const [threads, setThreads] = useState<Thread[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const { user } = useAuth()
   const router = useRouter()
   const supabase = getSupabaseClient()
@@ -43,7 +46,7 @@ export default function ThreadsPage() {
   useEffect(() => {
     async function fetchThreads() {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('threads')
           .select(`
             *,
@@ -52,16 +55,22 @@ export default function ThreadsPage() {
           `)
           .order('created_at', { ascending: false })
 
+        if (selectedCategory !== "all") {
+          query = query.eq('products.products.category', selectedCategory)
+        }
+
+        const { data, error } = await query
+
         if (error) throw error
 
         if (data) {
-          const transformedThreads = (data as ThreadResponse[]).map(thread => ({
+          const transformedThreads = data.map(thread => ({
             ...thread,
             user: {
               ...thread.user[0],
               avatar_url: thread.user[0]?.avatar_url || undefined
             },
-            products: thread.products.map(p => p.products)
+            products: thread.products.map((p: { products: Product }) => p.products)
           }))
           setThreads(transformedThreads)
         }
@@ -73,7 +82,7 @@ export default function ThreadsPage() {
     }
 
     fetchThreads()
-  }, [supabase])
+  }, [supabase, selectedCategory])
 
   const handleCreateClick = () => {
     if (!user) {
@@ -99,9 +108,9 @@ export default function ThreadsPage() {
     <div className="container mx-auto max-w-4xl px-4 py-12">
       <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">Discussions</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Community Discussions</h1>
           <p className="mt-2 text-lg text-muted-foreground">
-            Join the conversation about gaming gear
+            Join conversations about your favorite gaming gear
           </p>
         </div>
         <Button 
@@ -114,6 +123,23 @@ export default function ThreadsPage() {
         </Button>
       </div>
 
+      <Tabs defaultValue="all" className="mb-8">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="all" onClick={() => setSelectedCategory("all")}>
+            All Discussions
+          </TabsTrigger>
+          {categories.map(category => (
+            <TabsTrigger 
+              key={category.id}
+              value={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+            >
+              {category.name}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       <div className="space-y-6">
         {threads.map(thread => (
           <ThreadCard key={thread.id} thread={thread} />
@@ -122,7 +148,10 @@ export default function ThreadsPage() {
           <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
             <h2 className="text-xl font-semibold">No threads yet</h2>
             <p className="mt-2 text-muted-foreground">
-              Be the first to start a discussion
+              {selectedCategory === "all"
+                ? "Be the first to start a discussion"
+                : `No discussions yet in ${categories.find(c => c.id === selectedCategory)?.name}`
+              }
             </p>
             <Button 
               onClick={handleCreateClick}
