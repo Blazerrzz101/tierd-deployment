@@ -17,6 +17,7 @@ interface AnonymousVote {
 export function useVote() {
   const [isLoading, setIsLoading] = useState(false);
   const [anonymousVotes, setAnonymousVotes] = useState<AnonymousVote[]>([]);
+  const [optimisticVotes, setOptimisticVotes] = useState<Map<string, VoteType>>(new Map());
 
   // Load anonymous votes from localStorage on mount
   useEffect(() => {
@@ -29,6 +30,29 @@ export function useVote() {
         localStorage.removeItem(ANONYMOUS_VOTE_KEY);
       }
     }
+  }, []);
+
+  // Subscribe to real-time ranking updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('product_rankings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'product_rankings'
+        },
+        (payload) => {
+          // Handle real-time ranking updates
+          console.log('Ranking updated:', payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Save anonymous votes to localStorage
@@ -59,6 +83,13 @@ export function useVote() {
   const vote = async (productId: string, voteType: VoteType) => {
     try {
       setIsLoading(true);
+
+      // Optimistically update the UI
+      setOptimisticVotes(prev => {
+        const newVotes = new Map(prev);
+        newVotes.set(productId, voteType);
+        return newVotes;
+      });
 
       // Get current session
       const { data: { session } } = await supabase.auth.getSession();
@@ -158,6 +189,9 @@ export function useVote() {
 
             if (error) throw error;
 
+            // Update rankings immediately
+            await supabase.rpc('refresh_product_rankings');
+
             toast.success("Vote Removed");
           } else {
             // Update vote if changing from up to down or vice versa
@@ -167,6 +201,9 @@ export function useVote() {
               .eq('id', existingVote.id);
 
             if (error) throw error;
+
+            // Update rankings immediately
+            await supabase.rpc('refresh_product_rankings');
 
             toast.success("Vote Updated");
           }
@@ -183,17 +220,24 @@ export function useVote() {
 
           if (error) throw error;
 
+          // Update rankings immediately
+          await supabase.rpc('refresh_product_rankings');
+
           toast.success("Vote Recorded");
         }
       }
-
-      // Refresh the product rankings
-      await supabase.rpc('refresh_product_rankings');
 
     } catch (error: any) {
       console.error('Error voting:', error);
       toast.error("Error", {
         description: error.message || "There was a problem recording your vote. Please try again."
+      });
+      
+      // Revert optimistic update on error
+      setOptimisticVotes(prev => {
+        const newVotes = new Map(prev);
+        newVotes.delete(productId);
+        return newVotes;
       });
     } finally {
       setIsLoading(false);
@@ -239,6 +283,7 @@ export function useVote() {
     vote,
     claimAnonymousVotes,
     isLoading,
-    anonymousVoteCount: anonymousVotes.length
+    anonymousVoteCount: anonymousVotes.length,
+    optimisticVotes
   };
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { categories, products } from "@/lib/data"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -10,6 +10,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useVote } from "@/hooks/use-vote"
 import { VoteType } from "@/types/vote"
+import { getSupabaseClient } from "@/lib/supabase/client"
 
 // Direct URL to a placeholder image
 const PLACEHOLDER_IMAGE = "https://placehold.co/400x400/1a1a1a/ff4b26?text=No+Image"
@@ -17,11 +18,21 @@ const PLACEHOLDER_IMAGE = "https://placehold.co/400x400/1a1a1a/ff4b26?text=No+Im
 export function ProductRankings() {
   const [selectedCategory, setSelectedCategory] = useState(categories[0].id)
   const [displayCount, setDisplayCount] = useState(5)
-  const { vote } = useVote()
+  const { vote, optimisticVotes } = useVote()
+  const [localRankings, setLocalRankings] = useState<Map<string, number>>(new Map())
 
   // Get products for the selected category
   const categoryProducts = products
     .filter(product => product.category === selectedCategory)
+    .map(product => ({
+      ...product,
+      // Apply optimistic vote updates
+      votes: product.votes + (
+        optimisticVotes.get(product.id) === 'up' ? 1 :
+        optimisticVotes.get(product.id) === 'down' ? -1 : 0
+      ),
+      userVote: optimisticVotes.get(product.id) || product.userVote
+    }))
     .sort((a, b) => {
       // First sort by votes
       if (b.votes !== a.votes) return b.votes - a.votes
@@ -32,15 +43,44 @@ export function ProductRankings() {
   // Update ranks based on current sorting
   const rankedProducts = categoryProducts.map((product, index) => ({
     ...product,
-    currentRank: index + 1
+    currentRank: localRankings.get(product.id) || index + 1
   }))
 
-  const displayedProducts = rankedProducts.slice(0, displayCount)
-  const hasMore = displayCount < rankedProducts.length
+  // Subscribe to real-time ranking updates
+  useEffect(() => {
+    const channel = getSupabaseClient()
+      .channel('product_rankings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'product_rankings'
+        },
+        (payload: any) => {
+          // Update local rankings
+          setLocalRankings(prev => {
+            const newRankings = new Map(prev)
+            if (payload.new && payload.new.id) {
+              newRankings.set(payload.new.id, payload.new.rank)
+            }
+            return newRankings
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      getSupabaseClient().removeChannel(channel)
+    }
+  }, [])
 
   const handleVote = async (productId: string, voteType: VoteType) => {
     await vote(productId, voteType)
   }
+
+  const displayedProducts = rankedProducts.slice(0, displayCount)
+  const hasMore = displayCount < rankedProducts.length
 
   return (
     <div className="space-y-8">
