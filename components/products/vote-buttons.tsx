@@ -2,31 +2,27 @@
 
 import { ThumbsUp, ThumbsDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useVote } from "@/hooks/use-vote"
 import { cn } from "@/lib/utils"
 import { VoteType } from "@/types/vote"
+import { Product } from "@/types/product"
 
 interface VoteButtonsProps {
-  productId: string
-  upvotes: number
-  downvotes: number
-  userVote?: VoteType | null
+  product: Product
+  onVote: (productId: string, voteType: VoteType) => Promise<void>
   className?: string
 }
 
 export function VoteButtons({ 
-  productId, 
-  upvotes = 0, 
-  downvotes = 0, 
-  userVote = null,
+  product,
+  onVote,
   className 
 }: VoteButtonsProps) {
-  const { vote, isLoading } = useVote()
+  if (!product?.id) {
+    return null;
+  }
 
-  const handleVote = (type: VoteType) => {
-    if (!isLoading) {
-      vote(productId, type)
-    }
+  const handleVote = async (type: VoteType) => {
+    await onVote(product.id, type)
   }
 
   return (
@@ -35,34 +31,30 @@ export function VoteButtons({
         variant="ghost"
         size="sm"
         className={cn(
-          "flex items-center gap-1",
-          userVote === 'up' && "bg-green-100 hover:bg-green-200"
+          "flex items-center gap-1 transition-colors",
+          product?.userVote === 'up' && "bg-green-500/20 hover:bg-green-500/30 text-green-500"
         )}
         onClick={() => handleVote('up')}
-        disabled={isLoading}
       >
-        <ThumbsUp className={cn(
-          "h-4 w-4",
-          userVote === 'up' && "text-green-600"
-        )} />
-        <span>{upvotes}</span>
+        <ThumbsUp className="h-4 w-4" />
+        <span className="min-w-[1rem] text-center">
+          {product?.upvotes || 0}
+        </span>
       </Button>
 
       <Button
         variant="ghost"
         size="sm"
         className={cn(
-          "flex items-center gap-1",
-          userVote === 'down' && "bg-red-100 hover:bg-red-200"
+          "flex items-center gap-1 transition-colors",
+          product?.userVote === 'down' && "bg-red-500/20 hover:bg-red-500/30 text-red-500"
         )}
         onClick={() => handleVote('down')}
-        disabled={isLoading}
       >
-        <ThumbsDown className={cn(
-          "h-4 w-4",
-          userVote === 'down' && "text-red-600"
-        )} />
-        <span>{downvotes}</span>
+        <ThumbsDown className="h-4 w-4" />
+        <span className="min-w-[1rem] text-center">
+          {product?.downvotes || 0}
+        </span>
       </Button>
     </div>
   )

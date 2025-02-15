@@ -15,7 +15,30 @@ import { RelatedProducts } from "@/components/products/related-products"
 import { ProductReviews } from "@/components/products/product-reviews"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { NotFound } from "@/components/not-found"
-import { getProduct } from "@/lib/supabase/server"
+import Link from "next/link"
+import { ProductCard } from "@/components/products/product-card"
+
+interface ProductDetailsResponse {
+  id: string
+  name: string
+  description: string | null
+  category: string
+  price: number | null
+  image_url: string | null
+  specifications: Record<string, unknown>
+  votes: number
+  rank: number
+  url_slug: string
+  created_at: string
+  updated_at: string
+  related_products: Array<{
+    id: string
+    name: string
+    url_slug: string
+    price: number | null
+    votes: number
+  }>
+}
 
 export default function ProductPage() {
   const params = useParams()
@@ -25,59 +48,123 @@ export default function ProductPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const { user } = useAuth()
   const supabase = getSupabaseClient()
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let isMounted = true
+    
     async function fetchProductAndThreads() {
       try {
-        // Fetch product details
+        setIsLoading(true)
+        setError(null)
+
+        // Use the get_product_details function
         const { data: productData, error: productError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('url_slug', params.slug)
-          .single()
+          .rpc('get_product_details', { p_slug: params.slug })
 
-        if (productError) throw productError
-        setProduct(productData)
+        if (productError) {
+          console.error('Error fetching product:', productError)
+          if (isMounted) {
+            setError('Product not found')
+            setIsLoading(false)
+            setProduct(null)
+          }
+          return
+        }
+        
+        if (!productData || productData.length === 0) {
+          if (isMounted) {
+            setError('Product not found')
+            setIsLoading(false)
+            setProduct(null)
+          }
+          return
+        }
 
-        // Fetch threads for this product
-        const { data: threadData, error: threadError } = await supabase
-          .from('threads')
-          .select(`
-            *,
-            user:users(username, avatar_url),
-            products:thread_products(products(*))
-          `)
-          .eq('products.thread_products.product_id', productData.id)
-          .order('created_at', { ascending: false })
+        if (isMounted) {
+          // Transform the product data
+          const transformedProduct: Product = {
+            id: productData[0].id,
+            name: productData[0].name,
+            description: productData[0].description,
+            category: productData[0].category,
+            price: productData[0].price,
+            image_url: productData[0].image_url || '/placeholder-product.png',
+            specifications: productData[0].specifications,
+            votes: productData[0].votes,
+            rank: productData[0].rank,
+            url_slug: productData[0].url_slug,
+            created_at: productData[0].created_at,
+            updated_at: productData[0].updated_at,
+            relatedProducts: productData[0].related_products,
+            upvotes: productData[0].upvotes,
+            downvotes: productData[0].downvotes,
+            userVote: productData[0].user_vote,
+            rating: productData[0].rating || 0,
+            review_count: productData[0].review_count || 0,
+            stock_status: productData[0].stock_status || 'in_stock',
+            details: {
+              ...productData[0].specifications,
+              stock_quantity: productData[0].specifications?.stock_quantity || 0
+            }
+          }
+          
+          setProduct(transformedProduct)
 
-        if (threadError) throw threadError
+          // Fetch threads for this product
+          const { data: threadData, error: threadError } = await supabase
+            .from('threads')
+            .select(`
+              *,
+              user:users(username, avatar_url),
+              products:thread_products(products(*))
+            `)
+            .eq('products.thread_products.product_id', productData[0].id)
+            .order('created_at', { ascending: false })
 
-        if (threadData) {
-          const transformedThreads = threadData.map(thread => ({
-            ...thread,
-            user: {
-              ...thread.user[0],
-              avatar_url: thread.user[0]?.avatar_url || undefined
-            },
-            products: thread.products.map(p => p.products)
-          }))
-          setThreads(transformedThreads)
+          if (threadError) {
+            console.error('Error fetching threads:', threadError)
+            if (isMounted) {
+              setThreads([])
+            }
+          } else if (threadData && isMounted) {
+            const transformedThreads = threadData.map((thread: any) => ({
+              ...thread,
+              user: {
+                ...thread.user[0],
+                avatar_url: thread.user[0]?.avatar_url || undefined
+              },
+              products: thread.products?.map((p: any) => p.products) || []
+            }))
+            setThreads(transformedThreads)
+          }
         }
       } catch (error) {
         console.error('Error fetching product and threads:', error)
+        if (isMounted) {
+          setError('An error occurred while loading the product')
+          setThreads([])
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
     if (params.slug) {
       fetchProductAndThreads()
+    } else {
+      setIsLoading(false)
+      setError('Invalid product URL')
     }
+    
+    return () => { isMounted = false }
   }, [params.slug, supabase])
 
   const handleCreateClick = () => {
     if (!user) {
-      window.location.href = '/auth/sign-in'
+      window.location.href = '/auth/sign-in?redirect=' + encodeURIComponent(window.location.pathname)
       return
     }
     setShowCreateDialog(true)
@@ -86,22 +173,28 @@ export default function ProductPage() {
   if (isLoading) {
     return (
       <div className="container py-8">
-        <div className="space-y-4">
-          <div className="h-64 animate-pulse rounded-lg bg-muted" />
-          <div className="h-40 animate-pulse rounded-lg bg-muted" />
-        </div>
+        <LoadingSpinner />
+        <p className="mt-4 text-center text-muted-foreground">Loading product details...</p>
       </div>
     )
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <div className="container py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Product not found</h1>
-          <p className="mt-2 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+          <h1 className="text-6xl font-bold mb-4">404</h1>
+          <h2 className="text-2xl font-semibold mb-6">
+            {error || "Product not found"}
+          </h2>
+          <p className="text-white/70 mb-8 max-w-md">
             The product you're looking for doesn't exist or has been removed.
           </p>
+          <Link href="/products">
+            <Button className="mt-4" variant="outline">
+              Browse Products
+            </Button>
+          </Link>
         </div>
       </div>
     )
@@ -111,6 +204,39 @@ export default function ProductPage() {
     <div className="container mx-auto max-w-7xl px-6 py-12">
       {/* Product Details */}
       <ProductDetails product={product} />
+
+      {/* Related Products */}
+      {product.relatedProducts && product.relatedProducts.length > 0 && (
+        <div className="mt-16">
+          <h2 className="text-2xl font-bold mb-8">Similar Products</h2>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {product.relatedProducts.map((relatedProduct) => (
+              <ProductCard 
+                key={relatedProduct.id} 
+                product={{
+                  id: relatedProduct.id,
+                  name: relatedProduct.name,
+                  description: '',
+                  category: relatedProduct.category,
+                  price: relatedProduct.price || 0,
+                  image_url: '/placeholder-product.png',
+                  url_slug: relatedProduct.url_slug,
+                  votes: relatedProduct.votes,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  userVote: null,
+                  rating: 0,
+                  review_count: 0,
+                  stock_status: 'in_stock',
+                  details: {
+                    stock_quantity: 0
+                  }
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Discussions Section */}
       <div className="mt-16">
@@ -131,49 +257,36 @@ export default function ProductPage() {
           </Button>
         </div>
 
-        <div className="space-y-6">
-          {threads.map(thread => (
-            <ThreadCard key={thread.id} thread={thread} />
-          ))}
-          {threads.length === 0 && (
-            <div className="flex min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-              <h3 className="text-xl font-semibold">No discussions yet</h3>
-              <p className="mt-2 text-muted-foreground">
-                Be the first to start a discussion about {product.name}
-              </p>
-              <Button 
-                onClick={handleCreateClick}
-                variant="outline" 
-                className="mt-4"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create Thread
-              </Button>
-            </div>
-          )}
-        </div>
+        {threads.length > 0 ? (
+          <div className="space-y-6">
+            {threads.map((thread) => (
+              <ThreadCard key={thread.id} thread={thread} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <h3 className="text-lg font-semibold">No discussions yet</h3>
+            <p className="mt-2 text-muted-foreground">
+              Be the first to start a discussion about {product.name}
+            </p>
+            <Button
+              onClick={handleCreateClick}
+              className="mt-4"
+              variant="outline"
+            >
+              Create Thread
+            </Button>
+          </div>
+        )}
+      </div>
 
+      {showCreateDialog && (
         <CreateThreadDialog
           open={showCreateDialog}
           onOpenChange={setShowCreateDialog}
           defaultProduct={product}
         />
-      </div>
-
-      {/* Related Products */}
-      <div className="mt-16">
-        <h2 className="text-2xl font-bold mb-8">Related Products</h2>
-        <RelatedProducts 
-          categoryId={product.category}
-          currentProductId={product.id}
-        />
-      </div>
-
-      {/* Product Reviews */}
-      <div className="mt-16">
-        <h2 className="text-2xl font-bold mb-8">Reviews</h2>
-        <ProductReviews productId={product.id} />
-      </div>
+      )}
     </div>
   )
 } 

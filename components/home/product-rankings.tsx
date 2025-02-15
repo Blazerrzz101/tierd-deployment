@@ -1,86 +1,134 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { categories, products } from "@/lib/data"
+import { categories } from "@/lib/data"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { ThumbsUp, ThumbsDown } from "lucide-react"
+import { ThumbsUp, ThumbsDown, Star } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useVote } from "@/hooks/use-vote"
 import { VoteType } from "@/types/vote"
-import { getSupabaseClient } from "@/lib/supabase/client"
-
-// Direct URL to a placeholder image
-const PLACEHOLDER_IMAGE = "https://placehold.co/400x400/1a1a1a/ff4b26?text=No+Image"
+import { getSupabaseClient, testDatabaseConnection } from "@/lib/supabase/client"
+import { Product } from "@/types/product"
+import { VoteButtons } from "@/components/products/vote-buttons"
+import { useVote } from "@/hooks/use-vote"
 
 export function ProductRankings() {
   const [selectedCategory, setSelectedCategory] = useState(categories[0].id)
   const [displayCount, setDisplayCount] = useState(5)
-  const { vote, optimisticVotes } = useVote()
-  const [localRankings, setLocalRankings] = useState<Map<string, number>>(new Map())
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
-  // Get products for the selected category
-  const categoryProducts = products
-    .filter(product => product.category === selectedCategory)
-    .map(product => ({
-      ...product,
-      // Apply optimistic vote updates
-      votes: product.votes + (
-        optimisticVotes.get(product.id) === 'up' ? 1 :
-        optimisticVotes.get(product.id) === 'down' ? -1 : 0
-      ),
-      userVote: optimisticVotes.get(product.id) || product.userVote
-    }))
-    .sort((a, b) => {
-      // First sort by votes
-      if (b.votes !== a.votes) return b.votes - a.votes
-      // Then by rank if votes are equal
-      return (a.rank || Infinity) - (b.rank || Infinity)
-    })
-
-  // Update ranks based on current sorting
-  const rankedProducts = categoryProducts.map((product, index) => ({
-    ...product,
-    currentRank: localRankings.get(product.id) || index + 1
-  }))
-
-  // Subscribe to real-time ranking updates
+  // Fetch products for the selected category
   useEffect(() => {
-    const channel = getSupabaseClient()
-      .channel('product_rankings')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'product_rankings'
-        },
-        (payload: any) => {
-          // Update local rankings
-          setLocalRankings(prev => {
-            const newRankings = new Map(prev)
-            if (payload.new && payload.new.id) {
-              newRankings.set(payload.new.id, payload.new.rank)
-            }
-            return newRankings
-          })
+    let isMounted = true
+    let retryTimeout: NodeJS.Timeout
+    
+    async function fetchProducts() {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        // Test database connection first
+        const isConnected = await testDatabaseConnection()
+        if (!isConnected) {
+          throw new Error('Unable to connect to local Supabase instance. Please ensure Supabase is running locally.')
         }
-      )
-      .subscribe()
 
-    return () => {
-      getSupabaseClient().removeChannel(channel)
+        const supabase = getSupabaseClient()
+        console.log('Fetching products for category:', selectedCategory)
+        
+        const { data, error } = await supabase
+          .rpc('get_product_rankings', {
+            p_category: selectedCategory === 'all' ? null : selectedCategory
+          })
+
+        if (error) {
+          console.error('RPC Error:', error)
+          throw error
+        }
+
+        if (data && isMounted) {
+          console.log('Fetched products:', data.length)
+          setProducts(data)
+          setRetryCount(0) // Reset retry count on success
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err)
+        if (isMounted) {
+          const isLocalhost = window.location.hostname === 'localhost'
+          const errorMessage = isLocalhost
+            ? 'Unable to fetch products. Please ensure your local Supabase instance is running and the database is properly seeded.'
+            : err instanceof Error ? err.message : 'Failed to load products'
+          
+          setError(errorMessage)
+          
+          // Implement exponential backoff for retries
+          if (retryCount < 3) {
+            const delay = Math.pow(2, retryCount) * 1000 // 1s, 2s, 4s
+            retryTimeout = setTimeout(() => {
+              setRetryCount(prev => prev + 1)
+              fetchProducts()
+            }, delay)
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
     }
-  }, [])
 
-  const handleVote = async (productId: string, voteType: VoteType) => {
-    await vote(productId, voteType)
+    fetchProducts()
+    
+    return () => {
+      isMounted = false
+      if (retryTimeout) {
+        clearTimeout(retryTimeout)
+      }
+    }
+  }, [selectedCategory, retryCount])
+
+  const displayedProducts = products
+    .slice(0, displayCount)
+    .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+
+  const hasMore = displayCount < products.length
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="mt-4 text-sm text-muted-foreground">Loading rankings...</p>
+      </div>
+    )
   }
 
-  const displayedProducts = rankedProducts.slice(0, displayCount)
-  const hasMore = displayCount < rankedProducts.length
+  if (error) {
+    return (
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
+        <h3 className="text-lg font-semibold text-destructive mb-2">Error Loading Rankings</h3>
+        <p className="text-destructive/80 mb-4">{error}</p>
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Attempt {retryCount + 1} of 3
+          </p>
+          <button 
+            onClick={() => {
+              setRetryCount(0)
+              setError(null)
+            }}
+            className="text-sm font-medium text-destructive hover:text-destructive/80 underline underline-offset-4"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -109,110 +157,91 @@ export function ProductRankings() {
       {/* Product Rankings */}
       <div className="space-y-4">
         {displayedProducts.map((product, index) => (
-          <div
-            key={product.id}
-            className="group relative flex items-center gap-6 rounded-lg border bg-card p-6 transition-all hover:border-primary hover:shadow-lg"
-          >
-            {/* Rank Number */}
-            <div className={cn(
-              "text-7xl font-bold tracking-tighter",
-              index === 0 && "rank-gradient",
-              index === 1 && "text-[#c0c0c0]",
-              index === 2 && "text-[#cd7f32]",
-            )}>
-              #{product.currentRank}
-            </div>
-
-            {/* Product Image */}
-            <div className="relative aspect-square w-32 overflow-hidden rounded-lg bg-muted">
-              <Image
-                src={product.imageUrl || PLACEHOLDER_IMAGE}
-                alt={product.name || 'Product Image'}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            </div>
-
-            {/* Product Info */}
-            <div className="flex flex-1 flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xl font-semibold">{product.name}</h3>
-                {product.currentRank <= 3 && (
-                  <span className={cn(
-                    "rounded-full px-2 py-1 text-xs font-medium",
-                    product.currentRank === 1 && "bg-yellow-500/20 text-yellow-500",
-                    product.currentRank === 2 && "bg-gray-400/20 text-gray-400",
-                    product.currentRank === 3 && "bg-orange-700/20 text-orange-700",
-                  )}>
-                    #{product.currentRank} in {categories.find(c => c.id === selectedCategory)?.name}
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">{product.description}</p>
-              <div className="mt-2 flex items-center gap-4">
-                {product.price && (
-                  <span className="text-sm font-medium">
-                    ${product.price.toFixed(2)}
-                  </span>
-                )}
-                <span className="text-sm text-muted-foreground">
-                  {product.votes || 0} votes
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => handleVote(product.id, "down")}
-                  className={cn(
-                    "h-8 w-8 rounded-full",
-                    "hover:border-red-500 hover:text-red-500",
-                    product.userVote === "down" && "border-red-500 text-red-500"
-                  )}
-                >
-                  <ThumbsDown className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => handleVote(product.id, "up")}
-                  className={cn(
-                    "h-8 w-8 rounded-full",
-                    "hover:border-green-500 hover:text-green-500",
-                    product.userVote === "up" && "border-green-500 text-green-500"
-                  )}
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                </Button>
-              </div>
-              <Link href={`/products/${product.url_slug}`}>
-                <Button 
-                  variant="secondary" 
-                  size="sm"
-                  className="font-medium hover-glow"
-                >
-                  Learn More &gt;
-                </Button>
-              </Link>
-            </div>
-          </div>
+          <ProductRankingCard 
+            key={product.id} 
+            product={product}
+            rank={index + 1}
+          />
         ))}
+      </div>
 
-        {/* Show More Button */}
-        {hasMore && (
+      {/* Load More Button */}
+      {hasMore && (
+        <div className="flex justify-center">
           <Button
             variant="outline"
-            className="w-full"
             onClick={() => setDisplayCount(prev => prev + 5)}
           >
             Show More
           </Button>
-        )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ProductRankingCard({ product, rank }: { product: Product, rank: number }) {
+  const { vote } = useVote(product)
+
+  return (
+    <div className="group relative flex items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-4 transition-colors hover:bg-white/10">
+      {/* Rank */}
+      <div className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-bold",
+        rank === 1 && "bg-yellow-500/20 text-yellow-500",
+        rank === 2 && "bg-gray-500/20 text-gray-400",
+        rank === 3 && "bg-orange-900/20 text-orange-700",
+        rank > 3 && "bg-white/10 text-white/50"
+      )}>
+        #{rank}
       </div>
+
+      {/* Product Image */}
+      <div className="relative aspect-square w-16 overflow-hidden rounded-lg bg-zinc-100">
+        <Image
+          src={product.image_url || "/images/products/placeholder.svg"}
+          alt={product.name}
+          fill
+          sizes="(max-width: 768px) 64px, 64px"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement
+            img.src = "/images/products/placeholder.svg"
+          }}
+        />
+      </div>
+
+      {/* Product Info */}
+      <div className="flex flex-1 flex-col gap-1">
+        <Link 
+          href={`/products/${product.url_slug}`}
+          className="text-lg font-medium hover:underline"
+        >
+          {product.name}
+        </Link>
+        <div className="flex items-center gap-2 text-sm text-white/60">
+          <span className="capitalize">{product.category.replace('-', ' ')}</span>
+          <span>•</span>
+          <span>${product.price?.toFixed(2)}</span>
+          {(product.rating ?? 0) > 0 && (
+            <>
+              <span>•</span>
+              <div className="flex items-center gap-1">
+                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                <span>{(product.rating ?? 0).toFixed(1)}</span>
+                <span>({product.review_count ?? 0})</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Vote Buttons */}
+      <VoteButtons 
+        product={product}
+        onVote={vote}
+        className="shrink-0"
+      />
     </div>
   )
 }

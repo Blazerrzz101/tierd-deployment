@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { toast } from "sonner"
-import { create, StateCreator, StoreApi } from "zustand"
+import { create } from "zustand"
 import { supabase } from "@/lib/supabase/client"
 
 interface UserDetails {
@@ -45,10 +45,7 @@ interface AuthState {
   resetPassword: (email: string) => Promise<void>
 }
 
-export const useAuth = create<AuthState>((
-  set: StoreApi<AuthState>['setState'],
-  get: StoreApi<AuthState>['getState']
-): AuthState => ({
+export const useAuth = create<AuthState>((set, get) => ({
   user: null,
   userDetails: null,
   isLoading: true,
@@ -78,7 +75,15 @@ export const useAuth = create<AuthState>((
         user: {
           id: data.user.id,
           email: data.user.email!,
-          ...profile
+          display_name: profile.username || data.user.email!.split('@')[0],
+          avatar_url: profile.avatar_url || null,
+          provider: data.user.app_metadata.provider || null,
+          last_sign_in: data.user.last_sign_in_at || null,
+          preferences: profile.preferences || {
+            theme: "dark",
+            email_notifications: true,
+            accessibility_mode: false
+          }
         }
       })
 
@@ -124,21 +129,23 @@ export const useAuth = create<AuthState>((
       // Create user profile
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert([
-          {
-            id: data.user!.id,
-            email,
-            username,
-            display_name: username,
-            created_at: new Date().toISOString()
+        .insert({
+          id: data.user!.id,
+          username,
+          email,
+          preferences: {
+            theme: "dark",
+            email_notifications: true,
+            accessibility_mode: false
           }
-        ])
+        })
 
-      if (profileError) throw profileError
+      if (profileError) {
+        console.error("Error creating user profile:", profileError)
+        throw profileError
+      }
 
-      toast.success("Account created successfully", {
-        description: "Please check your email to verify your account."
-      })
+      toast.success("Account created successfully! Please check your email to verify your account.")
     } catch (error: any) {
       console.error("Error signing up:", error)
       toast.error(error.message || "Failed to create account")
@@ -148,15 +155,6 @@ export const useAuth = create<AuthState>((
 
   signOut: async () => {
     try {
-      // Update user status before signing out
-      const { user } = get()
-      if (user) {
-        await supabase
-          .from('users')
-          .update({ is_online: false, last_seen: new Date().toISOString() })
-          .eq('id', user.id)
-      }
-
       const { error } = await supabase.auth.signOut()
       if (error) throw error
 
@@ -171,17 +169,26 @@ export const useAuth = create<AuthState>((
 
   updateProfile: async (data: Partial<User>) => {
     try {
+      const user = get().user
+      if (!user) throw new Error("No user logged in")
+
       const { error } = await supabase
         .from('user_profiles')
-        .update(data)
-        .eq('id', data.id)
+        .update({
+          username: data.display_name,
+          avatar_url: data.avatar_url,
+          preferences: data.preferences
+        })
+        .eq('id', user.id)
 
       if (error) throw error
 
-      set((state: AuthState) => ({
-        ...state,
-        user: state.user ? { ...state.user, ...data } : null
-      }))
+      set({
+        user: {
+          ...user,
+          ...data
+        }
+      })
 
       toast.success("Profile updated successfully")
     } catch (error: any) {
@@ -199,9 +206,7 @@ export const useAuth = create<AuthState>((
 
       if (error) throw error
 
-      toast.success("Password reset email sent", {
-        description: "Please check your email for further instructions."
-      })
+      toast.success("Password reset email sent. Please check your inbox.")
     } catch (error: any) {
       console.error("Error resetting password:", error)
       toast.error(error.message || "Failed to send reset email")
@@ -210,53 +215,38 @@ export const useAuth = create<AuthState>((
   }
 }))
 
-// Initialize auth state with improved error handling and logging
-supabase.auth.onAuthStateChange(async (event, session) => {
-  useAuth.setState({ isLoading: true })
-  console.log(`Auth state changed: ${event}`)
+// Subscribe to auth state changes
+if (typeof window !== "undefined") {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log("Auth state changed:", event)
 
-  try {
-    if (session?.user) {
-      // Fetch user profile and preferences
-      const [{ data: profile }, { data: preferences }] = await Promise.all([
-        supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single(),
-        supabase
-          .from('user_preferences')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single()
-      ])
-
-      useAuth.setState({
-        user: {
-          id: session.user.id,
-          email: session.user.email!,
-          ...profile,
-          preferences
-        },
-        isLoading: false
-      })
-
-      // Update online status
-      await supabase
-        .from('users')
-        .update({ 
-          is_online: true,
-          last_seen: new Date().toISOString()
-        })
+    if (event === "SIGNED_IN" && session?.user) {
+      // Fetch user profile
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
         .eq('id', session.user.id)
+        .single()
 
-      console.log('User session restored and profile updated')
-    } else {
-      useAuth.setState({ user: null, isLoading: false })
-      console.log('No active session found')
+      if (!error && profile) {
+        useAuth.setState({
+          user: {
+            id: session.user.id,
+            email: session.user.email!,
+            display_name: profile.username || session.user.email!.split('@')[0],
+            avatar_url: profile.avatar_url || null,
+            provider: session.user.app_metadata.provider || null,
+            last_sign_in: session.user.last_sign_in_at || null,
+            preferences: profile.preferences || {
+              theme: "dark",
+              email_notifications: true,
+              accessibility_mode: false
+            }
+          }
+        })
+      }
+    } else if (event === "SIGNED_OUT") {
+      useAuth.setState({ user: null, userDetails: null })
     }
-  } catch (error) {
-    console.error("Error in auth state change handler:", error)
-    useAuth.setState({ user: null, isLoading: false })
-  }
-})
+  })
+}

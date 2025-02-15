@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { Product } from "./use-product"
+import { Product } from "@/types/product"
 
 interface CartItem extends Product {
   quantity: number
@@ -50,7 +50,7 @@ export const useCart = create<CartStore>()(
       clearCart: () => set({ items: [] }),
       get total() {
         return get().items.reduce(
-          (sum, item) => sum + item.price * item.quantity,
+          (sum, item) => sum + (item.price ?? 0) * item.quantity,
           0
         )
       }

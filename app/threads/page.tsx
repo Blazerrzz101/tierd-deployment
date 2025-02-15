@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { Product } from "@/types/product"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { categories } from "@/lib/data"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 interface ThreadResponse {
   id: string
@@ -39,13 +40,19 @@ export default function ThreadsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
   const router = useRouter()
   const supabase = getSupabaseClient()
 
   useEffect(() => {
+    let isMounted = true
+    
     async function fetchThreads() {
       try {
+        setIsLoading(true)
+        setError(null)
+
         let query = supabase
           .from('threads')
           .select(`
@@ -63,25 +70,32 @@ export default function ThreadsPage() {
 
         if (error) throw error
 
-        if (data) {
+        if (data && isMounted) {
           const transformedThreads = data.map(thread => ({
             ...thread,
             user: {
               ...thread.user[0],
               avatar_url: thread.user[0]?.avatar_url || undefined
             },
-            products: thread.products.map((p: { products: Product }) => p.products)
+            products: thread.products?.map((p: { products: Product }) => p.products) || []
           }))
           setThreads(transformedThreads)
         }
       } catch (error) {
         console.error('Error fetching threads:', error)
+        if (isMounted) {
+          setError('Failed to load discussions. Please try again.')
+          setThreads([])
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
     fetchThreads()
+    return () => { isMounted = false }
   }, [supabase, selectedCategory])
 
   const handleCreateClick = () => {
@@ -90,18 +104,6 @@ export default function ThreadsPage() {
       return
     }
     setShowCreateDialog(true)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="container py-8">
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-40 animate-pulse rounded-lg bg-muted" />
-          ))}
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -141,10 +143,29 @@ export default function ThreadsPage() {
       </Tabs>
 
       <div className="space-y-6">
-        {threads.map(thread => (
-          <ThreadCard key={thread.id} thread={thread} />
-        ))}
-        {threads.length === 0 && (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <LoadingSpinner size="lg" />
+            <p className="mt-4 text-muted-foreground">
+              Loading discussions...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
+            <h3 className="text-lg font-semibold text-destructive mb-2">Error Loading Discussions</h3>
+            <p className="text-destructive/80 mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="text-sm font-medium text-destructive hover:text-destructive/80 underline underline-offset-4"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : threads.length > 0 ? (
+          threads.map(thread => (
+            <ThreadCard key={thread.id} thread={thread} />
+          ))
+        ) : (
           <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
             <h2 className="text-xl font-semibold">No threads yet</h2>
             <p className="mt-2 text-muted-foreground">

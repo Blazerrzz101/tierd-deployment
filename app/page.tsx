@@ -2,6 +2,8 @@
 
 import { HeroSection } from "@/components/home/hero-section"
 import { ProductRankings } from "@/components/home/product-rankings"
+import { FeaturesSection } from "@/components/home/features-section"
+import { Footer } from "@/components/layout/footer"
 import { Particles } from "@/components/ui/particles"
 
 export default function HomePage() {
@@ -10,6 +12,8 @@ export default function HomePage() {
       <div className="fixed inset-0 overflow-hidden">
         <Particles className="absolute inset-0" />
       </div>
+      
+      {/* Hero Section */}
       <HeroSection />
       
       {/* Product Rankings Section */}
@@ -26,6 +30,12 @@ export default function HomePage() {
           <ProductRankings />
         </div>
       </section>
+
+      {/* Features Section */}
+      <FeaturesSection />
+
+      {/* Footer */}
+      <Footer />
     </>
   )
 }

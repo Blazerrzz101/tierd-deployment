@@ -7,10 +7,11 @@ import { Star, ShoppingCart, Heart, Share2, MessageSquarePlus, ChevronLeft, Chev
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Product } from "@/hooks/use-product"
+import { Product } from "@/types/product"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/hooks/use-cart"
 import { useWishlist } from "@/hooks/use-wishlist"
+import { useVote } from "@/hooks/use-vote"
 import { ProductReviews } from "@/components/products/product-reviews"
 import { ProductThreads } from "@/components/products/product-threads"
 import { VoteButtons } from "@/components/products/vote-buttons"
@@ -21,13 +22,18 @@ interface ProductDetailsProps {
   product: Product
 }
 
-export function ProductDetails({ product }: ProductDetailsProps) {
+export function ProductDetails({ product: initialProduct }: ProductDetailsProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   const [isRotating, setIsRotating] = useState(false)
   const { toast } = useToast()
   const { addToCart } = useCart()
   const { addToWishlist } = useWishlist()
+  const { product, vote } = useVote(initialProduct)
   const router = useRouter()
+
+  if (!product) {
+    return null;
+  }
 
   const images = [
     product.image_url,
@@ -38,7 +44,8 @@ export function ProductDetails({ product }: ProductDetailsProps) {
     addToCart(product)
     toast({
       title: "Added to Cart",
-      description: `${product.name} has been added to your cart.`
+      variant: "default",
+      children: `${product.name} has been added to your cart.`
     })
   }
 
@@ -46,7 +53,8 @@ export function ProductDetails({ product }: ProductDetailsProps) {
     addToWishlist(product)
     toast({
       title: "Added to Wishlist",
-      description: `${product.name} has been added to your wishlist.`
+      variant: "default",
+      children: `${product.name} has been added to your wishlist.`
     })
   }
 
@@ -175,16 +183,15 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               ({product.review_count || 0} reviews)
             </span>
             <VoteButtons
-              productId={product.id}
-              upvotes={product.metadata?.upvotes || 0}
-              downvotes={product.metadata?.downvotes || 0}
-              userVote={product.metadata?.userVote}
+              product={product}
+              onVote={vote}
+              className="ml-auto"
             />
           </div>
         </div>
 
         <div className="space-y-4">
-          <p className="text-2xl font-bold">${product.price.toFixed(2)}</p>
+          <p className="text-2xl font-bold">${product.price?.toFixed(2) ?? 'N/A'}</p>
           <Badge
             variant={
               (product.stock_status || "in_stock") === "in_stock"
@@ -231,7 +238,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </TabsContent>
           <TabsContent value="specifications" className="mt-4">
             <div className="space-y-4">
-              {Object.entries(product.details)
+              {Object.entries(product.details || {})
                 .filter(([key]) => key !== "images")
                 .map(([key, value]) => (
                   <div key={key} className="grid grid-cols-2 gap-4 py-2 border-b border-gray-100">

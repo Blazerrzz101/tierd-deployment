@@ -137,64 +137,214 @@ VALUES
 -- Create test products
 INSERT INTO products (id, name, category, price, image_url, description, url_slug)
 VALUES 
-  ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Test Product 1', 'Electronics', 99.99, 
+  ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Test Product 1', 'gaming-mice', 99.99, 
    'https://example.com/img1.jpg', 'A great test product', 'test-product-1'),
   
-  ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Test Product 2', 'Electronics', 149.99,
+  ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Test Product 2', 'gaming-keyboards', 149.99,
    'https://example.com/img2.jpg', 'Another amazing product', 'test-product-2'),
   
-  ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'Test Product 3', 'Electronics', 199.99,
+  ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'Test Product 3', 'gaming-headsets', 199.99,
    'https://example.com/img3.jpg', 'The best product ever', 'test-product-3');
 
 -- Add some product votes
 INSERT INTO product_votes (product_id, user_id, vote_type)
 VALUES 
   ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c', 'up'),
-  ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c', 'down'),
   ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7', 'up'),
   ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7', 'up');
 
--- Add some reviews
-INSERT INTO reviews (product_id, user_id, rating, title, content)
+-- Insert sample products
+INSERT INTO products (name, description, category, price, votes, specifications, url_slug, image_url)
 VALUES 
-  ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c', 5, 'Amazing Product!', 'Great product, exceeded my expectations!'),
-  ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7', 4, 'Pretty Good', 'Good value for money, would recommend.'),
-  ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c', 5, 'Best Purchase Ever!', 'This is the best product I have ever bought!');
-
--- Add some test threads
-INSERT INTO threads (id, title, content, user_id, created_at, upvotes, downvotes, mentioned_products)
-VALUES 
-  ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'Best Gaming Mouse 2024?', 
-   'Looking for recommendations on the best gaming mouse for FPS games. Currently considering the Pulsar X2 and Logitech G Pro X Superlight. Any thoughts?',
-   'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c', NOW(), 5, 1,
-   ARRAY['a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11']),
-   
-  ('f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', 'Mechanical Keyboard Showdown', 
-   'Just got my hands on both the Keychron Q1 and GMMK Pro. Here are my initial impressions and comparison...',
-   'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7', NOW(), 8, 2,
-   ARRAY['b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12']);
-
--- Add thread comments
-INSERT INTO thread_comments (thread_id, user_id, content)
-VALUES 
-  ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7',
-   'I have been using the Pulsar X2 for a few months now. The weight and shape are perfect for FPS games.'),
-   
-  ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c',
-   'Thanks for the feedback! How is the build quality?'),
-   
-  ('f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', 'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c',
-   'Great comparison! Which one has better stabilizers out of the box?');
-
--- Add thread product mentions
-INSERT INTO thread_products (thread_id, product_id)
-VALUES 
-  ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
-  ('f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12');
-
--- Add thread votes
-INSERT INTO thread_votes (thread_id, user_id, vote_type)
-VALUES 
-  ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c', 'up'),
-  ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14', 'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7', 'up'),
-  ('f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a15', 'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7', 'up'); 
+    ('Logitech G502 X PLUS', 
+     'LIGHTFORCE hybrid optical-mechanical switches and LIGHTSPEED wireless technology combine in our most advanced gaming mouse ever.',
+     'gaming-mice',
+     149.99,
+     1500,
+     jsonb_build_object(
+         'sensor', 'HERO 25K',
+         'dpi', '100-25,600',
+         'buttons', '13 programmable',
+         'weight', '89g',
+         'battery', 'Up to 60 hours',
+         'connection', 'LIGHTSPEED Wireless'
+     ),
+     'logitech-g502-x-plus',
+     '/images/products/logitech-g502-x-plus.png'
+    ),
+    ('Razer Viper V2 Pro',
+     'Ultra-lightweight wireless gaming mouse with next-gen optical switches and Focus Pro 30K optical sensor.',
+     'gaming-mice',
+     149.99,
+     880,
+     jsonb_build_object(
+         'sensor', 'Focus Pro 30K',
+         'dpi', '100-30,000',
+         'buttons', '5 programmable',
+         'weight', '58g',
+         'battery', 'Up to 80 hours',
+         'connection', 'HyperSpeed Wireless'
+     ),
+     'razer-viper-v2-pro',
+     '/images/products/razer-viper-v2-pro.png'
+    ),
+    ('Glorious Model O',
+     'Ultra-lightweight gaming mouse with honeycomb shell design.',
+     'gaming-mice',
+     79.99,
+     650,
+     jsonb_build_object(
+         'sensor', 'BAMF',
+         'dpi', '400-16,000',
+         'buttons', '6',
+         'weight', '67g',
+         'connection', 'Wired',
+         'rgb', true
+     ),
+     'glorious-model-o',
+     '/images/products/glorious-model-o.png'
+    ),
+    ('Razer Huntsman V2',
+     'Optical gaming keyboard with analog switches and premium features.',
+     'gaming-keyboards',
+     199.99,
+     920,
+     jsonb_build_object(
+         'switches', 'Razer Analog Optical',
+         'form_factor', 'Full-size',
+         'backlight', 'Razer Chroma RGB',
+         'wrist_rest', 'Detachable magnetic',
+         'connection', 'USB-C',
+         'features', jsonb_build_array(
+             'N-key rollover',
+             'Multimedia controls',
+             'USB 3.0 passthrough',
+             'Aluminum construction'
+         )
+     ),
+     'razer-huntsman-v2',
+     '/images/products/razer-huntsman-v2.png'
+    ),
+    ('HyperX Cloud Alpha',
+     'Premium gaming headset with dual chamber drivers.',
+     'gaming-headsets',
+     99.99,
+     1200,
+     jsonb_build_object(
+         'drivers', '50mm Dual Chamber',
+         'frequency_response', '13Hz–27,000Hz',
+         'connection', '3.5mm',
+         'microphone', 'Detachable noise-cancelling',
+         'features', jsonb_build_array(
+             'Memory foam ear cushions',
+             'Aluminum frame',
+             'Braided cable',
+             'Cross-platform compatibility'
+         )
+     ),
+     'hyperx-cloud-alpha',
+     '/images/products/hyperx-cloud-alpha.png'
+    ),
+    ('ASUS ROG Swift PG279QM',
+     '27-inch 1440p gaming monitor with 240Hz refresh rate.',
+     'gaming-monitors',
+     849.99,
+     650,
+     jsonb_build_object(
+         'panel', 'IPS',
+         'resolution', '2560x1440',
+         'refresh_rate', '240Hz',
+         'response_time', '1ms GTG',
+         'hdr', 'HDR400',
+         'features', jsonb_build_array(
+             'G-SYNC Ultimate',
+             'ELMB-Sync',
+             'DisplayHDR 400',
+             'Factory calibrated'
+         )
+     ),
+     'asus-rog-swift-pg279qm',
+     '/images/products/asus-rog-swift-pg279qm.png'
+    ),
+    ('Samsung Odyssey G7',
+     '32-inch curved gaming monitor with QLED technology.',
+     'gaming-monitors',
+     799.99,
+     720,
+     jsonb_build_object(
+         'panel', 'VA QLED',
+         'resolution', '2560x1440',
+         'refresh_rate', '240Hz',
+         'response_time', '1ms GTG',
+         'hdr', 'HDR600',
+         'curvature', '1000R',
+         'features', jsonb_build_array(
+             'G-SYNC Compatible',
+             'FreeSync Premium Pro',
+             'DisplayHDR 600',
+             'Infinity Core Lighting'
+         )
+     ),
+     'samsung-odyssey-g7',
+     '/images/products/samsung-odyssey-g7.png'
+    ),
+    ('LG 27GN950-B',
+     '27-inch 4K Nano IPS gaming monitor.',
+     'gaming-monitors',
+     899.99,
+     580,
+     jsonb_build_object(
+         'panel', 'Nano IPS',
+         'resolution', '3840x2160',
+         'refresh_rate', '144Hz',
+         'response_time', '1ms GTG',
+         'hdr', 'HDR600',
+         'features', jsonb_build_array(
+             'G-SYNC Compatible',
+             'FreeSync Premium Pro',
+             'DisplayHDR 600',
+             'Sphere Lighting 2.0'
+         )
+     ),
+     'lg-27gn950-b',
+     '/images/products/lg-27gn950-b.png'
+    ),
+    ('Logitech G Pro X Keyboard',
+     'Tournament-grade tenkeyless mechanical gaming keyboard.',
+     'gaming-keyboards',
+     199.99,
+     850,
+     jsonb_build_object(
+         'switches', 'GX Hot-swappable',
+         'form_factor', 'Tenkeyless',
+         'backlight', 'RGB per key',
+         'connection', 'Detachable USB-C',
+         'features', jsonb_build_array(
+             'Programmable macros',
+             'Onboard memory',
+             'Aircraft-grade aluminum'
+         )
+     ),
+     'logitech-g-pro-x-keyboard',
+     '/images/products/logitech-g-pro-x-keyboard.png'
+    ),
+    ('SteelSeries Arctis Nova Pro',
+     'High-end wireless gaming headset with active noise cancellation.',
+     'gaming-headsets',
+     349.99,
+     920,
+     jsonb_build_object(
+         'drivers', 'Custom 40mm',
+         'frequency_response', '10-40,000Hz',
+         'connection', 'Wireless 2.4GHz/Bluetooth',
+         'battery', 'Dual-battery system',
+         'features', jsonb_build_array(
+             'Active Noise Cancellation',
+             'Hi-Res Audio certified',
+             'Multi-system compatibility',
+             'Hot-swappable batteries'
+         )
+     ),
+     'steelseries-arctis-nova-pro',
+     '/images/products/steelseries-arctis-nova-pro.png'
+    ); 

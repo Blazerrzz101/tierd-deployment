@@ -6,6 +6,7 @@ import { RankingCard } from "./ranking-card"
 import { Product } from "@/types/product"
 import { supabase } from "@/lib/supabase/client"
 import { CATEGORY_IDS } from "@/lib/constants"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 // Base64 encoded SVG placeholder
 const PLACEHOLDER_IMAGE = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiMyMDIwMjAiLz48cGF0aCBkPSJNMTgyIDIwMkMyMDAgMTY2IDIxNSAxNDUgMjM1IDE0NUMyNTUgMTQ1IDI2NSAxNjYgMjcwIDIwMkMzMDAgMTY2IDMxNSAxNDUgMzM1IDE0NUMzNTUgMTQ1IDM2NSAxNjYgMzcwIDIwMiIgc3Ryb2tlPSIjNDA0MDQwIiBzdHJva2Utd2lkdGg9IjIwIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4="
@@ -44,89 +45,69 @@ export function RankingList({ categoryId }: RankingListProps) {
   const searchQuery = searchParams.get('search')
 
   useEffect(() => {
+    let isMounted = true
+    
     async function fetchProducts() {
       try {
-        console.log('Fetching products for category:', categoryId)
         setIsLoading(true)
         setError(null)
 
-        let baseQuery = supabase
-          .from('products')
-          .select('*', { count: 'exact' })
+        const { data, error: queryError } = await supabase
+          .rpc('get_product_rankings', {
+            p_category: categoryId === 'all' ? null : categoryId
+          })
 
-        // Apply category filter if specified and valid
-        if (categoryId && categoryId !== 'all') {
-          baseQuery = baseQuery.eq('category', categoryId)
+        if (queryError) throw queryError
+
+        if (isMounted) {
+          let filteredProducts = data || []
+          
+          // Apply search filter if needed
+          if (searchQuery) {
+            const searchLower = searchQuery.toLowerCase()
+            filteredProducts = filteredProducts.filter((p: Product) => 
+              p.name.toLowerCase().includes(searchLower) ||
+              (p.description && p.description.toLowerCase().includes(searchLower))
+            )
+          }
+
+          setProducts(filteredProducts)
         }
-
-        // Apply search filter if specified
-        if (searchQuery) {
-          baseQuery = baseQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
-        }
-
-        // Get the products with proper ordering
-        const { data, error: queryError, count } = await baseQuery
-          .order('votes', { ascending: false })
-          .limit(50)
-
-        if (queryError) {
-          console.error('Database error:', queryError)
-          setError(queryError.message)
-          return
-        }
-
-        console.log(`Found ${count} products in category ${categoryId}`)
-        console.log('Raw products data:', data)
-
-        if (!data || data.length === 0) {
-          setProducts([])
-          return
-        }
-
-        const transformedProducts = data.map((product, index) => ({
-          id: String(product.id),
-          name: String(product.name || 'Unnamed Product'),
-          description: product.description || '',
-          category: product.category || '',
-          price: product.price || 0,
-          image_url: product.image_url || null,
-          votes: product.votes || 0,
-          rank: index + 1, // Set rank based on the sorted order
-          specs: product.specs || {},
-          userVote: product.user_vote || null,
-          url_slug: product.url_slug || '',
-          created_at: product.created_at || new Date().toISOString(),
-          updated_at: product.updated_at || new Date().toISOString()
-        }))
-
-        setProducts(transformedProducts)
       } catch (err) {
         console.error('Error fetching products:', err)
-        setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
     fetchProducts()
+    return () => { isMounted = false }
   }, [categoryId, searchQuery])
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex flex-col items-center justify-center py-12">
+        <LoadingSpinner size="lg" />
+        <p className="mt-4 text-muted-foreground">
+          Loading rankings...
+        </p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-500">
-        <div>Error loading products:</div>
-        <div className="text-sm">{error}</div>
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
+        <h3 className="text-lg font-semibold text-destructive mb-2">Error Loading Rankings</h3>
+        <p className="text-destructive/80 mb-4">{error}</p>
         <button 
           onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-md text-sm"
+          className="text-sm font-medium text-destructive hover:text-destructive/80 underline underline-offset-4"
         >
           Try Again
         </button>
@@ -136,17 +117,20 @@ export function RankingList({ categoryId }: RankingListProps) {
 
   if (products.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        {searchQuery 
-          ? `No products found matching "${searchQuery}"`
-          : 'No products found in this category.'
-        }
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-lg font-medium mb-2">No Products Found</p>
+        <p className="text-muted-foreground">
+          {searchQuery 
+            ? `No products found matching "${searchQuery}"`
+            : 'No products found in this category.'
+          }
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="mt-8 space-y-4">
+    <div className="space-y-4">
       {products.map((product, index) => (
         <RankingCard
           key={product.id}

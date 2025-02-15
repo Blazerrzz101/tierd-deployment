@@ -9,7 +9,41 @@ let supabaseInstance: ReturnType<typeof createClientComponentClient<Database>> |
 export function getSupabaseClient() {
   if (supabaseInstance) return supabaseInstance;
 
-  supabaseInstance = createClientComponentClient<Database>();
+  // For local development, we want to use the local Supabase instance
+  const isLocalDev = process.env.NODE_ENV === 'development' && 
+                     process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('localhost');
+
+  supabaseInstance = createClientComponentClient<Database>({
+    options: {
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      },
+      db: {
+        schema: 'public'
+      },
+      global: {
+        headers: {
+          'x-client-info': `tierd-web-${isLocalDev ? 'local' : 'prod'}`
+        }
+      }
+    }
+  });
+
+  // Test the connection
+  testDatabaseConnection()
+    .then(isConnected => {
+      if (!isConnected) {
+        console.error('Failed to establish initial database connection');
+      } else {
+        console.log(`Successfully connected to ${isLocalDev ? 'local' : 'production'} Supabase instance`);
+      }
+    })
+    .catch(error => {
+      console.error('Error testing database connection:', error);
+    });
+
   return supabaseInstance;
 }
 

@@ -124,7 +124,7 @@ export function SearchBar() {
                 {filteredProducts.map((product) => (
                   <Link 
                     key={product.id}
-                    href={`/products/${product.url_slug}`}
+                    href={`/products/${product.url_slug || product.id}`}
                     className="flex items-center gap-2 p-2 hover:bg-accent rounded-md"
                     onClick={() => setShowDropdown(false)}
                   >

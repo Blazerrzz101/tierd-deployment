@@ -2,30 +2,35 @@
 
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
+import { useAuth } from "@/hooks/use-auth"
 
 interface OAuthButtonsProps {
-  isLoading?: boolean
+  className?: string
 }
 
-export function OAuthButtons({ isLoading }: OAuthButtonsProps) {
+export function OAuthButtons({ className }: OAuthButtonsProps) {
+  const { signInWithProvider } = useAuth()
+  
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <Button variant="outline" disabled={isLoading} className="w-full" onClick={() => {}}>
-        {isLoading ? (
-          <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
+    <div className={className}>
+      <div className="grid gap-2">
+        <Button
+          variant="outline"
+          onClick={() => signInWithProvider("github")}
+          className="bg-white/5"
+        >
+          <Icons.gitHub className="mr-2 h-4 w-4" />
+          Continue with GitHub
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => signInWithProvider("google")}
+          className="bg-white/5"
+        >
           <Icons.google className="mr-2 h-4 w-4" />
-        )}
-        Google
-      </Button>
-      <Button variant="outline" disabled={isLoading} className="w-full" onClick={() => {}}>
-        {isLoading ? (
-          <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Icons.discord className="mr-2 h-4 w-4" />
-        )}
-        Discord
-      </Button>
+          Continue with Google
+        </Button>
+      </div>
     </div>
   )
 }

@@ -9,7 +9,6 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { VoteButtons } from "@/components/products/vote-buttons"
 import { useVote } from "@/hooks/use-vote"
-import { PLACEHOLDER_IMAGE } from "@/lib/constants"
 
 interface RankingCardProps {
   rank: number
@@ -17,10 +16,10 @@ interface RankingCardProps {
 }
 
 export function RankingCard({ rank, product }: RankingCardProps) {
-  const { vote, isLoading } = useVote()
+  const { vote } = useVote(product)
 
   // Get the image URL, falling back to placeholder
-  const imageUrl = product.image_url || PLACEHOLDER_IMAGE
+  const imageUrl = product.image_url || "/images/products/placeholder.svg"
 
   return (
     <motion.div
@@ -47,12 +46,12 @@ export function RankingCard({ rank, product }: RankingCardProps) {
           <div className="relative aspect-square w-20 overflow-hidden rounded-lg bg-black/20">
             <Image
               src={imageUrl}
-              alt={product.name}
+              alt={product.name || 'Product image'}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {
                 const img = e.target as HTMLImageElement
-                img.src = PLACEHOLDER_IMAGE
+                img.src = "/images/products/placeholder.svg"
               }}
             />
             {/* Gradient Overlay */}
@@ -83,10 +82,8 @@ export function RankingCard({ rank, product }: RankingCardProps) {
           {/* Actions */}
           <div className="flex items-center gap-6">
             <VoteButtons 
-              productId={product.id}
-              upvotes={product.votes ?? 0}
-              downvotes={0}
-              userVote={product.userVote}
+              product={product}
+              onVote={vote}
             />
             <Link href={`/products/${product.url_slug || product.id}`}>
               <Button 
