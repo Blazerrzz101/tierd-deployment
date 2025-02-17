@@ -1,350 +1,300 @@
--- This seed file runs automatically when the database is initialized
+-- Clear existing data
+TRUNCATE products CASCADE;
 
--- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Gaming Mice
+INSERT INTO products (name, description, category, url_slug, price, specifications, image_url)
+VALUES 
+  (
+    'Logitech G Pro X Superlight',
+    'Ultra-lightweight wireless gaming mouse designed for esports professionals. Features HERO 25K sensor and weighs only 63g.',
+    'Gaming Mice',
+    'logitech-g-pro-x-superlight',
+    149.99,
+    '{
+      "sensor": "HERO 25K",
+      "dpi": 25600,
+      "weight": "63g",
+      "battery_life": "70 hours",
+      "connection": "Wireless",
+      "rgb": false,
+      "polling_rate": "1000Hz",
+      "buttons": 5
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'Razer DeathAdder V3 Pro',
+    'Professional-grade gaming mouse with Focus Pro 30K optical sensor and ergonomic design.',
+    'Gaming Mice',
+    'razer-deathadder-v3-pro',
+    159.99,
+    '{
+      "sensor": "Focus Pro 30K",
+      "dpi": 30000,
+      "weight": "64g",
+      "battery_life": "90 hours",
+      "connection": "Wireless",
+      "rgb": false,
+      "polling_rate": "1000Hz",
+      "buttons": 5
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1527814050087-3793815479db?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'Zowie EC2-C',
+    'Professional esports mouse with 3360 sensor and ergonomic right-handed design.',
+    'Gaming Mice',
+    'zowie-ec2-c',
+    69.99,
+    '{
+      "sensor": "3360",
+      "dpi": 3200,
+      "weight": "73g",
+      "connection": "Wired",
+      "rgb": false,
+      "polling_rate": "1000Hz",
+      "buttons": 5
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1623820919239-0d0ff10797a1?w=800&auto=format&fit=crop&q=60'
+  );
 
--- Ensure proper schema setup
-CREATE SCHEMA IF NOT EXISTS public;
+-- Gaming Keyboards
+INSERT INTO products (name, description, category, url_slug, price, specifications, image_url)
+VALUES 
+  (
+    'Wooting 60HE',
+    'Revolutionary analog mechanical keyboard with Lekker switches and adjustable actuation points.',
+    'Gaming Keyboards',
+    'wooting-60he',
+    199.99,
+    '{
+      "switches": "Lekker (Hall Effect)",
+      "form_factor": "60%",
+      "backlight": "RGB",
+      "hot_swappable": true,
+      "connection": "USB-C",
+      "analog_input": true,
+      "rapid_trigger": true
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'Keychron Q1 Pro',
+    'Premium wireless mechanical keyboard with QMK/VIA support and gasket mount design.',
+    'Gaming Keyboards',
+    'keychron-q1-pro',
+    199.99,
+    '{
+      "switches": "Gateron G Pro",
+      "form_factor": "75%",
+      "backlight": "RGB",
+      "hot_swappable": true,
+      "connection": "Wireless/USB-C",
+      "case_material": "Aluminum",
+      "plate_material": "Steel"
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1595044426077-d36d9236d54a?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'Razer Huntsman V2',
+    'Optical gaming keyboard with advanced features and premium build quality.',
+    'Gaming Keyboards',
+    'razer-huntsman-v2',
+    249.99,
+    '{
+      "switches": "Razer Optical",
+      "form_factor": "Full size",
+      "backlight": "RGB",
+      "wrist_rest": true,
+      "connection": "USB-C",
+      "polling_rate": "8000Hz",
+      "anti_ghosting": true
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1595044426111-2f255729d051?w=800&auto=format&fit=crop&q=60'
+  );
 
--- Grant proper permissions to public schema
-GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres;
-GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres;
+-- Gaming Monitors
+INSERT INTO products (name, description, category, url_slug, price, specifications, image_url)
+VALUES 
+  (
+    'ASUS ROG Swift 360Hz PG259QN',
+    'Ultra-fast 360Hz gaming monitor designed for competitive esports.',
+    'Gaming Monitors',
+    'asus-rog-swift-pg259qn',
+    699.99,
+    '{
+      "panel": "IPS",
+      "resolution": "1920x1080",
+      "refresh_rate": "360Hz",
+      "response_time": "1ms",
+      "hdr": "HDR10",
+      "g_sync": true,
+      "size": "24.5 inch"
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1616711906333-23e63cd0884c?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'Samsung Odyssey G7',
+    'Curved 1440p gaming monitor with 240Hz refresh rate and QLED technology.',
+    'Gaming Monitors',
+    'samsung-odyssey-g7',
+    799.99,
+    '{
+      "panel": "VA QLED",
+      "resolution": "2560x1440",
+      "refresh_rate": "240Hz",
+      "response_time": "1ms",
+      "hdr": "HDR600",
+      "g_sync": true,
+      "size": "27 inch",
+      "curvature": "1000R"
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1616711907003-046ba89d4c58?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'LG 27GP950-B',
+    '4K gaming monitor with HDMI 2.1 and 144Hz refresh rate.',
+    'Gaming Monitors',
+    'lg-27gp950-b',
+    899.99,
+    '{
+      "panel": "Nano IPS",
+      "resolution": "3840x2160",
+      "refresh_rate": "144Hz",
+      "response_time": "1ms",
+      "hdr": "HDR600",
+      "g_sync": true,
+      "size": "27 inch",
+      "hdmi": "2.1"
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1616711907914-c0c5e6c13701?w=800&auto=format&fit=crop&q=60'
+  );
 
--- Grant basic read access to anon and authenticated roles
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon, authenticated;
+-- Gaming Headsets
+INSERT INTO products (name, description, category, url_slug, price, specifications, image_url)
+VALUES 
+  (
+    'Sennheiser HD 800S',
+    'Audiophile-grade open-back headphones perfect for immersive gaming.',
+    'Gaming Headsets',
+    'sennheiser-hd-800s',
+    1599.99,
+    '{
+      "type": "Open-back",
+      "driver": "50mm Ring Radiator",
+      "frequency_response": "4-51000Hz",
+      "impedance": "300 ohm",
+      "weight": "330g",
+      "connection": "6.3mm/XLR",
+      "microphone": false
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1618066135557-593e0bfd9d27?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'Beyerdynamic DT 990 Pro',
+    'Professional studio headphones with excellent gaming performance.',
+    'Gaming Headsets',
+    'beyerdynamic-dt-990-pro',
+    159.99,
+    '{
+      "type": "Open-back",
+      "driver": "45mm Dynamic",
+      "frequency_response": "5-35000Hz",
+      "impedance": "250 ohm",
+      "weight": "250g",
+      "connection": "3.5mm",
+      "cable_length": "3m"
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1599669454699-248893623440?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'HyperX Cloud Alpha',
+    'Premium gaming headset with dual chamber drivers.',
+    'Gaming Headsets',
+    'hyperx-cloud-alpha',
+    99.99,
+    '{
+      "type": "Closed-back",
+      "driver": "50mm Dual Chamber",
+      "frequency_response": "13-27000Hz",
+      "impedance": "65 ohm",
+      "weight": "336g",
+      "connection": "3.5mm",
+      "microphone": true,
+      "detachable_cable": true
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1600086827875-a63b01f1335c?w=800&auto=format&fit=crop&q=60'
+  );
 
--- Create or replace function to automatically set updated_at
-CREATE OR REPLACE FUNCTION public.set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Gaming Chairs
+INSERT INTO products (name, description, category, url_slug, price, specifications, image_url)
+VALUES 
+  (
+    'Herman Miller Embody Gaming',
+    'Premium ergonomic gaming chair designed for long gaming sessions.',
+    'Gaming Chairs',
+    'herman-miller-embody-gaming',
+    1695.00,
+    '{
+      "material": "Multi-layer fabric",
+      "max_weight": "300lbs",
+      "adjustable_arms": true,
+      "lumbar_support": true,
+      "recline": "Synchronized",
+      "warranty": "12 years",
+      "assembly_required": false
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1610395219791-21b0353e43cb?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'Steelcase Gesture',
+    'High-end office chair perfect for gaming with advanced arm system.',
+    'Gaming Chairs',
+    'steelcase-gesture',
+    1299.00,
+    '{
+      "material": "Fabric",
+      "max_weight": "400lbs",
+      "adjustable_arms": true,
+      "lumbar_support": true,
+      "recline": "Variable back stop",
+      "warranty": "12 years",
+      "arm_system": "360 degree"
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1611883653111-0d295cc8c0c6?w=800&auto=format&fit=crop&q=60'
+  ),
+  (
+    'Secretlab Titan Evo 2022',
+    'Premium gaming chair with advanced ergonomic features.',
+    'Gaming Chairs',
+    'secretlab-titan-evo-2022',
+    549.00,
+    '{
+      "material": "NEO Hybrid Leatherette",
+      "max_weight": "395lbs",
+      "adjustable_arms": "4D",
+      "lumbar_support": "Integrated",
+      "recline": "165 degrees",
+      "warranty": "5 years",
+      "size": "Regular"
+    }'::jsonb,
+    'https://images.unsplash.com/photo-1601855018889-08c25e5a2861?w=800&auto=format&fit=crop&q=60'
+  );
 
--- Ensure tables exist with proper structure
-CREATE TABLE IF NOT EXISTS public.products (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    description TEXT,
-    category TEXT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    image_url TEXT,
-    url_slug TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT unique_url_slug UNIQUE (url_slug)
+-- Add some initial votes to create rankings
+INSERT INTO votes (product_id, user_id, vote_type)
+SELECT 
+  p.id,
+  '00000000-0000-0000-0000-000000000001'::uuid,
+  1
+FROM products p
+WHERE p.name IN (
+  'Logitech G Pro X Superlight',
+  'Wooting 60HE',
+  'ASUS ROG Swift 360Hz PG259QN',
+  'Sennheiser HD 800S',
+  'Herman Miller Embody Gaming'
 );
 
-CREATE TABLE IF NOT EXISTS public.product_rankings (
-    product_id UUID PRIMARY KEY REFERENCES public.products(id) ON DELETE CASCADE,
-    upvotes INTEGER DEFAULT 0,
-    downvotes INTEGER DEFAULT 0,
-    net_score INTEGER DEFAULT 0,
-    rank INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category);
-CREATE INDEX IF NOT EXISTS idx_product_rankings_rank ON public.product_rankings(rank);
-
--- Set up automatic updated_at for both tables
-DROP TRIGGER IF EXISTS set_updated_at ON public.products;
-CREATE TRIGGER set_updated_at
-    BEFORE UPDATE ON public.products
-    FOR EACH ROW
-    EXECUTE FUNCTION public.set_updated_at();
-
-DROP TRIGGER IF EXISTS set_updated_at ON public.product_rankings;
-CREATE TRIGGER set_updated_at
-    BEFORE UPDATE ON public.product_rankings
-    FOR EACH ROW
-    EXECUTE FUNCTION public.set_updated_at();
-
--- Enable Row Level Security
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.product_rankings ENABLE ROW LEVEL SECURITY;
-
--- Create permissive policies
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.products;
-CREATE POLICY "Enable read access for all users" ON public.products
-    FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.product_rankings;
-CREATE POLICY "Enable read access for all users" ON public.product_rankings
-    FOR SELECT USING (true);
-
--- Create test users
-INSERT INTO auth.users (
-    id,
-    instance_id,
-    aud,
-    role,
-    email,
-    encrypted_password,
-    email_confirmed_at,
-    created_at,
-    updated_at,
-    confirmation_token,
-    recovery_token,
-    email_change_token_new,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    is_super_admin
-)
-VALUES 
-(
-    'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'test1@example.com',
-    crypt('testpassword', gen_salt('bf')),
-    NOW(),
-    NOW(),
-    NOW(),
-    NULL,
-    NULL,
-    NULL,
-    jsonb_build_object('provider', 'email', 'providers', ARRAY['email']),
-    '{"name": "Test User 1"}'::jsonb,
-    FALSE
-),
-(
-    'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'test2@example.com',
-    crypt('testpassword', gen_salt('bf')),
-    NOW(),
-    NOW(),
-    NOW(),
-    NULL,
-    NULL,
-    NULL,
-    jsonb_build_object('provider', 'email', 'providers', ARRAY['email']),
-    '{"name": "Test User 2"}'::jsonb,
-    FALSE
-);
-
--- Create test products
-INSERT INTO products (id, name, category, price, image_url, description, url_slug)
-VALUES 
-  ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Test Product 1', 'gaming-mice', 99.99, 
-   'https://example.com/img1.jpg', 'A great test product', 'test-product-1'),
-  
-  ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Test Product 2', 'gaming-keyboards', 149.99,
-   'https://example.com/img2.jpg', 'Another amazing product', 'test-product-2'),
-  
-  ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'Test Product 3', 'gaming-headsets', 199.99,
-   'https://example.com/img3.jpg', 'The best product ever', 'test-product-3');
-
--- Add some product votes
-INSERT INTO product_votes (product_id, user_id, vote_type)
-VALUES 
-  ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'd0d8c19c-3b3e-4f5a-9b1a-e3cce01a9c5c', 'up'),
-  ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7', 'up'),
-  ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'e1e9c2ad-4c4f-4f6b-0c2b-f4ddf1b0d6d7', 'up');
-
--- Insert sample products
-INSERT INTO products (name, description, category, price, votes, specifications, url_slug, image_url)
-VALUES 
-    ('Logitech G502 X PLUS', 
-     'LIGHTFORCE hybrid optical-mechanical switches and LIGHTSPEED wireless technology combine in our most advanced gaming mouse ever.',
-     'gaming-mice',
-     149.99,
-     1500,
-     jsonb_build_object(
-         'sensor', 'HERO 25K',
-         'dpi', '100-25,600',
-         'buttons', '13 programmable',
-         'weight', '89g',
-         'battery', 'Up to 60 hours',
-         'connection', 'LIGHTSPEED Wireless'
-     ),
-     'logitech-g502-x-plus',
-     '/images/products/logitech-g502-x-plus.png'
-    ),
-    ('Razer Viper V2 Pro',
-     'Ultra-lightweight wireless gaming mouse with next-gen optical switches and Focus Pro 30K optical sensor.',
-     'gaming-mice',
-     149.99,
-     880,
-     jsonb_build_object(
-         'sensor', 'Focus Pro 30K',
-         'dpi', '100-30,000',
-         'buttons', '5 programmable',
-         'weight', '58g',
-         'battery', 'Up to 80 hours',
-         'connection', 'HyperSpeed Wireless'
-     ),
-     'razer-viper-v2-pro',
-     '/images/products/razer-viper-v2-pro.png'
-    ),
-    ('Glorious Model O',
-     'Ultra-lightweight gaming mouse with honeycomb shell design.',
-     'gaming-mice',
-     79.99,
-     650,
-     jsonb_build_object(
-         'sensor', 'BAMF',
-         'dpi', '400-16,000',
-         'buttons', '6',
-         'weight', '67g',
-         'connection', 'Wired',
-         'rgb', true
-     ),
-     'glorious-model-o',
-     '/images/products/glorious-model-o.png'
-    ),
-    ('Razer Huntsman V2',
-     'Optical gaming keyboard with analog switches and premium features.',
-     'gaming-keyboards',
-     199.99,
-     920,
-     jsonb_build_object(
-         'switches', 'Razer Analog Optical',
-         'form_factor', 'Full-size',
-         'backlight', 'Razer Chroma RGB',
-         'wrist_rest', 'Detachable magnetic',
-         'connection', 'USB-C',
-         'features', jsonb_build_array(
-             'N-key rollover',
-             'Multimedia controls',
-             'USB 3.0 passthrough',
-             'Aluminum construction'
-         )
-     ),
-     'razer-huntsman-v2',
-     '/images/products/razer-huntsman-v2.png'
-    ),
-    ('HyperX Cloud Alpha',
-     'Premium gaming headset with dual chamber drivers.',
-     'gaming-headsets',
-     99.99,
-     1200,
-     jsonb_build_object(
-         'drivers', '50mm Dual Chamber',
-         'frequency_response', '13Hz–27,000Hz',
-         'connection', '3.5mm',
-         'microphone', 'Detachable noise-cancelling',
-         'features', jsonb_build_array(
-             'Memory foam ear cushions',
-             'Aluminum frame',
-             'Braided cable',
-             'Cross-platform compatibility'
-         )
-     ),
-     'hyperx-cloud-alpha',
-     '/images/products/hyperx-cloud-alpha.png'
-    ),
-    ('ASUS ROG Swift PG279QM',
-     '27-inch 1440p gaming monitor with 240Hz refresh rate.',
-     'gaming-monitors',
-     849.99,
-     650,
-     jsonb_build_object(
-         'panel', 'IPS',
-         'resolution', '2560x1440',
-         'refresh_rate', '240Hz',
-         'response_time', '1ms GTG',
-         'hdr', 'HDR400',
-         'features', jsonb_build_array(
-             'G-SYNC Ultimate',
-             'ELMB-Sync',
-             'DisplayHDR 400',
-             'Factory calibrated'
-         )
-     ),
-     'asus-rog-swift-pg279qm',
-     '/images/products/asus-rog-swift-pg279qm.png'
-    ),
-    ('Samsung Odyssey G7',
-     '32-inch curved gaming monitor with QLED technology.',
-     'gaming-monitors',
-     799.99,
-     720,
-     jsonb_build_object(
-         'panel', 'VA QLED',
-         'resolution', '2560x1440',
-         'refresh_rate', '240Hz',
-         'response_time', '1ms GTG',
-         'hdr', 'HDR600',
-         'curvature', '1000R',
-         'features', jsonb_build_array(
-             'G-SYNC Compatible',
-             'FreeSync Premium Pro',
-             'DisplayHDR 600',
-             'Infinity Core Lighting'
-         )
-     ),
-     'samsung-odyssey-g7',
-     '/images/products/samsung-odyssey-g7.png'
-    ),
-    ('LG 27GN950-B',
-     '27-inch 4K Nano IPS gaming monitor.',
-     'gaming-monitors',
-     899.99,
-     580,
-     jsonb_build_object(
-         'panel', 'Nano IPS',
-         'resolution', '3840x2160',
-         'refresh_rate', '144Hz',
-         'response_time', '1ms GTG',
-         'hdr', 'HDR600',
-         'features', jsonb_build_array(
-             'G-SYNC Compatible',
-             'FreeSync Premium Pro',
-             'DisplayHDR 600',
-             'Sphere Lighting 2.0'
-         )
-     ),
-     'lg-27gn950-b',
-     '/images/products/lg-27gn950-b.png'
-    ),
-    ('Logitech G Pro X Keyboard',
-     'Tournament-grade tenkeyless mechanical gaming keyboard.',
-     'gaming-keyboards',
-     199.99,
-     850,
-     jsonb_build_object(
-         'switches', 'GX Hot-swappable',
-         'form_factor', 'Tenkeyless',
-         'backlight', 'RGB per key',
-         'connection', 'Detachable USB-C',
-         'features', jsonb_build_array(
-             'Programmable macros',
-             'Onboard memory',
-             'Aircraft-grade aluminum'
-         )
-     ),
-     'logitech-g-pro-x-keyboard',
-     '/images/products/logitech-g-pro-x-keyboard.png'
-    ),
-    ('SteelSeries Arctis Nova Pro',
-     'High-end wireless gaming headset with active noise cancellation.',
-     'gaming-headsets',
-     349.99,
-     920,
-     jsonb_build_object(
-         'drivers', 'Custom 40mm',
-         'frequency_response', '10-40,000Hz',
-         'connection', 'Wireless 2.4GHz/Bluetooth',
-         'battery', 'Dual-battery system',
-         'features', jsonb_build_array(
-             'Active Noise Cancellation',
-             'Hi-Res Audio certified',
-             'Multi-system compatibility',
-             'Hot-swappable batteries'
-         )
-     ),
-     'steelseries-arctis-nova-pro',
-     '/images/products/steelseries-arctis-nova-pro.png'
-    ); 
+-- Refresh the materialized view
+REFRESH MATERIALIZED VIEW product_rankings; 

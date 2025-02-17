@@ -23,10 +23,11 @@ export const PLACEHOLDER_IMAGE = `data:image/svg+xml;base64,${Buffer.from(`
 
 // Category IDs
 export const CATEGORY_IDS = {
-  MICE: 'mice',
-  KEYBOARDS: 'keyboards',
-  HEADSETS: 'headsets',
-  MONITORS: 'monitors',
+  MICE: 'Gaming Mice',
+  KEYBOARDS: 'Gaming Keyboards',
+  MONITORS: 'Gaming Monitors',
+  HEADSETS: 'Gaming Headsets',
+  CHAIRS: 'Gaming Chairs'
 } as const
 
 // Vote types

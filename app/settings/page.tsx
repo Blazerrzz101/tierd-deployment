@@ -27,11 +27,6 @@ const notificationSchema = z.object({
   activity_digest: z.boolean(),
 })
 
-export const metadata = {
-  title: "Settings | Bolt",
-  description: "Manage your account settings and preferences",
-}
-
 export default function SettingsPage() {
   const { user, updateProfile } = useAuth()
   const [isLoading, setIsLoading] = useState(false)

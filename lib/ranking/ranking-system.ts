@@ -15,8 +15,15 @@ interface Vote {
 interface Rankings {
   id: string;
   name: string;
+  description: string;
+  image_url: string;
+  price: number;
+  category: string;
+  slug: string;
   upvotes: number;
   downvotes: number;
+  rating: number;
+  review_count: number;
   net_score: number;
   rank: number;
 }
@@ -144,8 +151,17 @@ export async function getProductWithRankings(productId: string): Promise<Product
         *,
         reviews (*),
         product_rankings!inner (
+          id,
+          name,
+          description,
+          image_url,
+          price,
+          category,
+          slug,
           upvotes,
           downvotes,
+          rating,
+          review_count,
           net_score,
           rank
         )
@@ -184,6 +200,8 @@ export async function getProductWithRankings(productId: string): Promise<Product
       rank: rankings.rank,
       upvotes: rankings.upvotes,
       downvotes: rankings.downvotes,
+      rating: rankings.rating,
+      review_count: rankings.review_count,
       neutral_votes: 0, // We don't track neutral votes anymore
       controversy_score: calculateControversyScore(rankings.upvotes, rankings.downvotes),
       last_vote_timestamp: new Date().toISOString(), // Updated whenever rankings are refreshed
@@ -208,8 +226,17 @@ export async function getAllRankedProducts(): Promise<Product[]> {
         *,
         reviews (*),
         product_rankings!inner (
+          id,
+          name,
+          description,
+          image_url,
+          price,
+          category,
+          slug,
           upvotes,
           downvotes,
+          rating,
+          review_count,
           net_score,
           rank
         )
@@ -248,6 +275,8 @@ export async function getAllRankedProducts(): Promise<Product[]> {
         rank: rankings.rank,
         upvotes: rankings.upvotes,
         downvotes: rankings.downvotes,
+        rating: rankings.rating,
+        review_count: rankings.review_count,
         neutral_votes: 0,
         controversy_score: calculateControversyScore(rankings.upvotes, rankings.downvotes),
         last_vote_timestamp: new Date().toISOString(),

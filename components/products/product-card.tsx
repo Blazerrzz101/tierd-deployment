@@ -85,8 +85,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
               product.url_slug && "group-hover:scale-110"
             )}
             onError={(e) => {
-              const img = e.target as HTMLImageElement
-              img.src = "/images/products/placeholder.svg"
+              const img = e.target as HTMLImageElement;
+              img.src = "/images/products/placeholder.svg";
             }}
           />
           

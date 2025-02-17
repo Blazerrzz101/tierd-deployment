@@ -228,10 +228,11 @@ export function HeroSection() {
                   className="relative h-80 w-80"
                 >
                   <Image
-                    src="/featured-product.png"
+                    src="/images/products/placeholder.svg"
                     alt="Featured Gaming Product"
                     fill
-                    className="object-contain transition-transform duration-500 group-hover:scale-110"
+                    className="object-contain"
+                    priority
                   />
                 </motion.div>
                 <motion.div 

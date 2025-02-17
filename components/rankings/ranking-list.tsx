@@ -7,6 +7,7 @@ import { Product } from "@/types/product"
 import { supabase } from "@/lib/supabase/client"
 import { CATEGORY_IDS } from "@/lib/constants"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { slugToCategory } from "@/lib/utils"
 
 // Base64 encoded SVG placeholder
 const PLACEHOLDER_IMAGE = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiMyMDIwMjAiLz48cGF0aCBkPSJNMTgyIDIwMkMyMDAgMTY2IDIxNSAxNDUgMjM1IDE0NUMyNTUgMTQ1IDI2NSAxNjYgMjcwIDIwMkMzMDAgMTY2IDMxNSAxNDUgMzM1IDE0NUMzNTUgMTQ1IDM2NSAxNjYgMzcwIDIwMiIgc3Ryb2tlPSIjNDA0MDQwIiBzdHJva2Utd2lkdGg9IjIwIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4="
@@ -51,7 +52,7 @@ export function RankingList({ categoryId }: RankingListProps) {
       try {
         setIsLoading(true)
         setError(null)
-
+        
         const { data, error: queryError } = await supabase
           .rpc('get_product_rankings', {
             p_category: categoryId === 'all' ? null : categoryId

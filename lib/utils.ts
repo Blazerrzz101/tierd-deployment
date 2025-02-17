@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { CATEGORY_IDS } from "./constants"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -70,4 +71,19 @@ export function formatTimeAgo(date: string | Date): string {
     const years = Math.round(elapsed/msPerYear)
     return `${years} ${years === 1 ? 'year' : 'years'} ago`
   }
+}
+
+export function slugToCategory(slug: string): string | null {
+  const categoryMap = {
+    'gaming-mice': CATEGORY_IDS.MICE,
+    'gaming-keyboards': CATEGORY_IDS.KEYBOARDS,
+    'gaming-monitors': CATEGORY_IDS.MONITORS,
+    'gaming-headsets': CATEGORY_IDS.HEADSETS,
+    'gaming-chairs': CATEGORY_IDS.CHAIRS
+  }
+  return categoryMap[slug as keyof typeof categoryMap] || null
+}
+
+export function categoryToSlug(category: string): string {
+  return category.toLowerCase().replace(/\s+/g, '-')
 }

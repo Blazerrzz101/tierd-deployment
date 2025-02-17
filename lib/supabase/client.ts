@@ -54,15 +54,38 @@ export const supabase = getSupabaseClient();
 export async function testDatabaseConnection(): Promise<boolean> {
   try {
     const client = getSupabaseClient();
-    const { data, error } = await client
+    
+    // First test basic connection
+    const { data: productData, error: productError } = await client
       .from('products')
       .select('id')
-      .limit(1)
+      .limit(1);
     
-    return !error
+    if (productError) {
+      console.error('Product table connection test failed:', productError);
+      return false;
+    }
+
+    // Test materialized view
+    const { data: rankingsData, error: rankingsError } = await client
+      .from('product_rankings')
+      .select('id')
+      .limit(1);
+    
+    if (rankingsError) {
+      console.error('Product rankings view connection test failed:', rankingsError);
+      return false;
+    }
+
+    console.log('Database connection test successful:', {
+      productsConnected: !!productData,
+      rankingsConnected: !!rankingsData
+    });
+    
+    return true;
   } catch (error) {
-    console.error('Database connection test failed:', error)
-    return false
+    console.error('Database connection test failed:', error);
+    return false;
   }
 }
 
@@ -86,12 +109,20 @@ export async function fetchProducts(options: {
       .select(`
         *,
         product_rankings!inner (
+          id,
+          name,
+          description,
+          image_url,
+          price,
+          category,
+          slug,
           upvotes,
           downvotes,
+          rating,
+          review_count,
           net_score,
           rank
         )
-        ${options.includeVotes ? ',product_votes (*)' : ''}
         ${options.includeReviews ? ',reviews (*)' : ''}
       `.trim());
     
