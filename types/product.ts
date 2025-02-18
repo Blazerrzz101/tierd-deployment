@@ -1,43 +1,37 @@
 "use client"
 
+import { Vote } from './vote';
+
 export interface Product {
-  id: string
-  name: string
-  description: string | null
-  category: string
-  price: number | null
-  image_url: string | null
-  url_slug: string
-  created_at: string
-  updated_at: string
-  rank?: number
-  votes: number
-  upvotes?: number
-  downvotes?: number
-  userVote?: 'up' | 'down' | null
-  rating?: number
-  review_count?: number
-  stock_status?: 'in_stock' | 'low_stock' | 'out_of_stock'
-  details?: {
-    images?: Record<string, string>
-    stock_quantity?: number
-    [key: string]: unknown
-  }
-  metadata?: {
-    upvotes?: number
-    downvotes?: number
-    userVote?: 'up' | 'down' | null
-    [key: string]: unknown
-  }
-  specifications?: Record<string, unknown>
-  relatedProducts?: Array<{
-    id: string
-    name: string
-    url_slug: string
-    price: number | null
-    votes: number
-    category: string
-  }>
+  // Basic product information
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  image_url: string;
+  url_slug: string;
+  specifications: Record<string, any>;
+  
+  // Vote-related fields
+  upvotes: number;
+  downvotes: number;
+  total_votes: number;
+  score: number;
+  rank: number;
+  userVote: number | null; // 1 for upvote, -1 for downvote, null for no vote
+  
+  // Review-related fields
+  rating: number;
+  review_count: number;
+  
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+  
+  // Optional relationships
+  votes?: Vote[];
+  reviews?: any[]; // TODO: Add Review type
 }
 
 export interface Category {

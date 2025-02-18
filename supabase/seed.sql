@@ -281,20 +281,5 @@ VALUES
     'https://images.unsplash.com/photo-1601855018889-08c25e5a2861?w=800&auto=format&fit=crop&q=60'
   );
 
--- Add some initial votes to create rankings
-INSERT INTO votes (product_id, user_id, vote_type)
-SELECT 
-  p.id,
-  '00000000-0000-0000-0000-000000000001'::uuid,
-  1
-FROM products p
-WHERE p.name IN (
-  'Logitech G Pro X Superlight',
-  'Wooting 60HE',
-  'ASUS ROG Swift 360Hz PG259QN',
-  'Sennheiser HD 800S',
-  'Herman Miller Embody Gaming'
-);
-
 -- Refresh the materialized view
 REFRESH MATERIALIZED VIEW product_rankings; 

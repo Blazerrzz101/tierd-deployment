@@ -9,10 +9,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 const ANONYMOUS_ID_KEY = 'anonymous_id';
 
-export function useVote(initialProduct: Product | undefined) {
-  const [product, setProduct] = useState<Product | undefined>(initialProduct);
+export function useVote(initialProduct: Product) {
+  const [product, setProduct] = useState<Product>(initialProduct);
   const [isLoading, setIsLoading] = useState(false);
   const [anonymousId, setAnonymousId] = useState<string>('');
+  const [isVoting, setIsVoting] = useState(false);
 
   // Initialize or get anonymous ID
   useEffect(() => {
@@ -26,7 +27,7 @@ export function useVote(initialProduct: Product | undefined) {
 
   // Subscribe to real-time vote updates
   useEffect(() => {
-    if (!initialProduct?.id || !anonymousId) return;
+    if (!initialProduct.id || !anonymousId) return;
 
     const channel = supabase
       .channel(`product_votes:${initialProduct.id}`)
@@ -60,113 +61,76 @@ export function useVote(initialProduct: Product | undefined) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [initialProduct?.id, anonymousId]);
+  }, [initialProduct.id, anonymousId]);
 
-  const vote = async (productId: string, voteType: VoteType) => {
-    if (!productId || !anonymousId) {
-      console.error('Cannot vote without a product ID and anonymous ID');
-      return;
-    }
+  const vote = async (voteType: VoteType) => {
+    if (isVoting) return;
+    setIsVoting(true);
 
     try {
-      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Must be logged in to vote');
+      }
 
-      // Get current session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Call the cast_vote function
-      const { data, error } = await supabase
-        .rpc('cast_vote', {
-          p_product_id: productId,
+      // Convert vote type to numeric value
+      const voteValue = voteType === 'upvote' ? 1 : -1;
+
+      // Call the authenticated vote function
+      const { data, error } = await supabase.rpc(
+        'handle_authenticated_vote',
+        {
+          p_product_id: product.id,
           p_vote_type: voteType,
-          p_user_id: session?.user?.id || null,
-          p_anonymous_id: !session ? anonymousId : null
-        });
+          p_user_id: user.id
+        }
+      );
 
       if (error) throw error;
 
-      if (data) {
-        if (!data.success) {
-          if (data.message === 'Anonymous vote limit reached') {
-            toast.error("Vote Limit Reached", {
-              description: "You've reached the limit of 5 anonymous votes per day. Please sign in to continue voting.",
-              action: {
-                label: "Sign In",
-                onClick: () => window.location.href = "/auth/sign-in"
-              }
-            });
-            return;
-          }
-          throw new Error(data.message);
-        }
+      // Update local state based on the vote
+      setProduct(prev => {
+        const newUpvotes = voteType === 'upvote'
+          ? (prev.userVote === 1 ? prev.upvotes - 1 : prev.upvotes + 1)
+          : prev.upvotes;
 
-        // Update local state optimistically
-        setProduct(prev => {
-          if (!prev) return prev;
+        const newDownvotes = voteType === 'downvote'
+          ? (prev.userVote === -1 ? prev.downvotes - 1 : prev.downvotes + 1)
+          : prev.downvotes;
 
-          const newVoteType = data.vote_type as VoteType | null;
-          const oldVoteType = prev.userVote;
+        const newScore = prev.score + (
+          voteType === 'upvote'
+            ? (prev.userVote === 1 ? -1 : 1)
+            : (prev.userVote === -1 ? 1 : -1)
+        );
 
-          let voteDiff = 0;
-          let upvoteDiff = 0;
-          let downvoteDiff = 0;
+        return {
+          ...prev,
+          userVote: voteValue,
+          upvotes: newUpvotes,
+          downvotes: newDownvotes,
+          score: newScore,
+          total_votes: newUpvotes + newDownvotes
+        };
+      });
 
-          if (!oldVoteType && newVoteType) {
-            // Adding new vote
-            voteDiff = newVoteType === 'up' ? 1 : -1;
-            upvoteDiff = newVoteType === 'up' ? 1 : 0;
-            downvoteDiff = newVoteType === 'down' ? 1 : 0;
-          } else if (oldVoteType && !newVoteType) {
-            // Removing vote
-            voteDiff = oldVoteType === 'up' ? -1 : 1;
-            upvoteDiff = oldVoteType === 'up' ? -1 : 0;
-            downvoteDiff = oldVoteType === 'down' ? -1 : 0;
-          } else if (oldVoteType && newVoteType && oldVoteType !== newVoteType) {
-            // Changing vote
-            voteDiff = newVoteType === 'up' ? 2 : -2;
-            upvoteDiff = newVoteType === 'up' ? 1 : -1;
-            downvoteDiff = newVoteType === 'down' ? 1 : -1;
-          }
+      // Show success message
+      toast.success(
+        data.vote_type ? "Vote recorded" : "Vote removed"
+      );
 
-          const currentVotes = prev.votes ?? 0;
-          const currentUpvotes = prev.upvotes ?? 0;
-          const currentDownvotes = prev.downvotes ?? 0;
-
-          return {
-            ...prev,
-            userVote: newVoteType,
-            votes: Math.max(0, currentVotes + voteDiff),
-            upvotes: Math.max(0, currentUpvotes + upvoteDiff),
-            downvotes: Math.max(0, currentDownvotes + downvoteDiff)
-          };
-        });
-
-        // Show appropriate toast message
-        if (!data.vote_type) {
-          toast.success("Vote Removed");
-        } else if (!session) {
-          toast.success("Vote Recorded", {
-            description: "Sign in to make your votes permanent!",
-            action: {
-              label: "Sign In",
-              onClick: () => window.location.href = "/auth/sign-in"
-            }
-          });
-        } else {
-          toast.success(data.message);
-        }
-      }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error voting:', error);
-      toast.error(error.message || "Failed to record vote");
+      toast.error(error instanceof Error ? error.message : 'Failed to record vote');
     } finally {
-      setIsLoading(false);
+      setIsVoting(false);
     }
   };
 
   return {
     product,
     isLoading,
-    vote
+    vote,
+    isVoting
   };
 }

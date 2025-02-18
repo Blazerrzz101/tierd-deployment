@@ -32,9 +32,9 @@ export function VoteButtons({
         size="sm"
         className={cn(
           "flex items-center gap-1 transition-colors",
-          product?.userVote === 'up' && "bg-green-500/20 hover:bg-green-500/30 text-green-500"
+          product?.userVote === 1 && "bg-green-500/20 hover:bg-green-500/30 text-green-500"
         )}
-        onClick={() => handleVote('up')}
+        onClick={() => handleVote('upvote')}
       >
         <ThumbsUp className="h-4 w-4" />
         <span className="min-w-[1rem] text-center">
@@ -47,9 +47,9 @@ export function VoteButtons({
         size="sm"
         className={cn(
           "flex items-center gap-1 transition-colors",
-          product?.userVote === 'down' && "bg-red-500/20 hover:bg-red-500/30 text-red-500"
+          product?.userVote === -1 && "bg-red-500/20 hover:bg-red-500/30 text-red-500"
         )}
-        onClick={() => handleVote('down')}
+        onClick={() => handleVote('downvote')}
       >
         <ThumbsDown className="h-4 w-4" />
         <span className="min-w-[1rem] text-center">

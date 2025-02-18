@@ -3,36 +3,52 @@ DROP MATERIALIZED VIEW IF EXISTS product_rankings;
 
 -- Create the materialized view
 CREATE MATERIALIZED VIEW product_rankings AS
+WITH vote_counts AS (
+    SELECT 
+        product_id,
+        COUNT(CASE WHEN vote_type = 1 THEN 1 END) as upvotes,
+        COUNT(CASE WHEN vote_type = -1 THEN 1 END) as downvotes,
+        COUNT(*) as total_votes
+    FROM public.votes
+    GROUP BY product_id
+),
+review_stats AS (
+    SELECT 
+        product_id,
+        AVG(rating) as avg_rating,
+        COUNT(*) as review_count
+    FROM public.reviews
+    GROUP BY product_id
+)
 SELECT 
     p.id,
     p.name,
     p.description,
-    p.image_url,
-    p.price,
     p.category,
+    p.price,
+    p.image_url,
     p.url_slug,
     p.specifications,
-    COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type = 1), 0) as upvotes,
-    COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type = -1), 0) as downvotes,
-    COALESCE(AVG(r.rating), 0) as rating,
-    COALESCE(COUNT(DISTINCT r.id), 0) as review_count,
-    COALESCE(
-        COUNT(v.*) FILTER (WHERE v.vote_type = 1) -
-        COUNT(v.*) FILTER (WHERE v.vote_type = -1),
-        0
-    ) as net_score,
-    ROW_NUMBER() OVER (
+    COALESCE(vc.upvotes, 0) as upvotes,
+    COALESCE(vc.downvotes, 0) as downvotes,
+    COALESCE(vc.total_votes, 0) as total_votes,
+    COALESCE(rs.avg_rating, 0) as rating,
+    COALESCE(rs.review_count, 0) as review_count,
+    COALESCE(vc.upvotes, 0) - COALESCE(vc.downvotes, 0) as score,
+    (
+        (COALESCE(vc.upvotes, 0) - COALESCE(vc.downvotes, 0)) * 0.7 +
+        (COALESCE(rs.avg_rating, 0) * COALESCE(rs.review_count, 0)) * 0.3
+    ) as ranking_score,
+    RANK() OVER (
         ORDER BY (
-            COUNT(v.*) FILTER (WHERE v.vote_type = 1) -
-            COUNT(v.*) FILTER (WHERE v.vote_type = -1)
-        ) DESC
+            (COALESCE(vc.upvotes, 0) - COALESCE(vc.downvotes, 0)) * 0.7 +
+            (COALESCE(rs.avg_rating, 0) * COALESCE(rs.review_count, 0)) * 0.3
+        ) DESC,
+        p.created_at DESC
     ) as rank
-FROM 
-    products p
-    LEFT JOIN votes v ON p.id = v.product_id
-    LEFT JOIN reviews r ON p.id = r.product_id
-GROUP BY 
-    p.id, p.name, p.description, p.image_url, p.price, p.category, p.url_slug, p.specifications;
+FROM public.products p
+LEFT JOIN vote_counts vc ON p.id = vc.product_id
+LEFT JOIN review_stats rs ON p.id = rs.product_id;
 
 -- Create unique index for concurrent refresh
 CREATE UNIQUE INDEX idx_product_rankings_id ON product_rankings (id);
