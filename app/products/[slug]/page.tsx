@@ -17,6 +17,19 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { NotFound } from "@/components/not-found"
 import Link from "next/link"
 import { ProductCard } from "@/components/products/product-card"
+import Image from 'next/image'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Database } from '@/types/supabase'
+import { useProducts } from '@/hooks/useProducts'
+import { ProductReviewForm } from '@/components/products/ProductReviewForm'
+import { ProductReviewList } from '@/components/products/ProductReviewList'
+import { ThumbsUp, ThumbsDown } from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
+import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/card'
+
+type ProductRanking = Database['public']['Views']['product_rankings']['Row']
+type Review = Database['public']['Tables']['reviews']['Row']
 
 interface ProductDetailsResponse {
   id: string
@@ -42,12 +55,17 @@ interface ProductDetailsResponse {
 
 export default function ProductPage() {
   const params = useParams()
-  const [product, setProduct] = useState<Product | null>(null)
-  const [threads, setThreads] = useState<Thread[]>([])
+  const { toast } = useToast()
+  const supabase = createClientComponentClient<Database>()
+  const { vote } = useProducts()
+  const [product, setProduct] = useState<ProductRanking | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+  const [threads, setThreads] = useState<Thread[]>([])
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const { user } = useAuth()
-  const supabase = getSupabaseClient()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -83,7 +101,7 @@ export default function ProductPage() {
 
         if (isMounted) {
           // Transform the product data
-          const transformedProduct: Product = {
+          const transformedProduct: ProductRanking = {
             id: productData[0].id,
             name: productData[0].name,
             description: productData[0].description,
@@ -96,7 +114,7 @@ export default function ProductPage() {
             url_slug: productData[0].url_slug,
             created_at: productData[0].created_at,
             updated_at: productData[0].updated_at,
-            relatedProducts: productData[0].related_products,
+            related_products: productData[0].related_products,
             upvotes: productData[0].upvotes,
             downvotes: productData[0].downvotes,
             userVote: productData[0].user_vote,
@@ -138,6 +156,32 @@ export default function ProductPage() {
             }))
             setThreads(transformedThreads)
           }
+
+          // Fetch reviews
+          const { data: reviewsData, error: reviewsError } = await supabase
+            .from('reviews')
+            .select('*')
+            .eq('product_id', productData[0].id)
+            .order('created_at', { ascending: false })
+
+          if (reviewsError) throw reviewsError
+          setReviews(reviewsData)
+
+          // Fetch user's vote
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+
+          if (session) {
+            const { data: voteData } = await supabase
+              .from('votes')
+              .select('vote_type')
+              .eq('product_id', productData[0].id)
+              .eq('user_id', session.user.id)
+              .single()
+
+            setUserVote(voteData?.vote_type as 'upvote' | 'downvote' | null)
+          }
         }
       } catch (error) {
         console.error('Error fetching product and threads:', error)
@@ -168,6 +212,72 @@ export default function ProductPage() {
       return
     }
     setShowCreateDialog(true)
+  }
+
+  const handleVote = async (voteType: 'upvote' | 'downvote') => {
+    if (!product) return
+
+    try {
+      await vote(product.id, voteType)
+      
+      // Refresh product data
+      const { data } = await supabase
+        .from('product_rankings')
+        .select('*')
+        .eq('id', product.id)
+        .single()
+
+      if (data) {
+        setProduct(data)
+        setUserVote(voteType)
+      }
+    } catch (error) {
+      console.error('Error voting:', error)
+    }
+  }
+
+  const handleReviewSubmit = async (data: {
+    rating: number
+    title: string
+    content: string
+    pros?: string[]
+    cons?: string[]
+  }) => {
+    if (!product) return
+
+    try {
+      setIsSubmittingReview(true)
+      const { error } = await supabase.from('reviews').insert({
+        product_id: product.id,
+        ...data,
+      })
+
+      if (error) throw error
+
+      // Refresh reviews
+      const { data: newReviews, error: reviewsError } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('created_at', { ascending: false })
+
+      if (reviewsError) throw reviewsError
+      setReviews(newReviews)
+
+      toast({
+        title: 'Success',
+        description: 'Your review has been submitted.',
+      })
+    } catch (error) {
+      console.error('Error submitting review:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to submit review. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmittingReview(false)
+    }
   }
 
   if (isLoading) {
@@ -203,40 +313,93 @@ export default function ProductPage() {
   return (
     <div className="container mx-auto max-w-7xl px-6 py-12">
       {/* Product Details */}
-      <ProductDetails product={product} />
-
-      {/* Related Products */}
-      {product.relatedProducts && product.relatedProducts.length > 0 && (
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold mb-8">Similar Products</h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {product.relatedProducts.map((relatedProduct) => (
-              <ProductCard 
-                key={relatedProduct.id} 
-                product={{
-                  id: relatedProduct.id,
-                  name: relatedProduct.name,
-                  description: '',
-                  category: relatedProduct.category,
-                  price: relatedProduct.price || 0,
-                  image_url: '/placeholder-product.png',
-                  url_slug: relatedProduct.url_slug,
-                  votes: relatedProduct.votes,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                  userVote: null,
-                  rating: 0,
-                  review_count: 0,
-                  stock_status: 'in_stock',
-                  details: {
-                    stock_quantity: 0
-                  }
-                }}
-              />
-            ))}
-          </div>
+      <div className="grid gap-8 md:grid-cols-2">
+        <div className="relative aspect-square overflow-hidden rounded-lg">
+          <Image
+            src={product.image_url || '/placeholder.png'}
+            alt={product.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 50vw"
+          />
         </div>
-      )}
+
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">{product.name}</h1>
+            <p className="mt-2 text-lg text-muted-foreground">
+              {product.description}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Category</span>
+              <span className="text-sm">{product.category}</span>
+            </div>
+            {product.price && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Price</span>
+                <span className="text-lg font-bold">
+                  ${product.price.toFixed(2)}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Rank</span>
+              <span className="text-sm">#{product.rank} in {product.category}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => handleVote('upvote')}
+              className={cn(
+                'flex-1 gap-2',
+                userVote === 'upvote' && 'bg-green-100 hover:bg-green-200'
+              )}
+            >
+              <ThumbsUp className="h-5 w-5" />
+              <span>{product.upvotes}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => handleVote('downvote')}
+              className={cn(
+                'flex-1 gap-2',
+                userVote === 'downvote' && 'bg-red-100 hover:bg-red-200'
+              )}
+            >
+              <ThumbsDown className="h-5 w-5" />
+              <span>{product.downvotes}</span>
+            </Button>
+          </div>
+
+          {product.specifications && (
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">Specifications</h2>
+              <div className="rounded-lg border p-4">
+                {Object.entries(product.specifications as Record<string, unknown>).map(
+                  ([key, value]) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between border-b py-2 last:border-0"
+                    >
+                      <span className="text-sm font-medium">
+                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                      <span className="text-sm">{String(value)}</span>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Discussions Section */}
       <div className="mt-16">
@@ -287,6 +450,27 @@ export default function ProductPage() {
           defaultProduct={product}
         />
       )}
+
+      <div className="mt-12 space-y-8">
+        <div>
+          <h2 className="text-2xl font-bold">Reviews</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Share your experience with this product
+          </p>
+        </div>
+
+        <ProductReviewForm
+          onSubmit={handleReviewSubmit}
+          isSubmitting={isSubmittingReview}
+        />
+
+        <div className="mt-8">
+          <h3 className="mb-4 text-lg font-semibold">
+            Customer Reviews ({reviews.length})
+          </h3>
+          <ProductReviewList reviews={reviews} />
+        </div>
+      </div>
     </div>
   )
 } 

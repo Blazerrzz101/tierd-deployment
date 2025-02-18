@@ -82,6 +82,9 @@ LEFT JOIN (
     GROUP BY product_id
 ) r ON p.id = r.product_id;
 
+-- Create unique index on materialized view for concurrent refresh
+CREATE UNIQUE INDEX idx_product_rankings_id ON public.product_rankings(id);
+
 -- Create index for faster materialized view refresh
 CREATE INDEX idx_votes_product_type ON public.votes(product_id, vote_type);
 CREATE INDEX idx_reviews_product_rating ON public.reviews(product_id, rating);
@@ -146,8 +149,8 @@ TO authenticated
 WITH CHECK (
     auth.uid() = user_id AND
     NOT EXISTS (
-        SELECT 1 FROM public.votes
-        WHERE product_id = NEW.product_id AND user_id = auth.uid()
+        SELECT 1 FROM public.votes v
+        WHERE v.product_id = votes.product_id AND v.user_id = auth.uid()
     )
 );
 
@@ -173,8 +176,8 @@ TO authenticated
 WITH CHECK (
     auth.uid() = user_id AND
     NOT EXISTS (
-        SELECT 1 FROM public.reviews
-        WHERE product_id = NEW.product_id AND user_id = auth.uid()
+        SELECT 1 FROM public.reviews r
+        WHERE r.product_id = reviews.product_id AND r.user_id = auth.uid()
     )
 );
 

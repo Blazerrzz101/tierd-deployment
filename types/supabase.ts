@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
       activities: {
@@ -41,9 +41,10 @@ export type Database = {
           name: string
           description: string | null
           category: string
-          price: number
+          price: number | null
           image_url: string | null
           url_slug: string
+          specifications: Json | null
           created_at: string
           updated_at: string
         }
@@ -52,9 +53,10 @@ export type Database = {
           name: string
           description?: string | null
           category: string
-          price: number
+          price?: number | null
           image_url?: string | null
           url_slug: string
+          specifications?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -63,9 +65,10 @@ export type Database = {
           name?: string
           description?: string | null
           category?: string
-          price?: number
+          price?: number | null
           image_url?: string | null
           url_slug?: string
+          specifications?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -146,24 +149,62 @@ export type Database = {
       votes: {
         Row: {
           id: string
-          user_id: string
           product_id: string
-          vote_type: 'up' | 'down'
+          user_id: string
+          vote_type: string
           created_at: string
         }
         Insert: {
           id?: string
-          user_id: string
           product_id: string
-          vote_type: 'up' | 'down'
+          user_id: string
+          vote_type: string
           created_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
           product_id?: string
-          vote_type?: 'up' | 'down'
+          user_id?: string
+          vote_type?: string
           created_at?: string
+        }
+      }
+      reviews: {
+        Row: {
+          id: string
+          product_id: string
+          user_id: string
+          rating: number
+          title: string
+          content: string
+          pros: string[]
+          cons: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          user_id: string
+          rating: number
+          title: string
+          content: string
+          pros?: string[]
+          cons?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          user_id?: string
+          rating?: number
+          title?: string
+          content?: string
+          pros?: string[]
+          cons?: string[]
+          created_at?: string
+          updated_at?: string
         }
       }
       product_mentions: {
@@ -205,6 +246,23 @@ export type Database = {
           }>
         }
       }
+      product_rankings: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          category: string
+          price: number | null
+          image_url: string | null
+          url_slug: string
+          specifications: Json | null
+          upvotes: number
+          downvotes: number
+          rating: number
+          review_count: number
+          rank: number
+        }
+      }
     }
     Functions: {
       fetch_reddit_threads: {
@@ -227,9 +285,13 @@ export type Database = {
           }>
         }>
       }
+      refresh_rankings: {
+        Args: Record<string, never>
+        Returns: void
+      }
     }
     Enums: {
-      [_ in never]: never
+      vote_type: 'upvote' | 'downvote'
     }
   }
 } 
