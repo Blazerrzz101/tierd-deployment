@@ -458,62 +458,53 @@ CREATE INDEX IF NOT EXISTS idx_products_url_slug_lookup ON public.products(url_s
 COMMENT ON FUNCTION get_product_rankings(TEXT) IS 'Returns ranked products, optionally filtered by category. Returns fallback data if no products found.';
 COMMENT ON FUNCTION get_product_details(TEXT) IS 'Returns detailed product information by URL slug. Returns fallback data if product not found.';
 
--- Create function to handle anonymous votes if not exists
-DO $$ 
+-- Create function to handle anonymous votes with rate limiting
+CREATE OR REPLACE FUNCTION public.handle_anonymous_vote(
+    product_id UUID,
+    vote_type TEXT,
+    ip_address TEXT
+) RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    rate_limit_key TEXT;
+    rate_limit_period INTERVAL := INTERVAL '1 hour';
+    max_votes_per_period INTEGER := 5;
+    current_votes INTEGER;
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'handle_anonymous_vote') THEN
-        CREATE FUNCTION public.handle_anonymous_vote(
-            p_product_id UUID,
-            p_vote_type TEXT,
-            p_client_ip TEXT
-        )
-        RETURNS BOOLEAN
-        SECURITY DEFINER
-        SET search_path = public
-        LANGUAGE plpgsql
-        AS $$
-        DECLARE
-            v_hashed_ip TEXT;
-            v_vote_count INT;
-        BEGIN
-            -- Hash the IP address for privacy
-            v_hashed_ip := encode(digest(p_client_ip, 'sha256'), 'hex');
-            
-            -- Check vote count in the last hour for this IP
-            SELECT COUNT(*)
-            INTO v_vote_count
-            FROM public.votes
-            WHERE user_id IS NULL 
-            AND created_at > NOW() - INTERVAL '1 hour'
-            AND metadata->>'hashed_ip' = v_hashed_ip;
-            
-            -- Allow up to 5 votes per hour for anonymous users
-            IF v_vote_count >= 5 THEN
-                RETURN FALSE;
-            END IF;
-            
-            -- Insert anonymous vote
-            INSERT INTO public.votes (
-                product_id,
-                user_id,
-                vote_type,
-                metadata
-            ) VALUES (
-                p_product_id,
-                NULL,
-                p_vote_type,
-                jsonb_build_object('hashed_ip', v_hashed_ip)
-            );
-            
-            RETURN TRUE;
-        EXCEPTION
-            WHEN OTHERS THEN
-                RAISE NOTICE 'Error in handle_anonymous_vote: %', SQLERRM;
-                RETURN FALSE;
-        END;
-        $$;
+    -- Generate a rate limit key from IP address
+    rate_limit_key := encode(digest(ip_address, 'sha256'), 'hex');
+    
+    -- Check vote count for this IP in the last period
+    SELECT COUNT(*)
+    INTO current_votes
+    FROM public.votes
+    WHERE metadata->>'rate_limit_key' = rate_limit_key
+    AND created_at > NOW() - rate_limit_period;
+    
+    -- If under rate limit, allow vote
+    IF current_votes < max_votes_per_period THEN
+        INSERT INTO public.votes (product_id, vote_type, metadata)
+        VALUES (
+            product_id,
+            vote_type,
+            jsonb_build_object('rate_limit_key', rate_limit_key)
+        );
+        RETURN TRUE;
     END IF;
-END $$;
+    
+    RETURN FALSE;
+END;
+$$;
+
+-- Grant execute permission on handle_anonymous_vote function
+GRANT EXECUTE ON FUNCTION public.handle_anonymous_vote(UUID, TEXT, TEXT) TO anon;
+GRANT EXECUTE ON FUNCTION public.handle_anonymous_vote(UUID, TEXT, TEXT) TO authenticated;
+
+-- Add comment for the function
+COMMENT ON FUNCTION public.handle_anonymous_vote IS 'Handles anonymous voting with IP-based rate limiting';
 
 -- Drop existing functions with all possible signatures
 DROP FUNCTION IF EXISTS public.get_user_votes(UUID);
