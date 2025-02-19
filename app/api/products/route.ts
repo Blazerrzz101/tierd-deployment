@@ -1,23 +1,9 @@
-import { createServerClient } from '@supabase/ssr'
+import { supabaseServer } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-    
-    const { data: rankings, error } = await supabase
+    const { data: rankings, error } = await supabaseServer
       .from('product_rankings')
       .select('*')
       .order('rank', { ascending: true })

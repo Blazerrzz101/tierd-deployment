@@ -1,61 +1,143 @@
 "use client"
 
-import { ThumbsUp, ThumbsDown } from "lucide-react"
+import { useState } from "react"
+import { ThumbsUp, ThumbsDown, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { VoteType } from "@/types/vote"
 import { Product } from "@/types/product"
+import { useVoteLimiter } from "@/hooks/use-vote-limiter"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface VoteButtonsProps {
   product: Product
   onVote: (productId: string, voteType: VoteType) => Promise<void>
   className?: string
+  showTooltips?: boolean
 }
 
 export function VoteButtons({ 
   product,
   onVote,
-  className 
+  className,
+  showTooltips = true
 }: VoteButtonsProps) {
+  const { canVote, remainingCooldown, resetTime } = useVoteLimiter()
+  const [votingType, setVotingType] = useState<VoteType | null>(null)
+
   if (!product?.id) {
-    return null;
+    return null
   }
 
   const handleVote = async (type: VoteType) => {
-    await onVote(product.id, type)
+    if (!canVote || votingType) return
+    
+    try {
+      setVotingType(type)
+      await onVote(product.id, type)
+    } finally {
+      setVotingType(null)
+    }
+  }
+
+  const formatCooldown = (ms: number) => {
+    const seconds = Math.ceil(ms / 1000)
+    return `${seconds}s`
+  }
+
+  const VoteButton = ({ type, icon: Icon, count }: { 
+    type: VoteType
+    icon: typeof ThumbsUp
+    count: number 
+  }) => {
+    const isUpvote = type === 'upvote'
+    const isVoting = votingType === type
+    const activeClass = isUpvote ? 'bg-green-500/20 hover:bg-green-500/30 text-green-500' : 'bg-red-500/20 hover:bg-red-500/30 text-red-500'
+    
+    const button = (
+      <motion.div
+        whileHover={{ scale: canVote ? 1.05 : 1 }}
+        whileTap={{ scale: canVote ? 0.95 : 1 }}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "flex items-center gap-1 transition-colors relative",
+            product?.userVote === (isUpvote ? 1 : -1) && activeClass,
+            !canVote && "opacity-50 cursor-not-allowed",
+            isVoting && "cursor-wait"
+          )}
+          onClick={() => handleVote(type)}
+          disabled={!canVote || votingType !== null}
+        >
+          {isVoting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Icon className="h-4 w-4" />
+          )}
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={count}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="min-w-[1rem] text-center"
+            >
+              {count}
+            </motion.span>
+          </AnimatePresence>
+        </Button>
+      </motion.div>
+    )
+
+    if (!showTooltips) return button
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {button}
+          </TooltipTrigger>
+          <TooltipContent>
+            {!canVote ? (
+              <div className="text-sm">
+                <p>Vote cooldown: {formatCooldown(remainingCooldown)}</p>
+                {resetTime && (
+                  <p className="text-muted-foreground">
+                    Resets at {new Date(resetTime).toLocaleTimeString()}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm">
+                Click to {type} this product
+              </p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
   }
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "flex items-center gap-1 transition-colors",
-          product?.userVote === 1 && "bg-green-500/20 hover:bg-green-500/30 text-green-500"
-        )}
-        onClick={() => handleVote('upvote')}
-      >
-        <ThumbsUp className="h-4 w-4" />
-        <span className="min-w-[1rem] text-center">
-          {product?.upvotes || 0}
-        </span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "flex items-center gap-1 transition-colors",
-          product?.userVote === -1 && "bg-red-500/20 hover:bg-red-500/30 text-red-500"
-        )}
-        onClick={() => handleVote('downvote')}
-      >
-        <ThumbsDown className="h-4 w-4" />
-        <span className="min-w-[1rem] text-center">
-          {product?.downvotes || 0}
-        </span>
-      </Button>
+      <VoteButton 
+        type="upvote" 
+        icon={ThumbsUp} 
+        count={product?.upvotes || 0} 
+      />
+      <VoteButton 
+        type="downvote" 
+        icon={ThumbsDown} 
+        count={product?.downvotes || 0} 
+      />
     </div>
   )
 }

@@ -160,8 +160,7 @@ const nextConfig = {
       logLevel: 'error',
       contextDirectory: __dirname,
       processCwd: __dirname
-    },
-    serverActions: true,
+    }
   },
   serverRuntimeConfig: {
     PORT: process.env.PORT || 3000

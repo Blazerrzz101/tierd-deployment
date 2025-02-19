@@ -26,9 +26,24 @@ import { ProductReviewList } from '@/components/products/ProductReviewList'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
-import { Card } from '@/components/ui/card'
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { formatDistanceToNow } from 'date-fns'
+import { ExternalLink, MessageSquare } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { VoteType } from "@/types/vote"
 
-type ProductRanking = Database['public']['Views']['product_rankings']['Row']
+type ProductRanking = Product & {
+  total_votes: number
+  score: number
+  userVote: number | null
+  created_at: string
+  updated_at: string
+  related_products?: Product[]
+  stock_status?: 'in_stock' | 'out_of_stock' | 'low_stock'
+  details?: Record<string, any>
+}
+
 type Review = Database['public']['Tables']['reviews']['Row']
 
 interface ProductDetailsResponse {
@@ -124,7 +139,9 @@ export default function ProductPage() {
             details: {
               ...productData[0].specifications,
               stock_quantity: productData[0].specifications?.stock_quantity || 0
-            }
+            },
+            total_votes: productData[0].total_votes || 0,
+            score: productData[0].score || 0
           }
           
           setProduct(transformedProduct)
@@ -280,6 +297,61 @@ export default function ProductPage() {
     }
   }
 
+  const handleThreadVote = async (threadId: string, voteType: VoteType) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to vote on threads",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('thread_votes')
+        .upsert({
+          thread_id: threadId,
+          user_id: user.id,
+          vote_type: voteType === 'upvote' ? 1 : -1
+        })
+
+      if (error) throw error
+
+      // Update local state
+      setThreads(currentThreads =>
+        currentThreads.map(thread => {
+          if (thread.id === threadId) {
+            const isRemovingVote = thread.userVote === (voteType === 'upvote' ? 'up' : 'down')
+            return {
+              ...thread,
+              upvotes: voteType === 'upvote'
+                ? thread.upvotes + (isRemovingVote ? -1 : 1)
+                : thread.upvotes,
+              downvotes: voteType === 'downvote'
+                ? thread.downvotes + (isRemovingVote ? -1 : 1)
+                : thread.downvotes,
+              userVote: isRemovingVote ? null : (voteType === 'upvote' ? 'up' : 'down')
+            }
+          }
+          return thread
+        })
+      )
+
+      toast({
+        title: "Success",
+        description: `Thread ${voteType}d successfully`,
+      })
+    } catch (error) {
+      console.error('Error voting on thread:', error)
+      toast({
+        title: "Error",
+        description: "Failed to vote on thread. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="container py-8">
@@ -423,7 +495,51 @@ export default function ProductPage() {
         {threads.length > 0 ? (
           <div className="space-y-6">
             {threads.map((thread) => (
-              <ThreadCard key={thread.id} thread={thread} />
+              <Card key={thread.id} className="mb-4">
+                <CardHeader className="flex flex-row items-center gap-4">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={thread.user?.avatar_url} alt={thread.user?.username} />
+                    <AvatarFallback>{thread.user?.username?.[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <h3 className="text-lg font-semibold">{thread.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Posted by {thread.user?.username} • {formatDistanceToNow(new Date(thread.created_at))} ago
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{thread.content}</p>
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'gap-1',
+                        thread.userVote === 'up' && 'bg-green-100 hover:bg-green-200'
+                      )}
+                      onClick={() => handleThreadVote(thread.id, 'upvote')}
+                    >
+                      <ThumbsUp className="h-4 w-4" />
+                      {thread.upvotes}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'gap-1',
+                        thread.userVote === 'down' && 'bg-red-100 hover:bg-red-200'
+                      )}
+                      onClick={() => handleThreadVote(thread.id, 'downvote')}
+                    >
+                      <ThumbsDown className="h-4 w-4" />
+                      {thread.downvotes}
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         ) : (

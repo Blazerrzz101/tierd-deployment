@@ -1,18 +1,14 @@
 -- Reset permissions for public schema
-DO $$ 
-BEGIN
-    -- Revoke existing permissions
-    EXECUTE 'REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon';
-    EXECUTE 'REVOKE ALL ON SCHEMA public FROM anon';
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+REVOKE ALL ON SCHEMA public FROM anon;
 
-    -- Grant schema usage
-    EXECUTE 'GRANT USAGE ON SCHEMA public TO anon';
+-- Grant schema usage
+GRANT USAGE ON SCHEMA public TO anon;
 
-    -- Grant table access
-    EXECUTE 'GRANT SELECT ON public.products TO anon';
-    EXECUTE 'GRANT SELECT ON public.product_rankings TO anon';
-    EXECUTE 'GRANT SELECT ON public.votes TO anon';
-END $$;
+-- Grant table access
+GRANT SELECT ON public.products TO anon;
+GRANT SELECT ON public.product_rankings TO anon;
+GRANT SELECT ON public.votes TO anon;
 
 -- Enable RLS
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -58,22 +54,8 @@ WITH CHECK (
 );
 
 -- Verify permissions
-SELECT 
-    schemaname,
-    tablename,
-    policyname,
-    permissive,
-    roles,
-    cmd
-FROM pg_policies 
-WHERE tablename IN ('products', 'product_rankings');
-
--- Verify grants
-SELECT 
-    grantee,
-    table_schema,
-    table_name,
-    privilege_type
-FROM information_schema.role_table_grants
-WHERE table_name IN ('products', 'product_rankings')
-AND grantee = 'anon'; 
+SELECT grantee, table_schema, table_name, privilege_type
+FROM information_schema.role_table_grants 
+WHERE grantee = 'anon'
+AND table_schema = 'public'
+ORDER BY table_schema, table_name; 

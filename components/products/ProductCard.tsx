@@ -12,7 +12,7 @@ type ProductRanking = Database['public']['Views']['product_rankings']['Row']
 interface ProductCardProps {
   product: ProductRanking
   onVote: (productId: string, voteType: 'upvote' | 'downvote') => Promise<void>
-  userVote?: 'upvote' | 'downvote' | null
+  userVote?: number | null
 }
 
 export function ProductCard({ product, onVote, userVote }: ProductCardProps) {
@@ -72,7 +72,7 @@ export function ProductCard({ product, onVote, userVote }: ProductCardProps) {
               disabled={isVoting}
               className={cn(
                 'gap-1',
-                userVote === 'upvote' && 'bg-green-100 hover:bg-green-200'
+                userVote === 1 && 'bg-green-100 hover:bg-green-200'
               )}
             >
               <ThumbsUp className="h-4 w-4" />
@@ -85,7 +85,7 @@ export function ProductCard({ product, onVote, userVote }: ProductCardProps) {
               disabled={isVoting}
               className={cn(
                 'gap-1',
-                userVote === 'downvote' && 'bg-red-100 hover:bg-red-200'
+                userVote === -1 && 'bg-red-100 hover:bg-red-200'
               )}
             >
               <ThumbsDown className="h-4 w-4" />
