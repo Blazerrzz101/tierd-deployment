@@ -62,6 +62,45 @@ export async function middleware(request: NextRequest) {
     // Log successful completion
     console.log(`Request processed in ${Date.now() - startTime}ms`)
 
+    // Handle product page requests
+    if (request.nextUrl.pathname.startsWith('/products/')) {
+      const slug = request.nextUrl.pathname.split('/')[2]
+      if (slug) {
+        const { data: product } = await supabase
+          .from('product_rankings')
+          .select('url_slug')
+          .eq('url_slug', slug)
+          .single()
+
+        if (!product) {
+          return NextResponse.redirect(new URL('/404', request.url))
+        }
+      }
+    }
+
+    // Handle protected routes
+    const protectedRoutes = ['/dashboard', '/settings', '/profile']
+    if (protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))) {
+      if (!session) {
+        const redirectUrl = new URL('/auth/sign-in', request.url)
+        redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+    }
+
+    // Handle rate limiting
+    const ip = request.ip || 'unknown'
+    const rateLimitKey = `rate_limit:${ip}`
+    const { data: rateLimit } = await supabase
+      .from('rate_limits')
+      .select('count, last_reset')
+      .eq('key', rateLimitKey)
+      .single()
+
+    if (rateLimit && rateLimit.count > 100) {
+      return new NextResponse('Too Many Requests', { status: 429 })
+    }
+
     return res
   } catch (error) {
     logError(error, 'unexpected')
@@ -86,5 +125,10 @@ export const config = {
      * - health check endpoint
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api|health).*)',
+    '/products/:path*',
+    '/dashboard/:path*',
+    '/settings/:path*',
+    '/profile/:path*',
+    '/auth/:path*'
   ],
 } 

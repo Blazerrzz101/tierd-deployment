@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
 import { ProductQuickView } from './product-quick-view'
-import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Image as ImageIcon } from 'lucide-react'
+import { ThreadManager } from '@/lib/supabase/thread-manager'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-react'
 
 interface MentionedProduct {
   id: string
@@ -29,10 +31,12 @@ export function ThreadCreator() {
   const [showProductQuickView, setShowProductQuickView] = useState(false)
   const [mentionedProducts, setMentionedProducts] = useState<MentionedProduct[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { user } = useAuth()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setError(null)
     const newContent = e.target.value
     setContent(newContent)
 
@@ -51,7 +55,7 @@ export function ThreadCreator() {
       setShowProductQuickView(true)
     } else {
       setShowProductQuickView(false)
-      setMentionPosition(null)  // Reset position
+      setMentionPosition(null)
     }
   }
 
@@ -61,7 +65,7 @@ export function ThreadCreator() {
     const newContent = currentContent.substring(0, lastAtIndex) + `@${product.name} `
     setContent(newContent)
     setShowProductQuickView(false)
-    setMentionPosition(null)  // Reset position
+    setMentionPosition(null)
     setMentionedProducts([...mentionedProducts, product])
     
     // Focus back on textarea and place cursor at end
@@ -83,41 +87,22 @@ export function ThreadCreator() {
     }
 
     setIsSubmitting(true)
+    setError(null)
+
     try {
-      const { data: thread, error: threadError } = await supabase
-        .from('threads')
-        .insert([
-          {
-            content,
-            user_id: user.id,
-            mentioned_products: mentionedProducts.map(p => p.id)
-          }
-        ])
-        .select()
-        .single()
-
-      if (threadError) throw threadError
-
-      // Create thread-product relationships
-      if (mentionedProducts.length > 0) {
-        const { error: relationError } = await supabase
-          .from('thread_products')
-          .insert(
-            mentionedProducts.map(product => ({
-              thread_id: thread.id,
-              product_id: product.id
-            }))
-          )
-
-        if (relationError) throw relationError
-      }
+      await ThreadManager.createThread(
+        content,
+        user.id,
+        mentionedProducts.map(p => p.id)
+      )
 
       toast.success('Thread created successfully')
       setContent('')
       setMentionedProducts([])
       setIsExpanded(false)
-    } catch (error) {
-      console.error('Error creating thread:', error)
+    } catch (err) {
+      console.error('Error creating thread:', err)
+      setError(err instanceof Error ? err : new Error('Failed to create thread'))
       toast.error('Failed to create thread. Please try again.')
     } finally {
       setIsSubmitting(false)
@@ -128,42 +113,20 @@ export function ThreadCreator() {
     setIsExpanded(true)
   }
 
-  // Helper function to get caret coordinates
-  const getCaretCoordinates = (element: HTMLTextAreaElement) => {
-    const position = element.selectionEnd || 0
-    const div = document.createElement('div')
-    const styles = getComputedStyle(element)
-    const properties = [
-      'fontFamily',
-      'fontSize',
-      'fontWeight',
-      'wordWrap',
-      'whiteSpace',
-      'padding'
-    ] as const
-
-    properties.forEach((prop) => {
-      div.style[prop] = styles.getPropertyValue(prop)
-    })
-
-    div.textContent = element.value.substring(0, position)
-    div.style.visibility = 'hidden'
-    div.style.position = 'absolute'
-    div.style.whiteSpace = 'pre-wrap'
-
-    document.body.appendChild(div)
-    const coordinates = {
-      top: div.offsetHeight,
-      left: div.offsetWidth
-    }
-    document.body.removeChild(div)
-
-    return coordinates
-  }
-
   return (
-    <Card className={`w-full transition-all duration-300 ${isExpanded ? 'p-4' : 'p-2'}`}>
-      <div className="relative">
+    <Card className={cn(
+      "w-full transition-all duration-300",
+      isExpanded ? "p-4" : "p-2"
+    )}>
+      <div className="relative space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        )}
+
         <Textarea
           ref={inputRef}
           placeholder="Ask anything... Use @ to mention products"
@@ -176,7 +139,9 @@ export function ThreadCreator() {
             "focus:ring-2 focus:ring-primary bg-background/50",
             content.includes('@') && "ring-2 ring-primary/50"
           )}
+          disabled={isSubmitting}
         />
+
         {showProductQuickView && mentionPosition && (
           <div
             style={{
@@ -189,6 +154,7 @@ export function ThreadCreator() {
             <ProductQuickView onSelect={handleProductSelect} />
           </div>
         )}
+
         {mentionedProducts.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {mentionedProducts.map((product) => (
@@ -223,20 +189,26 @@ export function ThreadCreator() {
             ))}
           </div>
         )}
+
         {isExpanded && (
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {user ? 'Posting as ' + user.email : 'Sign in to post'}
-            </p>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isSubmitting || !user}
-              className="relative overflow-hidden group"
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsExpanded(false)
+                setContent('')
+                setMentionedProducts([])
+                setError(null)
+              }}
+              disabled={isSubmitting}
             >
-              <span className="relative z-10">
-                {isSubmitting ? 'Posting...' : 'Post Thread'}
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-blue-600 to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!content.trim() || isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Thread'}
             </Button>
           </div>
         )}

@@ -1,41 +1,22 @@
-import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/lib/supabase/client"
-import { Thread } from "@/types/thread"
-import { ThreadCard } from "@/components/threads/thread-card"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useQuery } from '@tanstack/react-query'
+import { ThreadCard } from '@/components/threads/thread-card'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { ThreadManager } from '@/lib/supabase/thread-manager'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertCircle, MessageSquare } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 interface ProductThreadsProps {
   productId: string
 }
 
 export function ProductThreads({ productId }: ProductThreadsProps) {
-  const { data: threads, isLoading } = useQuery<Thread[]>({
+  const { data: threads, isLoading, error, refetch } = useQuery({
     queryKey: ['product-threads', productId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('threads')
-        .select(`
-          *,
-          user:user_profiles (
-            id,
-            display_name,
-            avatar_url
-          ),
-          votes:thread_votes (
-            id,
-            type
-          ),
-          mentions:thread_mentions (
-            product_id
-          )
-        `)
-        .eq('mentions.product_id', productId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return data
-    },
-    staleTime: 1000 * 60 * 5 // Consider data fresh for 5 minutes
+    queryFn: () => ThreadManager.getThreadsForProduct(productId),
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    retry: 2
   })
 
   if (isLoading) {
@@ -46,19 +27,50 @@ export function ProductThreads({ productId }: ProductThreadsProps) {
     )
   }
 
+  if (error) {
+    return (
+      <Alert variant="destructive" className="my-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          <div className="space-y-2">
+            <p>Failed to load discussions. {error.message}</p>
+            <Button onClick={() => refetch()} variant="outline" size="sm">
+              Try again
+            </Button>
+          </div>
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
   if (!threads?.length) {
     return (
-      <div className="text-center py-8 text-white/50">
-        <p>No discussions yet. Start a new thread!</p>
+      <div className="rounded-lg border border-white/10 bg-white/5 p-8 text-center">
+        <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground" />
+        <p className="mt-2 text-muted-foreground">
+          No discussions mentioning this product yet
+        </p>
+        <Button asChild className="mt-4">
+          <Link href="/threads/new">Start a Discussion</Link>
+        </Button>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      {threads.map((thread) => (
-        <ThreadCard key={thread.id} thread={thread} />
-      ))}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Discussions</h3>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/threads/new">New Discussion</Link>
+        </Button>
+      </div>
+      <div className="divide-y divide-white/10">
+        {threads.map((thread) => (
+          <ThreadCard key={thread.id} thread={thread} />
+        ))}
+      </div>
     </div>
   )
 } 
