@@ -87,3 +87,31 @@ export function slugToCategory(slug: string): string | null {
 export function categoryToSlug(category: string): string {
   return category.toLowerCase().replace(/\s+/g, '-')
 }
+
+export function sanitizeData(data: any): any {
+  if (data === null || data === undefined) {
+    return data
+  }
+
+  if (data instanceof Date) {
+    return data.toISOString()
+  }
+
+  if (typeof data === 'object' && 'toJSON' in data && typeof data.toJSON === 'function') {
+    return data.toJSON()
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeData(item))
+  }
+
+  if (typeof data === 'object') {
+    const sanitized: Record<string, any> = {}
+    for (const [key, value] of Object.entries(data)) {
+      sanitized[key] = sanitizeData(value)
+    }
+    return sanitized
+  }
+
+  return data
+}

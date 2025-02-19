@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils"
 import { VoteType } from "@/types/vote"
 import { Product } from "@/types/product"
 import { useVoteLimiter } from "@/hooks/use-vote-limiter"
+import { useAuthStore } from "@/lib/auth/auth-store"
+import { toast } from "sonner"
 import {
   Tooltip,
   TooltipContent,
@@ -30,16 +32,22 @@ export function VoteButtons({
 }: VoteButtonsProps) {
   const { canVote, remainingCooldown, resetTime } = useVoteLimiter()
   const [votingType, setVotingType] = useState<VoteType | null>(null)
+  const { isAuthenticated } = useAuthStore()
 
   if (!product?.id) {
     return null
   }
 
   const handleVote = async (type: VoteType) => {
-    if (!canVote || votingType) return
+    if (!isAuthenticated) {
+      toast.error("Please sign in to vote")
+      return
+    }
+
+    if (!canVote || votingType !== null) return
     
+    setVotingType(type)
     try {
-      setVotingType(type)
       await onVote(product.id, type)
     } finally {
       setVotingType(null)
@@ -53,13 +61,13 @@ export function VoteButtons({
 
   const VoteButton = ({ type, icon: Icon, count }: { 
     type: VoteType
-    icon: typeof ThumbsUp
+    icon: any
     count: number 
   }) => {
-    const isUpvote = type === 'upvote'
+    const isUpvote = type === "upvote"
+    const activeClass = isUpvote ? "text-green-600" : "text-red-600"
     const isVoting = votingType === type
-    const activeClass = isUpvote ? 'bg-green-500/20 hover:bg-green-500/30 text-green-500' : 'bg-red-500/20 hover:bg-red-500/30 text-red-500'
-    
+
     const button = (
       <motion.div
         whileHover={{ scale: canVote ? 1.05 : 1 }}
@@ -71,11 +79,11 @@ export function VoteButtons({
           className={cn(
             "flex items-center gap-1 transition-colors relative",
             product?.userVote === (isUpvote ? 1 : -1) && activeClass,
-            !canVote && "opacity-50 cursor-not-allowed",
+            (!canVote || !isAuthenticated) && "opacity-50 cursor-not-allowed",
             isVoting && "cursor-wait"
           )}
           onClick={() => handleVote(type)}
-          disabled={!canVote || votingType !== null}
+          disabled={!canVote || !isAuthenticated || votingType !== null}
         >
           {isVoting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -106,7 +114,9 @@ export function VoteButtons({
             {button}
           </TooltipTrigger>
           <TooltipContent>
-            {!canVote ? (
+            {!isAuthenticated ? (
+              <p className="text-sm">Please sign in to vote</p>
+            ) : !canVote ? (
               <div className="text-sm">
                 <p>Vote cooldown: {formatCooldown(remainingCooldown)}</p>
                 {resetTime && (

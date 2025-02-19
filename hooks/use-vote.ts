@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { VoteType } from '@/types/vote';
 import type { Product } from '@/types/product';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuthStore } from "@/lib/auth/auth-store";
 
 const ANONYMOUS_ID_KEY = 'anonymous_id';
 
@@ -14,6 +15,7 @@ export function useVote(initialProduct: Product) {
   const [isLoading, setIsLoading] = useState(false);
   const [anonymousId, setAnonymousId] = useState<string>('');
   const [isVoting, setIsVoting] = useState(false);
+  const { isAuthenticated, user, checkAuth } = useAuthStore();
 
   // Initialize or get anonymous ID
   useEffect(() => {
@@ -68,9 +70,11 @@ export function useVote(initialProduct: Product) {
     setIsVoting(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Must be logged in to vote');
+      // Check auth state
+      await checkAuth();
+
+      if (!isAuthenticated) {
+        throw new Error("Please sign in to vote");
       }
 
       // Convert vote type to numeric value

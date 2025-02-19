@@ -9,9 +9,9 @@ import { SearchBar } from "./search-bar"
 
 export function HeroSection() {
   const { scrollY } = useScroll()
-  const opacity = useTransform(scrollY, [0, 300], [1, 0])
-  const scale = useTransform(scrollY, [0, 300], [1, 0.8])
-  const y = useTransform(scrollY, [0, 300], [0, 100])
+  const opacity = useTransform(scrollY, [0, 400, 800], [1, 1, 0])
+  const scale = useTransform(scrollY, [0, 400, 800], [1, 1, 0.8])
+  const y = useTransform(scrollY, [0, 400, 800], [0, 0, 100])
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },

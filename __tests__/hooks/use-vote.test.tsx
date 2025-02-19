@@ -1,53 +1,175 @@
+/** @jest-environment jsdom */
 import { renderHook, act } from '@testing-library/react'
 import { useVote } from '@/hooks/use-vote'
 import { supabase } from '@/lib/supabase/client'
-import { vi } from 'vitest'
+import { useAuthStore } from '@/lib/auth/auth-store'
+import type { Product } from '@/types/product'
+import type { Vote } from '@/types/vote'
 
-// Mock localStorage
-const mockLocalStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn()
-}
-Object.defineProperty(window, 'localStorage', {
-  value: mockLocalStorage
-})
+// Mock uuid
+jest.mock('uuid', () => ({
+  v4: () => 'test-uuid'
+}))
 
 // Mock Supabase client
-vi.mock('@/lib/supabase/client', () => ({
+jest.mock('@/lib/supabase/client', () => ({
   supabase: {
-    auth: {
-      getSession: vi.fn()
-    },
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn()
-        }))
-      })),
-      insert: vi.fn(),
-      update: vi.fn(() => ({
-        eq: vi.fn(),
-        match: vi.fn()
-      })),
-      delete: vi.fn(() => ({
-        eq: vi.fn(),
-        match: vi.fn()
-      }))
+    rpc: jest.fn(() => Promise.resolve({ data: { success: true }, error: null })),
+    channel: jest.fn(() => ({
+      on: jest.fn(() => ({ subscribe: jest.fn() })),
+      subscribe: jest.fn()
     })),
-    rpc: vi.fn()
+    removeChannel: jest.fn()
   }
 }))
 
-describe('useVote', () => {
+// Mock auth store
+jest.mock('@/lib/auth/auth-store')
+const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>
+
+describe('useVote Hook', () => {
+  const mockProduct: Product = {
+    id: 'test-product',
+    name: 'Test Product',
+    description: 'Test Description',
+    category: 'Gaming Mice',
+    price: 0,
+    image_url: 'test.jpg',
+    url_slug: 'test-product',
+    specifications: {},
+    upvotes: 10,
+    downvotes: 5,
+    rating: 0,
+    votes: [] as Vote[],
+    userVote: null,
+    total_votes: 15,
+    score: 5,
+    rank: 1,
+    review_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+
+  const mockStorage = {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    clear: jest.fn()
+  }
+
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockLocalStorage.getItem.mockReturnValue(null)
+    jest.clearAllMocks()
+    
+    // Mock localStorage
+    Object.defineProperty(window, 'localStorage', {
+      value: mockStorage
+    })
+
+    // Mock authenticated user
+    mockUseAuthStore.mockImplementation(() => ({
+      isAuthenticated: true,
+      user: { id: 'test-user' },
+      checkAuth: jest.fn()
+    }))
+
+    // Reset Supabase mock
+    const mockRpc = jest.fn().mockResolvedValue({ data: { success: true }, error: null })
+    ;(supabase.rpc as jest.Mock).mockImplementation(mockRpc)
+  })
+
+  test('initializes with correct state', () => {
+    const { result } = renderHook(() => useVote(mockProduct))
+
+    expect(result.current.product).toEqual(mockProduct)
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.isVoting).toBe(false)
+    expect(mockStorage.setItem).toHaveBeenCalledWith('anonymous_id', 'test-uuid')
+  })
+
+  test('handles successful vote', async () => {
+    mockStorage.getItem.mockReturnValue('test-anonymous-id')
+    ;(supabase.rpc as jest.Mock).mockResolvedValueOnce({
+      data: { success: true },
+      error: null
+    })
+
+    const { result } = renderHook(() => useVote(mockProduct))
+
+    await act(async () => {
+      await result.current.vote('upvote')
+    })
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'handle_authenticated_vote',
+      expect.objectContaining({
+        p_product_id: mockProduct.id,
+        p_vote_type: 'upvote',
+        p_user_id: 'test-user'
+      })
+    )
+  })
+
+  test('handles vote error', async () => {
+    mockStorage.getItem.mockReturnValue('test-anonymous-id')
+    const error = new Error('Vote failed')
+    ;(supabase.rpc as jest.Mock).mockRejectedValueOnce(error)
+
+    const { result } = renderHook(() => useVote(mockProduct))
+
+    await act(async () => {
+      try {
+        await result.current.vote('upvote')
+      } catch (err) {
+        expect(err).toBe(error)
+      }
+    })
+
+    expect(result.current.isVoting).toBe(false)
+  })
+
+  test('prevents voting when not authenticated', async () => {
+    mockStorage.getItem.mockReturnValue('test-anonymous-id')
+    // Mock unauthenticated user
+    mockUseAuthStore.mockImplementation(() => ({
+      isAuthenticated: false,
+      user: null,
+      checkAuth: jest.fn()
+    }))
+
+    const { result } = renderHook(() => useVote(mockProduct))
+
+    await act(async () => {
+      try {
+        await result.current.vote('upvote')
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          expect(err.message).toBe('Please sign in to vote')
+        }
+      }
+    })
+
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  test('updates local state after vote', async () => {
+    mockStorage.getItem.mockReturnValue('test-anonymous-id')
+    ;(supabase.rpc as jest.Mock).mockResolvedValueOnce({
+      data: { success: true, vote_type: 1 },
+      error: null
+    })
+
+    const { result } = renderHook(() => useVote(mockProduct))
+
+    await act(async () => {
+      await result.current.vote('upvote')
+    })
+
+    expect(result.current.product.upvotes).toBe(11)
+    expect(result.current.product.userVote).toBe(1)
   })
 
   describe('anonymous voting', () => {
     beforeEach(() => {
-      vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      ;(supabase.auth.getSession as jest.Mock).mockResolvedValue({
         data: { session: null },
         error: null
       })
@@ -60,13 +182,13 @@ describe('useVote', () => {
         await result.current.vote('product-1', 'up')
       })
 
-      expect(mockLocalStorage.setItem).toHaveBeenCalled()
+      expect(global.Storage.prototype.setItem).toHaveBeenCalled()
       expect(supabase.from).toHaveBeenCalledWith('votes')
     })
 
     it('prevents voting when limit is reached', async () => {
       // Mock 5 existing votes
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify(
+      global.Storage.prototype.getItem.mockReturnValue(JSON.stringify(
         Array(5).fill({
           productId: 'product-x',
           voteType: 'up',
@@ -85,7 +207,7 @@ describe('useVote', () => {
 
     it('cleans up old votes', async () => {
       const oldTimestamp = Date.now() - (25 * 60 * 60 * 1000) // 25 hours ago
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify([
+      global.Storage.prototype.getItem.mockReturnValue(JSON.stringify([
         {
           productId: 'product-1',
           voteType: 'up',
@@ -100,7 +222,7 @@ describe('useVote', () => {
       })
 
       // Should have cleaned up old vote and allowed new one
-      expect(mockLocalStorage.setItem).toHaveBeenCalled()
+      expect(global.Storage.prototype.setItem).toHaveBeenCalled()
       expect(supabase.from).toHaveBeenCalledWith('votes')
     })
   })
@@ -111,22 +233,22 @@ describe('useVote', () => {
     }
 
     beforeEach(() => {
-      vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      ;(supabase.auth.getSession as jest.Mock).mockResolvedValue({
         data: { session: mockSession },
         error: null
       })
     })
 
     it('creates a new vote', async () => {
-      vi.mocked(supabase.from).mockImplementationOnce(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({ data: null })
+      ;(supabase.from as jest.Mock).mockImplementationOnce(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: null })
           }))
         })),
-        insert: vi.fn().mockResolvedValue({ error: null }),
-        update: vi.fn(),
-        delete: vi.fn()
+        insert: jest.fn().mockResolvedValue({ error: null }),
+        update: jest.fn(),
+        delete: jest.fn()
       }))
 
       const { result } = renderHook(() => useVote())
@@ -145,17 +267,17 @@ describe('useVote', () => {
         vote_type: 'up'
       }
 
-      vi.mocked(supabase.from).mockImplementationOnce(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({ data: existingVote })
+      ;(supabase.from as jest.Mock).mockImplementationOnce(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: existingVote })
           }))
         })),
-        insert: vi.fn(),
-        update: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ error: null })
+        insert: jest.fn(),
+        update: jest.fn(() => ({
+          eq: jest.fn().mockResolvedValue({ error: null })
         })),
-        delete: vi.fn()
+        delete: jest.fn()
       }))
 
       const { result } = renderHook(() => useVote())
@@ -174,16 +296,16 @@ describe('useVote', () => {
         vote_type: 'up'
       }
 
-      vi.mocked(supabase.from).mockImplementationOnce(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({ data: existingVote })
+      ;(supabase.from as jest.Mock).mockImplementationOnce(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: existingVote })
           }))
         })),
-        insert: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ error: null })
+        insert: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(() => ({
+          eq: jest.fn().mockResolvedValue({ error: null })
         }))
       }))
 
@@ -205,12 +327,12 @@ describe('useVote', () => {
         { product_id: 'product-2', vote_type: 'down' }
       ]
 
-      vi.mocked(supabase.from).mockImplementationOnce(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ data: anonymousVotes })
+      ;(supabase.from as jest.Mock).mockImplementationOnce(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn().mockResolvedValue({ data: anonymousVotes })
         })),
-        update: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ error: null })
+        update: jest.fn(() => ({
+          eq: jest.fn().mockResolvedValue({ error: null })
         }))
       }))
 
@@ -220,16 +342,16 @@ describe('useVote', () => {
         await result.current.claimAnonymousVotes('user-1')
       })
 
-      expect(mockLocalStorage.removeItem).toHaveBeenCalled()
+      expect(global.Storage.prototype.removeItem).toHaveBeenCalled()
       expect(supabase.from).toHaveBeenCalledWith('votes')
     })
 
     it('handles errors when claiming votes', async () => {
-      vi.mocked(supabase.from).mockImplementationOnce(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ error: new Error('Database error') })
+      ;(supabase.from as jest.Mock).mockImplementationOnce(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn().mockResolvedValue({ error: new Error('Database error') })
         })),
-        update: vi.fn()
+        update: jest.fn()
       }))
 
       const { result } = renderHook(() => useVote())
@@ -238,7 +360,7 @@ describe('useVote', () => {
         await result.current.claimAnonymousVotes('user-1')
       })
 
-      expect(mockLocalStorage.removeItem).not.toHaveBeenCalled()
+      expect(mockStorage.removeItem).not.toHaveBeenCalled()
     })
   })
 }) 

@@ -1,26 +1,21 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProductMentionInput } from '@/components/thread/product-mention-input'
-import { supabase } from '@/supabaseClient'
+import { supabase } from '@/lib/supabase/client'
 import { vi } from 'vitest'
 
 // Mock Supabase client
-vi.mock('@/supabaseClient', () => ({
+jest.mock('@/lib/supabase/client', () => ({
   supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        ilike: vi.fn(() => ({
-          limit: vi.fn(() => ({
+    from: jest.fn(() => ({
+      select: jest.fn(() => ({
+        ilike: jest.fn(() => ({
+          limit: jest.fn().mockResolvedValue({
             data: [
-              {
-                id: '1',
-                name: 'Test Product',
-                description: 'A test product',
-                category: 'Test Category'
-              }
-            ],
-            error: null
-          }))
+              { id: '1', name: 'Product 1', url_slug: 'product-1' },
+              { id: '2', name: 'Product 2', url_slug: 'product-2' }
+            ]
+          })
         }))
       }))
     }))

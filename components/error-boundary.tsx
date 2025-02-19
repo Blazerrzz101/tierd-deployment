@@ -1,101 +1,58 @@
-'use client';
+"use client"
 
-import { DatabaseError, DatabaseErrorType } from '@/lib/supabase/client';
-import { useEffect } from 'react';
+import { Component, ErrorInfo, ReactNode } from "react"
+import { Button } from "@/components/ui/button"
+import { AlertTriangle } from "lucide-react"
 
 interface Props {
-  error: Error;
-  reset: () => void;
+  children: ReactNode
+  fallback?: ReactNode
 }
 
-export function ErrorBoundary({ error, reset }: Props) {
-  useEffect(() => {
-    // Log errors to your error reporting service
-    console.error('Error caught by boundary:', error);
-  }, [error]);
+interface State {
+  hasError: boolean
+  error: Error | null
+  errorInfo: ErrorInfo | null
+}
 
-  // Handle specific database errors
-  if (error instanceof DatabaseError) {
-    switch (error.type) {
-      case DatabaseErrorType.CONNECTION:
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">Connection Error</h2>
-            <p className="text-gray-600 mb-6">
-              We're having trouble connecting to our servers. Please check your internet connection and try again.
-            </p>
-            <button
-              onClick={reset}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        );
-
-      case DatabaseErrorType.AUTHENTICATION:
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">Authentication Error</h2>
-            <p className="text-gray-600 mb-6">
-              Your session may have expired. Please refresh the page and try again.
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Refresh Page
-            </button>
-          </div>
-        );
-
-      case DatabaseErrorType.NOT_FOUND:
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Not Found</h2>
-            <p className="text-gray-600 mb-6">
-              We couldn't find what you're looking for. The item may have been removed or doesn't exist.
-            </p>
-            <a
-              href="/"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Return Home
-            </a>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">Something Went Wrong</h2>
-            <p className="text-gray-600 mb-6">
-              We encountered an unexpected error. Our team has been notified.
-            </p>
-            <button
-              onClick={reset}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        );
-    }
+export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null,
+    errorInfo: null
   }
 
-  // Handle generic errors
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-      <h2 className="text-2xl font-bold text-red-600 mb-4">Unexpected Error</h2>
-      <p className="text-gray-600 mb-6">
-        Something went wrong. Please try again later.
-      </p>
-      <button
-        onClick={reset}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-      >
-        Try Again
-      </button>
-    </div>
-  );
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error, errorInfo: null }
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo)
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        this.props.fallback || (
+          <div className="flex min-h-[400px] w-full items-center justify-center">
+            <div className="text-center">
+              <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500" />
+              <h2 className="mt-4 text-lg font-semibold">Something went wrong</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {this.state.error?.message || "An unexpected error occurred"}
+              </p>
+              <Button
+                className="mt-4"
+                onClick={() => this.setState({ hasError: false })}
+              >
+                Try again
+              </Button>
+            </div>
+          </div>
+        )
+      )
+    }
+
+    return this.props.children
+  }
 } 
