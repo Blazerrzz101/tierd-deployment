@@ -39,39 +39,21 @@ export interface Database {
         Row: {
           id: string
           name: string
-          description: string | null
+          description: string
           category: string
-          price: number | null
-          image_url: string | null
+          price: number
+          image_url: string
           url_slug: string
-          specifications: Json | null
+          specifications: Json
+          upvotes: number
+          downvotes: number
+          rating: number
+          review_count: number
           created_at: string
           updated_at: string
         }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          category: string
-          price?: number | null
-          image_url?: string | null
-          url_slug: string
-          specifications?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          category?: string
-          price?: number | null
-          image_url?: string | null
-          url_slug?: string
-          specifications?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
+        Insert: Omit<Database['public']['Tables']['products']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['products']['Insert']>
       }
       threads: {
         Row: {
@@ -150,24 +132,14 @@ export interface Database {
         Row: {
           id: string
           product_id: string
-          user_id: string
-          vote_type: string
+          user_id: string | null
+          vote_type: number
+          metadata: Json | null
           created_at: string
+          updated_at: string
         }
-        Insert: {
-          id?: string
-          product_id: string
-          user_id: string
-          vote_type: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          product_id?: string
-          user_id?: string
-          vote_type?: string
-          created_at?: string
-        }
+        Insert: Omit<Database['public']['Tables']['votes']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['votes']['Insert']>
       }
       reviews: {
         Row: {
@@ -227,6 +199,23 @@ export interface Database {
           created_at?: string
         }
       }
+      user_profiles: {
+        Row: {
+          id: string
+          username: string | null
+          full_name: string | null
+          avatar_url: string | null
+          website: string | null
+          email: string | null
+          bio: string | null
+          preferences: Json
+          last_seen: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['user_profiles']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['user_profiles']['Insert']>
+      }
     }
     Views: {
       reddit_threads_view: {
@@ -250,16 +239,18 @@ export interface Database {
         Row: {
           id: string
           name: string
-          description: string | null
+          description: string
           category: string
-          price: number | null
-          image_url: string | null
+          price: number
+          image_url: string
           url_slug: string
-          specifications: Json | null
+          specifications: Json
           upvotes: number
           downvotes: number
           rating: number
           review_count: number
+          total_votes: number
+          score: number
           rank: number
         }
       }
@@ -288,6 +279,35 @@ export interface Database {
       refresh_rankings: {
         Args: Record<string, never>
         Returns: void
+      }
+      get_product_rankings: {
+        Args: {
+          p_category?: string
+        }
+        Returns: Database['public']['Views']['product_rankings']['Row'][]
+      }
+      handle_authenticated_vote: {
+        Args: {
+          p_product_id: string
+          p_vote_type: string
+          p_user_id: string
+        }
+        Returns: {
+          success: boolean
+          vote_id: string
+          vote_type: number
+          created_at: string
+        }[]
+      }
+      get_user_votes: {
+        Args: {
+          p_product_ids?: string[]
+        }
+        Returns: {
+          product_id: string
+          vote_type: number
+          created_at: string
+        }[]
       }
     }
     Enums: {

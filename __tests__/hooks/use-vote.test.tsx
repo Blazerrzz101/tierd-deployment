@@ -4,28 +4,86 @@ import { useVote } from '@/hooks/use-vote'
 import { supabase } from '@/lib/supabase/client'
 import { useAuthStore } from '@/lib/auth/auth-store'
 import type { Product } from '@/types/product'
-import type { Vote } from '@/types/vote'
+import type { PostgrestResponse, Session, AuthError, RealtimeChannel } from '@supabase/supabase-js'
+import type { VoteResponse } from '@/types/vote'
 
 // Mock uuid
 jest.mock('uuid', () => ({
   v4: () => 'test-uuid'
 }))
 
+// Create typed mock for Supabase client
+const mockSupabase = {
+  rpc: jest.fn(),
+  channel: jest.fn(),
+  removeChannel: jest.fn(),
+  auth: {
+    getSession: jest.fn()
+  }
+} as unknown as jest.Mocked<typeof supabase>
+
 // Mock Supabase client
 jest.mock('@/lib/supabase/client', () => ({
   supabase: {
-    rpc: jest.fn(() => Promise.resolve({ data: { success: true }, error: null })),
-    channel: jest.fn(() => ({
-      on: jest.fn(() => ({ subscribe: jest.fn() })),
-      subscribe: jest.fn()
+    auth: {
+      getSession: jest.fn().mockImplementation(() => Promise.resolve({
+        data: { session: null },
+        error: null
+      })),
+      onAuthStateChange: jest.fn(),
+      signOut: jest.fn()
+    },
+    rpc: jest.fn().mockImplementation(() => Promise.resolve({
+      data: [{
+        success: true,
+        vote_id: 'test-vote-id',
+        vote_type: 1,
+        created_at: new Date().toISOString()
+      }],
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK'
     })),
-    removeChannel: jest.fn()
+    channel: jest.fn().mockReturnValue({
+      on: jest.fn().mockReturnThis(),
+      subscribe: jest.fn(),
+      topic: 'test-topic',
+      params: {},
+      socket: {} as any,
+      bindings: {},
+      state: 'SUBSCRIBED',
+      unsubscribe: jest.fn(),
+      send: jest.fn()
+    } as unknown as RealtimeChannel)
   }
 }))
 
 // Mock auth store
 jest.mock('@/lib/auth/auth-store')
 const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>
+
+// Mock storage implementation
+const mockStorage: { [key: string]: string } = {}
+
+// Properly typed storage mock functions
+const mockGetItem = jest.fn((key: string) => mockStorage[key] ?? null)
+const mockSetItem = jest.fn((key: string, value: string) => { mockStorage[key] = value })
+const mockRemoveItem = jest.fn((key: string) => { delete mockStorage[key] })
+const mockClear = jest.fn(() => { Object.keys(mockStorage).forEach(key => delete mockStorage[key]) })
+
+// Mock localStorage
+Object.defineProperty(window, 'localStorage', {
+  value: {
+    getItem: mockGetItem,
+    setItem: mockSetItem,
+    removeItem: mockRemoveItem,
+    clear: mockClear,
+    length: 0,
+    key: jest.fn()
+  },
+  writable: true
+})
 
 describe('useVote Hook', () => {
   const mockProduct: Product = {
@@ -40,7 +98,7 @@ describe('useVote Hook', () => {
     upvotes: 10,
     downvotes: 5,
     rating: 0,
-    votes: [] as Vote[],
+    votes: [],
     userVote: null,
     total_votes: 15,
     score: 5,
@@ -50,19 +108,35 @@ describe('useVote Hook', () => {
     updated_at: new Date().toISOString()
   }
 
-  const mockStorage = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    clear: jest.fn()
-  }
+  // Mock storage data
+  let storageData: Record<string, string> = {}
+  let getItemSpy: jest.SpyInstance
+  let setItemSpy: jest.SpyInstance
+  let removeItemSpy: jest.SpyInstance
+  let clearSpy: jest.SpyInstance
 
   beforeEach(() => {
     jest.clearAllMocks()
+    storageData = {}
+
+    // Mock localStorage methods using jest.spyOn with proper types
+    getItemSpy = jest.spyOn(Storage.prototype, 'getItem')
+      .mockImplementation((key: string) => storageData[key] ?? null)
     
-    // Mock localStorage
-    Object.defineProperty(window, 'localStorage', {
-      value: mockStorage
-    })
+    setItemSpy = jest.spyOn(Storage.prototype, 'setItem')
+      .mockImplementation((key: string, value: string) => {
+        storageData[key] = value
+      })
+    
+    removeItemSpy = jest.spyOn(Storage.prototype, 'removeItem')
+      .mockImplementation((key: string) => {
+        delete storageData[key]
+      })
+    
+    clearSpy = jest.spyOn(Storage.prototype, 'clear')
+      .mockImplementation(() => {
+        storageData = {}
+      })
 
     // Mock authenticated user
     mockUseAuthStore.mockImplementation(() => ({
@@ -71,9 +145,46 @@ describe('useVote Hook', () => {
       checkAuth: jest.fn()
     }))
 
-    // Reset Supabase mock
-    const mockRpc = jest.fn().mockResolvedValue({ data: { success: true }, error: null })
-    ;(supabase.rpc as jest.Mock).mockImplementation(mockRpc)
+    // Mock Supabase channel
+    mockSupabase.channel.mockReturnValue({
+      on: jest.fn().mockReturnThis(),
+      subscribe: jest.fn(),
+      topic: 'test-topic',
+      params: {},
+      socket: {} as any,
+      bindings: {},
+      state: 'SUBSCRIBED',
+      unsubscribe: jest.fn(),
+      send: jest.fn()
+    } as unknown as RealtimeChannel)
+
+    // Mock Supabase RPC with proper response type
+    mockSupabase.rpc.mockResolvedValue({
+      data: [{
+        success: true,
+        vote_id: 'test-vote-id',
+        vote_type: 1,
+        created_at: new Date().toISOString()
+      }],
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK'
+    } as PostgrestResponse<VoteResponse>)
+
+    // Mock Supabase auth
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null
+    } as { data: { session: Session | null }, error: AuthError | null })
+  })
+
+  afterEach(() => {
+    // Restore all mocks
+    getItemSpy.mockRestore()
+    setItemSpy.mockRestore()
+    removeItemSpy.mockRestore()
+    clearSpy.mockRestore()
   })
 
   test('initializes with correct state', () => {
@@ -82,15 +193,23 @@ describe('useVote Hook', () => {
     expect(result.current.product).toEqual(mockProduct)
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isVoting).toBe(false)
-    expect(mockStorage.setItem).toHaveBeenCalledWith('anonymous_id', 'test-uuid')
+    expect(storageData['anonymous_id']).toBe('test-uuid')
   })
 
   test('handles successful vote', async () => {
-    mockStorage.getItem.mockReturnValue('test-anonymous-id')
-    ;(supabase.rpc as jest.Mock).mockResolvedValueOnce({
-      data: { success: true },
-      error: null
-    })
+    storageData['anonymous_id'] = 'test-anonymous-id'
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: [{
+        success: true,
+        vote_id: 'test-vote-id',
+        vote_type: 1,
+        created_at: new Date().toISOString()
+      }],
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK'
+    } as PostgrestResponse<VoteResponse>)
 
     const { result } = renderHook(() => useVote(mockProduct))
 
@@ -98,7 +217,7 @@ describe('useVote Hook', () => {
       await result.current.vote('upvote')
     })
 
-    expect(supabase.rpc).toHaveBeenCalledWith(
+    expect(mockSupabase.rpc).toHaveBeenCalledWith(
       'handle_authenticated_vote',
       expect.objectContaining({
         p_product_id: mockProduct.id,
@@ -109,9 +228,9 @@ describe('useVote Hook', () => {
   })
 
   test('handles vote error', async () => {
-    mockStorage.getItem.mockReturnValue('test-anonymous-id')
+    storageData['anonymous_id'] = 'test-anonymous-id'
     const error = new Error('Vote failed')
-    ;(supabase.rpc as jest.Mock).mockRejectedValueOnce(error)
+    mockSupabase.rpc.mockRejectedValueOnce(error)
 
     const { result } = renderHook(() => useVote(mockProduct))
 
@@ -127,7 +246,7 @@ describe('useVote Hook', () => {
   })
 
   test('prevents voting when not authenticated', async () => {
-    mockStorage.getItem.mockReturnValue('test-anonymous-id')
+    storageData['anonymous_id'] = 'test-anonymous-id'
     // Mock unauthenticated user
     mockUseAuthStore.mockImplementation(() => ({
       isAuthenticated: false,
@@ -147,15 +266,23 @@ describe('useVote Hook', () => {
       }
     })
 
-    expect(supabase.rpc).not.toHaveBeenCalled()
+    expect(mockSupabase.rpc).not.toHaveBeenCalled()
   })
 
   test('updates local state after vote', async () => {
-    mockStorage.getItem.mockReturnValue('test-anonymous-id')
-    ;(supabase.rpc as jest.Mock).mockResolvedValueOnce({
-      data: { success: true, vote_type: 1 },
-      error: null
-    })
+    storageData['anonymous_id'] = 'test-anonymous-id'
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: [{
+        success: true,
+        vote_id: 'test-vote-id',
+        vote_type: 1,
+        created_at: new Date().toISOString()
+      }],
+      error: null,
+      count: null,
+      status: 200,
+      statusText: 'OK'
+    } as PostgrestResponse<VoteResponse>)
 
     const { result } = renderHook(() => useVote(mockProduct))
 
@@ -360,7 +487,7 @@ describe('useVote Hook', () => {
         await result.current.claimAnonymousVotes('user-1')
       })
 
-      expect(mockStorage.removeItem).not.toHaveBeenCalled()
+      expect(storageData.removeItem).not.toHaveBeenCalled()
     })
   })
 }) 

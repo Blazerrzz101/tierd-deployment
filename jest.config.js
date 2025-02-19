@@ -49,6 +49,12 @@ const customJestConfig = {
   },
   testEnvironmentOptions: {
     customExportConditions: [''],
+  },
+  // Add specific settings for Supabase mocking
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.jest.json'
+    }
   }
 }
 

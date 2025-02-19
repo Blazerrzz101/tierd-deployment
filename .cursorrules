@@ -17,6 +17,10 @@
 - When using pgcrypto for hashing, ensure the extension is created in the correct schema and parameters are properly cast
 - When modifying existing tables in Supabase migrations, use ALTER TABLE with IF EXISTS checks to prevent errors
 - When implementing RLS policies, ensure proper GRANT statements are in place for table access
+- When mocking browser APIs in Jest with TypeScript, prefer using `jest.spyOn` over direct mock objects to maintain proper typing
+- For localStorage mocks, consider using a combination of `jest.spyOn` and a mock storage object to maintain both type safety and test functionality
+- When working with Jest mocks in TypeScript, ensure mock functions are properly typed using `jest.MockedFunction` or `jest.SpyInstance`
+- When mocking Supabase in TypeScript tests, consider using a separate mock file with proper type definitions or use partial mocking with jest.spyOn for better type safety
 
 # Scratchpad
 
