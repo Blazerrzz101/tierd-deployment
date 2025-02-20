@@ -1,5 +1,5 @@
--- Clear existing data
-TRUNCATE products CASCADE;
+-- Delete existing sample data
+DELETE FROM products;
 
 -- Insert sample data with correct category format
 INSERT INTO products (name, description, category, price, image_url, url_slug, specifications, is_active) VALUES

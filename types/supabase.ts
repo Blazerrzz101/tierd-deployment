@@ -45,15 +45,36 @@ export interface Database {
           image_url: string
           url_slug: string
           specifications: Json
-          upvotes: number
-          downvotes: number
-          rating: number
-          review_count: number
           created_at: string
           updated_at: string
+          is_active: boolean
         }
-        Insert: Omit<Database['public']['Tables']['products']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['products']['Insert']>
+        Insert: {
+          id?: string
+          name: string
+          description: string
+          category: string
+          price: number
+          image_url: string
+          url_slug: string
+          specifications?: Json
+          created_at?: string
+          updated_at?: string
+          is_active?: boolean
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string
+          category?: string
+          price?: number
+          image_url?: string
+          url_slug?: string
+          specifications?: Json
+          created_at?: string
+          updated_at?: string
+          is_active?: boolean
+        }
       }
       threads: {
         Row: {
@@ -132,14 +153,27 @@ export interface Database {
         Row: {
           id: string
           product_id: string
-          user_id: string | null
+          user_id: string
           vote_type: number
-          metadata: Json | null
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['votes']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['votes']['Insert']>
+        Insert: {
+          id?: string
+          product_id: string
+          user_id: string
+          vote_type: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          user_id?: string
+          vote_type?: number
+          created_at?: string
+          updated_at?: string
+        }
       }
       reviews: {
         Row: {
@@ -149,8 +183,8 @@ export interface Database {
           rating: number
           title: string
           content: string
-          pros: string[]
-          cons: string[]
+          pros: string[] | null
+          cons: string[] | null
           created_at: string
           updated_at: string
         }
@@ -161,8 +195,8 @@ export interface Database {
           rating: number
           title: string
           content: string
-          pros?: string[]
-          cons?: string[]
+          pros?: string[] | null
+          cons?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -173,8 +207,8 @@ export interface Database {
           rating?: number
           title?: string
           content?: string
-          pros?: string[]
-          cons?: string[]
+          pros?: string[] | null
+          cons?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -241,6 +275,7 @@ export interface Database {
           name: string
           description: string
           category: string
+          category_slug: string
           price: number
           image_url: string
           url_slug: string
@@ -252,6 +287,17 @@ export interface Database {
           total_votes: number
           score: number
           rank: number
+        }
+      }
+      category_stats: {
+        Row: {
+          category: string
+          product_count: number
+          avg_price: number
+          min_price: number
+          max_price: number
+          total_upvotes: number
+          total_downvotes: number
         }
       }
     }
@@ -284,7 +330,25 @@ export interface Database {
         Args: {
           p_category?: string
         }
-        Returns: Database['public']['Views']['product_rankings']['Row'][]
+        Returns: {
+          id: string
+          name: string
+          description: string
+          category: string
+          category_slug: string
+          price: number
+          image_url: string
+          url_slug: string
+          specifications: Json
+          upvotes: number
+          downvotes: number
+          rating: number
+          review_count: number
+          total_votes: number
+          score: number
+          ranking_score: number
+          rank: number
+        }[]
       }
       handle_authenticated_vote: {
         Args: {
@@ -308,6 +372,13 @@ export interface Database {
           vote_type: number
           created_at: string
         }[]
+      }
+      vote_for_product: {
+        Args: {
+          p_product_id: string
+          p_vote_type: number
+        }
+        Returns: void
       }
     }
     Enums: {

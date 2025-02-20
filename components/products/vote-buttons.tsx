@@ -4,7 +4,7 @@ import { useState } from "react"
 import { ThumbsUp, ThumbsDown, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { VoteType } from "@/types/vote"
+import { VoteType } from "@/types/product"
 import { Product } from "@/types/product"
 import { useVoteLimiter } from "@/hooks/use-vote-limiter"
 import { useAuthStore } from "@/lib/auth/auth-store"
@@ -18,7 +18,12 @@ import {
 import { motion, AnimatePresence } from "framer-motion"
 
 interface VoteButtonsProps {
-  product: Product
+  product: {
+    id: string
+    userVote: VoteType
+    upvotes: number
+    downvotes: number
+  }
   onVote: (productId: string, voteType: VoteType) => Promise<void>
   className?: string
   showTooltips?: boolean
@@ -38,7 +43,7 @@ export function VoteButtons({
     return null
   }
 
-  const handleVote = async (type: VoteType) => {
+  const handleVote = async (voteType: VoteType) => {
     if (!isAuthenticated) {
       toast.error("Please sign in to vote")
       return
@@ -46,9 +51,11 @@ export function VoteButtons({
 
     if (!canVote || votingType !== null) return
     
-    setVotingType(type)
+    setVotingType(voteType)
     try {
-      await onVote(product.id, type)
+      await onVote(product.id, voteType)
+    } catch (error) {
+      console.error('Error voting:', error)
     } finally {
       setVotingType(null)
     }
@@ -64,7 +71,7 @@ export function VoteButtons({
     icon: any
     count: number 
   }) => {
-    const isUpvote = type === "upvote"
+    const isUpvote = type === "up"
     const activeClass = isUpvote ? "text-green-600" : "text-red-600"
     const isVoting = votingType === type
 
@@ -75,14 +82,14 @@ export function VoteButtons({
       >
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
+          onClick={() => handleVote(type)}
           className={cn(
-            "flex items-center gap-1 transition-colors relative",
-            product?.userVote === (isUpvote ? 1 : -1) && activeClass,
+            "h-8 w-8",
+            product.userVote === type && activeClass,
             (!canVote || !isAuthenticated) && "opacity-50 cursor-not-allowed",
             isVoting && "cursor-wait"
           )}
-          onClick={() => handleVote(type)}
           disabled={!canVote || !isAuthenticated || votingType !== null}
         >
           {isVoting ? (
@@ -90,17 +97,6 @@ export function VoteButtons({
           ) : (
             <Icon className="h-4 w-4" />
           )}
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={count}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="min-w-[1rem] text-center"
-            >
-              {count}
-            </motion.span>
-          </AnimatePresence>
         </Button>
       </motion.div>
     )
@@ -139,12 +135,12 @@ export function VoteButtons({
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <VoteButton 
-        type="upvote" 
+        type="up" 
         icon={ThumbsUp} 
         count={product?.upvotes || 0} 
       />
       <VoteButton 
-        type="downvote" 
+        type="down" 
         icon={ThumbsDown} 
         count={product?.downvotes || 0} 
       />

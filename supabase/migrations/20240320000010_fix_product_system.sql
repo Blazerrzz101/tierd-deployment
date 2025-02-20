@@ -1,5 +1,45 @@
--- Clear existing data
-TRUNCATE products CASCADE;
+-- Drop existing triggers and functions
+DROP TRIGGER IF EXISTS trigger_product_update ON products;
+DROP FUNCTION IF EXISTS handle_product_update();
+DROP FUNCTION IF EXISTS get_product_rankings(text);
+
+-- Create function to handle product updates with new category format
+CREATE OR REPLACE FUNCTION handle_product_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Clean URL slug
+    NEW.url_slug := clean_url_slug(NEW.url_slug);
+    
+    -- Ensure category is valid
+    IF NEW.category NOT IN (
+        'gaming-mice', 'gaming-keyboards', 'gaming-headsets', 
+        'gaming-monitors', 'gaming-chairs'
+    ) THEN
+        RAISE EXCEPTION 'Invalid category: %', NEW.category;
+    END IF;
+    
+    -- Ensure price is valid
+    IF NEW.price < 0 THEN
+        RAISE EXCEPTION 'Price cannot be negative';
+    END IF;
+    
+    -- Update timestamp
+    NEW.updated_at := NOW();
+    
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger for product updates
+CREATE TRIGGER trigger_product_update
+    BEFORE INSERT OR UPDATE ON products
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_product_update();
+
+-- Delete existing sample data
+DELETE FROM products;
 
 -- Insert sample data with correct category format
 INSERT INTO products (name, description, category, price, image_url, url_slug, specifications, is_active) VALUES
@@ -23,6 +63,72 @@ INSERT INTO products (name, description, category, price, image_url, url_slug, s
 ('Samsung Odyssey G7', 'Curved gaming monitor', 'gaming-monitors', 699.99, 'https://example.com/g7.jpg', 'samsung-odyssey-g7', '{"resolution": "1440p", "refresh": "240Hz", "panel": "VA"}', true),
 ('ASUS ROG Swift PG279QM', 'Esports gaming monitor', 'gaming-monitors', 849.99, 'https://example.com/pg279qm.jpg', 'asus-rog-swift-pg279qm', '{"resolution": "1440p", "refresh": "240Hz", "panel": "IPS"}', true);
 
--- Refresh materialized views
+-- Create the function with proper category slug handling
+CREATE OR REPLACE FUNCTION get_product_rankings(p_category text DEFAULT NULL)
+RETURNS TABLE (
+    id UUID,
+    name TEXT,
+    description TEXT,
+    category TEXT,
+    category_slug TEXT,
+    price DECIMAL,
+    image_url TEXT,
+    url_slug TEXT,
+    specifications JSONB,
+    upvotes BIGINT,
+    downvotes BIGINT,
+    rating DECIMAL,
+    review_count BIGINT,
+    total_votes BIGINT,
+    score BIGINT,
+    ranking_score DECIMAL,
+    rank BIGINT
+)
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        pr.id,
+        pr.name,
+        pr.description,
+        pr.category,
+        pr.category as category_slug,
+        pr.price,
+        pr.image_url,
+        pr.url_slug,
+        pr.specifications,
+        pr.upvotes,
+        pr.downvotes,
+        pr.rating,
+        pr.review_count,
+        pr.total_votes,
+        pr.score,
+        (
+            (pr.upvotes - pr.downvotes) * 0.7 +
+            (pr.rating * pr.review_count) * 0.3
+        ) as ranking_score,
+        pr.rank
+    FROM product_rankings pr
+    WHERE 
+        CASE 
+            WHEN p_category IS NULL THEN true
+            ELSE pr.category = p_category
+        END
+    ORDER BY 
+        CASE 
+            WHEN p_category IS NULL THEN pr.category
+            ELSE pr.rank::text
+        END,
+        pr.rank;
+END;
+$$;
+
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION get_product_rankings(TEXT) TO authenticated, anon;
+
+-- Refresh materialized views to reflect changes
 REFRESH MATERIALIZED VIEW CONCURRENTLY product_rankings;
 REFRESH MATERIALIZED VIEW CONCURRENTLY category_stats; 

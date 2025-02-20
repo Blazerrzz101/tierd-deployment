@@ -39,6 +39,9 @@ export async function generateStaticParams() {
 
 async function getProduct(slug: string): Promise<Product | null> {
   try {
+    // Normalize the slug to handle URL variations
+    const normalizedSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+
     const { data: product, error } = await supabaseServer
       .from('product_rankings')
       .select(`
@@ -56,15 +59,24 @@ async function getProduct(slug: string): Promise<Product | null> {
         review_count,
         rank,
         score,
-        total_votes,
-        created_at,
-        updated_at
+        total_votes
       `)
-      .eq('url_slug', slug)
+      .eq('url_slug', normalizedSlug)
       .single()
 
     if (error) {
       if (error.code === 'PGRST116') {
+        // Try to find the product by name if slug doesn't match
+        const { data: productByName, error: nameError } = await supabaseServer
+          .from('product_rankings')
+          .select('url_slug')
+          .ilike('name', `%${slug.replace(/-/g, ' ')}%`)
+          .limit(1)
+          .single()
+
+        if (!nameError && productByName) {
+          return getProduct(productByName.url_slug)
+        }
         return null
       }
       console.error('Error fetching product:', error)
@@ -81,19 +93,12 @@ async function getProduct(slug: string): Promise<Product | null> {
       description: product.description || '',
       category: product.category,
       price: product.price || 0,
-      image_url: product.image_url || '',
-      url_slug: product.url_slug,
-      specifications: product.specifications || {},
-      upvotes: product.upvotes || 0,
-      downvotes: product.downvotes || 0,
-      total_votes: product.total_votes || 0,
-      score: product.score || 0,
+      imageUrl: product.image_url || '',
+      votes: (product.upvotes || 0) - (product.downvotes || 0),
       rank: product.rank || 0,
-      rating: product.rating || 0,
-      review_count: product.review_count || 0,
-      created_at: product.created_at || new Date().toISOString(),
-      updated_at: product.updated_at || new Date().toISOString(),
-      userVote: null
+      specs: product.specifications || {},
+      userVote: null,
+      url_slug: product.url_slug
     }
 
     return transformedProduct
@@ -125,12 +130,22 @@ export default async function Page({ params }: PageProps) {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
-          An error occurred while loading the product. Please try again later.
-          {process.env.NODE_ENV === 'development' && (
-            <pre className="mt-2 text-xs">
-              {error instanceof Error ? error.message : String(error)}
-            </pre>
-          )}
+          <div className="space-y-2">
+            <p>An error occurred while loading the product. Please try again later.</p>
+            {process.env.NODE_ENV === 'development' && (
+              <pre className="mt-2 text-xs overflow-auto">
+                {error instanceof Error ? error.message : String(error)}
+              </pre>
+            )}
+            <p className="text-sm text-muted-foreground">
+              If you continue to see this error, please try:
+              <ul className="list-disc list-inside mt-1">
+                <li>Refreshing the page</li>
+                <li>Clearing your browser cache</li>
+                <li>Checking the URL for typos</li>
+              </ul>
+            </p>
+          </div>
         </AlertDescription>
       </Alert>
     )

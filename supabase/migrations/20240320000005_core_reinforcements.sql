@@ -69,8 +69,8 @@ FROM products p
 LEFT JOIN (
     SELECT 
         product_id,
-        COUNT(*) FILTER (WHERE vote_type = 1) as upvotes,
-        COUNT(*) FILTER (WHERE vote_type = -1) as downvotes
+        COUNT(*) FILTER (WHERE vote_type::integer = 1) as upvotes,
+        COUNT(*) FILTER (WHERE vote_type::integer = -1) as downvotes
     FROM votes
     GROUP BY product_id
 ) v ON p.id = v.product_id

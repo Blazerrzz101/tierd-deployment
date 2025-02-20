@@ -10,8 +10,6 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Image as ImageIcon } from 'lucide-react'
 import { ThreadManager } from '@/lib/supabase/thread-manager'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { AlertCircle } from 'lucide-react'
 
 interface MentionedProduct {
   id: string
@@ -87,7 +85,6 @@ export function ThreadCreator() {
     }
 
     setIsSubmitting(true)
-    setError(null)
 
     try {
       await ThreadManager.createThread(
@@ -102,7 +99,6 @@ export function ThreadCreator() {
       setIsExpanded(false)
     } catch (err) {
       console.error('Error creating thread:', err)
-      setError(err instanceof Error ? err : new Error('Failed to create thread'))
       toast.error('Failed to create thread. Please try again.')
     } finally {
       setIsSubmitting(false)
@@ -119,14 +115,6 @@ export function ThreadCreator() {
       isExpanded ? "p-4" : "p-2"
     )}>
       <div className="relative space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        )}
-
         <Textarea
           ref={inputRef}
           placeholder="Ask anything... Use @ to mention products"

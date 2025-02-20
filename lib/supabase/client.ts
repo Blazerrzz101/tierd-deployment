@@ -1,35 +1,20 @@
 "use client";
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 
-let supabaseInstance: ReturnType<typeof createClientComponentClient<Database>> | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
 
 // Get or create the Supabase client instance
 export function getSupabaseClient() {
-  if (supabaseInstance) return supabaseInstance;
+  if (supabase) return supabase;
 
   // For local development, we want to use the local Supabase instance
   const isLocalDev = process.env.NODE_ENV === 'development' && 
                      process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('localhost');
-
-  supabaseInstance = createClientComponentClient<Database>({
-    options: {
-      realtime: {
-        params: {
-          eventsPerSecond: 10
-        }
-      },
-      db: {
-        schema: 'public'
-      },
-      global: {
-        headers: {
-          'x-client-info': `tierd-web-${isLocalDev ? 'local' : 'prod'}`
-        }
-      }
-    }
-  });
 
   // Test the connection
   testDatabaseConnection()
@@ -44,11 +29,8 @@ export function getSupabaseClient() {
       console.error('Error testing database connection:', error);
     });
 
-  return supabaseInstance;
+  return supabase;
 }
-
-// Export a singleton instance
-export const supabase = getSupabaseClient();
 
 // Simple connection test that doesn't require auth
 export async function testDatabaseConnection(): Promise<boolean> {

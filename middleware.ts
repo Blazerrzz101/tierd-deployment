@@ -59,9 +59,6 @@ export async function middleware(request: NextRequest) {
     res.headers.set('X-Request-ID', crypto.randomUUID())
     res.headers.set('X-Process-Time', `${Date.now() - startTime}ms`)
 
-    // Log successful completion
-    console.log(`Request processed in ${Date.now() - startTime}ms`)
-
     // Handle product page requests
     if (request.nextUrl.pathname.startsWith('/products/')) {
       const slug = request.nextUrl.pathname.split('/')[2]
@@ -124,11 +121,6 @@ export const config = {
      * - api routes
      * - health check endpoint
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api|health).*)',
-    '/products/:path*',
-    '/dashboard/:path*',
-    '/settings/:path*',
-    '/profile/:path*',
-    '/auth/:path*'
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api|health).*)'
   ],
 } 

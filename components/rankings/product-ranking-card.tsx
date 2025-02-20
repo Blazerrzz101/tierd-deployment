@@ -1,12 +1,8 @@
-"use client"
+'use client'
 
-import React from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { Product } from '@/types/product'
-import { PLACEHOLDER_IMAGE } from "@/lib/constants"
+import Image from 'next/image'
+import Link from 'next/link'
 import { Star } from 'lucide-react'
 import { VoteButtons } from '@/components/products/vote-buttons'
 import { useVote } from '@/hooks/use-vote'
@@ -14,34 +10,34 @@ import type { Database } from '@/types/supabase'
 
 type ProductRanking = Database['public']['Views']['product_rankings']['Row']
 
-interface ProductCardProps {
+interface ProductRankingCardProps {
   product: ProductRanking
-  variant?: 'default' | 'compact'
-  className?: string
+  rank: number
 }
 
-export function ProductCard({ product, variant = 'default', className }: ProductCardProps) {
+export function ProductRankingCard({ product, rank }: ProductRankingCardProps) {
   const { vote } = useVote()
-  const isCompact = variant === 'compact'
 
   return (
-    <div className={cn(
-      "group relative overflow-hidden rounded-lg border border-white/10 bg-white/5 transition-colors hover:bg-white/10",
-      className
-    )}>
-      {/* Product Image */}
+    <div className="group relative flex items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-4 transition-colors hover:bg-white/10">
+      {/* Rank */}
       <div className={cn(
-        "relative overflow-hidden",
-        isCompact ? "aspect-[4/3]" : "aspect-square"
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-bold",
+        rank === 1 && "bg-yellow-500/20 text-yellow-500",
+        rank === 2 && "bg-gray-500/20 text-gray-400",
+        rank === 3 && "bg-orange-900/20 text-orange-700",
+        rank > 3 && "bg-white/10 text-white/50"
       )}>
+        #{rank}
+      </div>
+
+      {/* Product Image */}
+      <div className="relative aspect-square w-16 overflow-hidden rounded-lg bg-zinc-100">
         <Image
           src={product.image_url || "/images/products/placeholder.svg"}
           alt={product.name}
           fill
-          sizes={isCompact 
-            ? "(max-width: 768px) 50vw, 33vw"
-            : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          }
+          sizes="(max-width: 768px) 64px, 64px"
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           onError={(e) => {
             const img = e.target as HTMLImageElement
@@ -51,16 +47,10 @@ export function ProductCard({ product, variant = 'default', className }: Product
       </div>
 
       {/* Product Info */}
-      <div className={cn(
-        "space-y-2",
-        isCompact ? "p-3" : "p-4"
-      )}>
+      <div className="flex flex-1 flex-col gap-1">
         <Link 
           href={`/products/${product.url_slug}`}
-          className={cn(
-            "block font-medium hover:underline",
-            isCompact ? "text-base" : "text-lg"
-          )}
+          className="text-lg font-medium hover:underline"
         >
           {product.name}
         </Link>
@@ -79,22 +69,19 @@ export function ProductCard({ product, variant = 'default', className }: Product
             </>
           )}
         </div>
-
-        {/* Vote Buttons */}
-        <VoteButtons 
-          product={{
-            id: product.id,
-            userVote: null, // We'll implement this later with auth
-            upvotes: product.upvotes || 0,
-            downvotes: product.downvotes || 0
-          }}
-          onVote={vote}
-          className={cn(
-            "mt-4",
-            isCompact && "scale-90 origin-left"
-          )}
-        />
       </div>
+
+      {/* Vote Buttons */}
+      <VoteButtons 
+        product={{
+          id: product.id,
+          userVote: null, // We'll implement this later with auth
+          upvotes: product.upvotes || 0,
+          downvotes: product.downvotes || 0
+        }}
+        onVote={vote}
+        className="shrink-0"
+      />
     </div>
   )
-}
+} 

@@ -1,8 +1,8 @@
 -- Drop existing function
-DROP FUNCTION IF EXISTS get_product_rankings(TEXT);
+DROP FUNCTION IF EXISTS get_product_rankings(text);
 
--- Create the function with fixed category matching
-CREATE OR REPLACE FUNCTION get_product_rankings(p_category TEXT DEFAULT NULL)
+-- Create the function with proper category slug handling
+CREATE OR REPLACE FUNCTION get_product_rankings(p_category text DEFAULT NULL)
 RETURNS TABLE (
     id UUID,
     name TEXT,
@@ -33,7 +33,7 @@ BEGIN
         pr.name,
         pr.description,
         pr.category,
-        pr.category_slug,
+        LOWER(REPLACE(pr.category, ' ', '-')) as category_slug,
         pr.price,
         pr.image_url,
         pr.url_slug,
@@ -53,11 +53,11 @@ BEGIN
     WHERE 
         CASE 
             WHEN p_category IS NULL THEN true
-            ELSE pr.category_slug = p_category
+            ELSE pr.category = p_category
         END
     ORDER BY 
         CASE 
-            WHEN p_category IS NULL THEN pr.category_slug
+            WHEN p_category IS NULL THEN pr.category
             ELSE pr.rank::text
         END,
         pr.rank;
