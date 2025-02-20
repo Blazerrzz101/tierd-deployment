@@ -2,104 +2,102 @@
 
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import { RankingCard } from "./ranking-card"
 import { Product } from "@/types/product"
 import { supabase } from "@/lib/supabase/client"
 import { CATEGORY_IDS } from "@/lib/constants"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { slugToCategory } from "@/lib/utils"
+import { normalizeProduct } from "@/lib/utils"
+import { ProductCard } from "@/components/products/product-card"
+import { useDebounce } from "@/hooks/use-debounce"
 
 // Base64 encoded SVG placeholder
 const PLACEHOLDER_IMAGE = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiMyMDIwMjAiLz48cGF0aCBkPSJNMTgyIDIwMkMyMDAgMTY2IDIxNSAxNDUgMjM1IDE0NUMyNTUgMTQ1IDI2NSAxNjYgMjcwIDIwMkMzMDAgMTY2IDMxNSAxNDUgMzM1IDE0NUMzNTUgMTQ1IDM2NSAxNjYgMzcwIDIwMiIgc3Ryb2tlPSIjNDA0MDQwIiBzdHJva2Utd2lkdGg9IjIwIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4="
 
-type CategoryId = typeof CATEGORY_IDS[keyof typeof CATEGORY_IDS] | 'all'
+type CategoryId = typeof CATEGORY_IDS[keyof typeof CATEGORY_IDS]
 
 interface RankingListProps {
-  categoryId: CategoryId
+  selectedCategory: CategoryId | "all"
+  searchQuery?: string
 }
 
-interface DatabaseProduct {
-  id: string
-  name: string
-  description: string
-  category: string
-  price: number
-  image_url: string
+// Helper function to convert frontend category to database format
+function getDatabaseCategory(categoryId: CategoryId | "all" | undefined): string | null {
+  if (!categoryId || categoryId === "all") return null;
+  
+  const categoryMap: Record<CategoryId, string> = {
+    [CATEGORY_IDS.MICE]: "gaming-mice",
+    [CATEGORY_IDS.KEYBOARDS]: "gaming-keyboards",
+    [CATEGORY_IDS.HEADSETS]: "gaming-headsets",
+    [CATEGORY_IDS.MONITORS]: "gaming-monitors",
+    [CATEGORY_IDS.CHAIRS]: "gaming-chairs"
+  };
+  
+  const databaseCategory = categoryMap[categoryId as CategoryId] || null;
+  console.log(`Converting category: ${categoryId} to database category: ${databaseCategory}`);
+  return databaseCategory;
 }
 
-// Helper function to generate URL-safe slugs
-function generateSlug(name: string | null | undefined): string {
-  if (!name) return ''
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
-
-export function RankingList({ categoryId }: RankingListProps) {
+export function RankingList({ selectedCategory = "all", searchQuery = "" }: RankingListProps) {
   const [products, setProducts] = useState<Product[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const searchParams = useSearchParams()
-  const searchQuery = searchParams.get('search')
+  const debouncedSearch = useDebounce(searchQuery, 300)
 
   useEffect(() => {
-    let isMounted = true
-    
     async function fetchProducts() {
       try {
-        setIsLoading(true)
+        setLoading(true)
         setError(null)
         
-        const { data, error: queryError } = await supabase
-          .rpc('get_product_rankings', {
-            p_category: categoryId === 'all' ? null : categoryId
+        const databaseCategory = getDatabaseCategory(selectedCategory)
+        console.log(`Fetching products for category: ${databaseCategory}, selectedCategory: ${selectedCategory}`)
+        
+        let query = supabase.rpc('get_product_rankings', {
+          p_category: databaseCategory
+        })
+
+        const { data, error } = await query
+
+        if (error) {
+          console.error("Error fetching products:", error)
+          setError("Failed to fetch products")
+          return
+        }
+
+        // Filter products by search query if provided
+        let filteredProducts = data || []
+        
+        if (debouncedSearch) {
+          const searchTerms = debouncedSearch.toLowerCase().split(' ')
+          filteredProducts = filteredProducts.filter((product: Product) => {
+            const searchableText = `${product.name} ${product.description} ${product.category}`.toLowerCase()
+            return searchTerms.every(term => searchableText.includes(term))
           })
+        }
 
-        if (queryError) throw queryError
-
-        if (isMounted) {
-          let filteredProducts = data || []
-          
-          // Apply search filter if needed
-          if (searchQuery) {
-            const searchLower = searchQuery.toLowerCase()
-            filteredProducts = filteredProducts.filter((p: Product) => 
-              p.name.toLowerCase().includes(searchLower) ||
-              (p.description && p.description.toLowerCase().includes(searchLower))
-            )
+        // Normalize all products
+        const normalizedProducts = filteredProducts.map((product: Product) => normalizeProduct(product))
+        
+        // Sort products by rank and then by score
+        normalizedProducts.sort((a: Product, b: Product) => {
+          if (a.rank !== b.rank) {
+            return (a.rank || 0) - (b.rank || 0)
           }
+          return (b.score || 0) - (a.score || 0)
+        })
 
-          setProducts(filteredProducts)
-        }
+        console.log(`Found ${normalizedProducts.length} products after filtering`)
+        setProducts(normalizedProducts)
       } catch (err) {
-        console.error('Error fetching products:', err)
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'An unexpected error occurred')
-        }
+        console.error("Error in fetchProducts:", err)
+        setError("An unexpected error occurred")
       } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
+        setLoading(false)
       }
     }
 
     fetchProducts()
-    return () => { isMounted = false }
-  }, [categoryId, searchQuery])
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
-        <p className="mt-4 text-muted-foreground">
-          Loading rankings...
-        </p>
-      </div>
-    )
-  }
+  }, [selectedCategory, debouncedSearch])
 
   if (error) {
     return (
@@ -116,14 +114,25 @@ export function RankingList({ categoryId }: RankingListProps) {
     )
   }
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <LoadingSpinner size="lg" />
+        <p className="mt-4 text-muted-foreground">
+          Loading {selectedCategory === "all" ? "all products" : selectedCategory}...
+        </p>
+      </div>
+    )
+  }
+
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <p className="text-lg font-medium mb-2">No Products Found</p>
         <p className="text-muted-foreground">
           {searchQuery 
-            ? `No products found matching "${searchQuery}"`
-            : 'No products found in this category.'
+            ? `No products found matching "${searchQuery}" in ${selectedCategory === "all" ? "any category" : selectedCategory}`
+            : `No products found in ${selectedCategory === "all" ? "any category" : selectedCategory}`
           }
         </p>
       </div>
@@ -131,13 +140,9 @@ export function RankingList({ categoryId }: RankingListProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {products.map((product, index) => (
-        <RankingCard
-          key={product.id}
-          rank={index + 1}
-          product={product}
-        />
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
       ))}
     </div>
   )

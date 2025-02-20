@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { CATEGORY_IDS } from "./constants"
+import { Product } from "@/types/product"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -114,4 +115,28 @@ export function sanitizeData(data: any): any {
   }
 
   return data
+}
+
+// Helper function to normalize product data
+export function normalizeProduct(product: any): Partial<Product> {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    category: product.category,
+    category_slug: product.category_slug,
+    price: product.price,
+    imageUrl: product.image_url || product.imageUrl,
+    url_slug: product.url_slug,
+    specs: product.specifications || product.specs || {},
+    votes: product.votes || 0,
+    upvotes: product.upvotes || 0,
+    downvotes: product.downvotes || 0,
+    total_votes: product.total_votes || 0,
+    score: product.score || 0,
+    rank: product.rank || 0,
+    userVote: product.userVote || null,
+    rating: product.rating || 0,
+    review_count: product.review_count || 0,
+  }
 }

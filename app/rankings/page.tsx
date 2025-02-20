@@ -6,16 +6,24 @@ import { SearchBar } from "@/components/search/search-bar"
 import { categories } from "@/lib/data"
 import { Button } from "@/components/ui/button"
 import { RankingList } from "@/components/rankings/ranking-list"
+import { CATEGORY_IDS } from "@/lib/constants"
+
+type CategoryId = typeof CATEGORY_IDS[keyof typeof CATEGORY_IDS]
 
 export default function RankingsPage() {
-  const [selectedCategory, setSelectedCategory] = useState(categories[0].id)
+  const [selectedCategory, setSelectedCategory] = useState<CategoryId | "all">("all")
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
 
   return (
     <MainLayout>
       <div className="py-8 w-full">
         {/* Search Bar */}
         <div className="mb-8">
-          <SearchBar />
+          <SearchBar onSearch={handleSearch} />
         </div>
 
         <div className="flex items-center justify-between mb-8">
@@ -23,22 +31,30 @@ export default function RankingsPage() {
           
           {/* Category Tabs */}
           <div className="flex gap-1">
-            {categories.map((category) => (
+            <Button
+              variant={selectedCategory === "all" ? "default" : "ghost"}
+              onClick={() => setSelectedCategory("all")}
+              className="px-3 h-9"
+              size="sm"
+            >
+              All
+            </Button>
+            {Object.entries(CATEGORY_IDS).map(([key, value]) => (
               <Button
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "ghost"}
-                onClick={() => setSelectedCategory(category.id)}
+                key={key}
+                variant={selectedCategory === value ? "default" : "ghost"}
+                onClick={() => setSelectedCategory(value)}
                 className="px-3 h-9"
                 size="sm"
               >
-                {category.name}
+                {value.replace('Gaming ', '')}
               </Button>
             ))}
           </div>
         </div>
 
         {/* Rankings */}
-        <RankingList categoryId={selectedCategory} />
+        <RankingList selectedCategory={selectedCategory} searchQuery={searchQuery} />
       </div>
     </MainLayout>
   )

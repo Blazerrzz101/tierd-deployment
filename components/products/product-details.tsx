@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { Star, ShoppingCart, Heart, Share2, MessageSquarePlus, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -16,46 +15,54 @@ import { ProductReviews } from "@/components/products/product-reviews"
 import { ProductThreads } from "@/components/products/product-threads"
 import { VoteButtons } from "@/components/products/vote-buttons"
 import { useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, normalizeProduct } from "@/lib/utils"
+import { ProductImage } from "@/components/ui/product-image"
 
 interface ProductDetailsProps {
-  product: Product
+  product: any
 }
 
-export function ProductDetails({ product: initialProduct }: ProductDetailsProps) {
+export function ProductDetails({ product: rawProduct }: ProductDetailsProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   const [isRotating, setIsRotating] = useState(false)
   const { toast } = useToast()
   const { addToCart } = useCart()
   const { addToWishlist } = useWishlist()
-  const { product, vote } = useVote(initialProduct)
+  const { vote } = useVote()
   const router = useRouter()
+  const product = normalizeProduct(rawProduct) as Required<Product>
 
   if (!product) {
     return null;
   }
 
-  const images = [
-    product.image_url,
-    ...(product.details?.images ? Object.values(product.details.images) : [])
-  ].filter(Boolean) as string[]
+  // Get the base image URL and any additional images from specs
+  const baseImageUrl = product.imageUrl
+  const additionalImages = product.specs?.additional_images as string[] || []
+  
+  // Create array of image URLs
+  const images = [baseImageUrl, ...additionalImages].filter(Boolean)
 
   const handleAddToCart = () => {
     addToCart(product)
     toast({
-      title: "Added to Cart",
+      title: "Added to cart",
       variant: "default",
-      children: `${product.name} has been added to your cart.`
+      children: `${product.name} has been added to your cart.`,
     })
   }
 
   const handleAddToWishlist = () => {
     addToWishlist(product)
     toast({
-      title: "Added to Wishlist",
+      title: "Added to wishlist",
       variant: "default",
-      children: `${product.name} has been added to your wishlist.`
+      children: `${product.name} has been added to your wishlist.`,
     })
+  }
+
+  const toggleRotation = () => {
+    setIsRotating(!isRotating)
   }
 
   const nextImage = () => {
@@ -64,10 +71,6 @@ export function ProductDetails({ product: initialProduct }: ProductDetailsProps)
 
   const previousImage = () => {
     setSelectedImage((prev) => (prev - 1 + images.length) % images.length)
-  }
-
-  const toggleRotation = () => {
-    setIsRotating((prev) => !prev)
   }
 
   return (
@@ -92,13 +95,14 @@ export function ProductDetails({ product: initialProduct }: ProductDetailsProps)
                 ease: isRotating ? "linear" : "easeInOut"
               }}
             >
-              <Image
+              <ProductImage
                 src={images[selectedImage]}
                 alt={`${product.name} - View ${selectedImage + 1}`}
+                category={product.category}
                 fill
-                className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
+                className="object-contain"
               />
             </motion.div>
           </AnimatePresence>
@@ -149,12 +153,13 @@ export function ProductDetails({ product: initialProduct }: ProductDetailsProps)
                            ${selectedImage === index ? 'ring-2 ring-[#ff4b26]' : ''}`}
                 onClick={() => setSelectedImage(index)}
               >
-                <Image
+                <ProductImage
                   src={image}
                   alt={`${product.name} - Thumbnail ${index + 1}`}
+                  category={product.category}
                   fill
-                  className="object-cover"
                   sizes="25vw"
+                  showPlaceholderIcon={false}
                 />
               </button>
             ))}
@@ -163,112 +168,75 @@ export function ProductDetails({ product: initialProduct }: ProductDetailsProps)
       </div>
 
       {/* Product Info */}
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">{product.name}</h1>
-          <div className="mt-2 flex items-center gap-4">
-            <div className="flex items-center">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`h-5 w-5 ${
-                    i < Math.floor(product.rating || 0)
-                      ? "text-yellow-400 fill-current"
-                      : "text-gray-300"
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="text-sm text-gray-500">
-              ({product.review_count || 0} reviews)
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold tracking-tight text-white/90">
+              {product.name}
+            </h1>
+            <Button variant="ghost" size="icon">
+              <Share2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-4">
+            <Badge variant="secondary" className="capitalize">
+              {product.category}
+            </Badge>
+            <span className="text-2xl font-bold text-white/90">
+              ${product.price}
             </span>
-            <VoteButtons
-              product={product}
-              onVote={vote}
-              className="ml-auto"
-            />
           </div>
         </div>
 
         <div className="space-y-4">
-          <p className="text-2xl font-bold">${product.price?.toFixed(2) ?? 'N/A'}</p>
-          <Badge
-            variant={
-              (product.stock_status || "in_stock") === "in_stock"
-                ? "default"
-                : (product.stock_status || "in_stock") === "low_stock"
-                ? "warning"
-                : "destructive"
-            }
-          >
-            {(product.stock_status || "in_stock").replace("_", " ").toUpperCase()}
-          </Badge>
+          <p className="text-sm leading-relaxed text-white/70">
+            {product.description}
+          </p>
+          <VoteButtons product={product} onVote={vote} />
         </div>
 
-        <div className="space-y-4">
-          <Button 
-            size="lg" 
-            className="w-full"
-            onClick={handleAddToCart}
-            disabled={product.stock_status === "out_of_stock"}
-          >
-            <ShoppingCart className="mr-2 h-5 w-5" />
+        <div className="flex gap-4">
+          <Button className="flex-1" onClick={handleAddToCart}>
+            <ShoppingCart className="mr-2 h-4 w-4" />
             Add to Cart
           </Button>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" onClick={handleAddToWishlist}>
-              <Heart className="mr-2 h-5 w-5" />
-              Wishlist
-            </Button>
-            <Button variant="outline">
-              <Share2 className="mr-2 h-5 w-5" />
-              Share
-            </Button>
-          </div>
+          <Button variant="outline" size="icon" onClick={handleAddToWishlist}>
+            <Heart className="h-4 w-4" />
+          </Button>
         </div>
 
-        <Tabs defaultValue="description">
-          <TabsList className="w-full">
-            <TabsTrigger value="description">Description</TabsTrigger>
-            <TabsTrigger value="specifications">Specifications</TabsTrigger>
+        <Tabs defaultValue="specs">
+          <TabsList>
+            <TabsTrigger value="specs">Specifications</TabsTrigger>
+            <TabsTrigger value="reviews">
+              Reviews
+              <Badge variant="secondary" className="ml-2">
+                {product.review_count}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="discussions">Discussions</TabsTrigger>
           </TabsList>
-          <TabsContent value="description" className="mt-4">
-            <p className="text-gray-600 leading-relaxed">{product.description}</p>
-          </TabsContent>
-          <TabsContent value="specifications" className="mt-4">
-            <div className="space-y-4">
-              {Object.entries(product.details || {})
-                .filter(([key]) => key !== "images")
-                .map(([key, value]) => (
-                  <div key={key} className="grid grid-cols-2 gap-4 py-2 border-b border-gray-100">
-                    <div className="font-medium capitalize text-gray-900">
-                      {key.replace(/_/g, " ")}
-                    </div>
-                    <div className="text-gray-600">{String(value)}</div>
+          <TabsContent value="specs" className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {Object.entries(product.specs).map(([key, value]) => (
+                key !== 'additional_images' && (
+                  <div key={key} className="space-y-1">
+                    <p className="text-sm text-white/50 capitalize">
+                      {key.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-sm font-medium text-white/90">{String(value)}</p>
                   </div>
-                ))}
+                )
+              ))}
             </div>
           </TabsContent>
+          <TabsContent value="reviews">
+            <ProductReviews productId={product.id} />
+          </TabsContent>
+          <TabsContent value="discussions">
+            <ProductThreads productId={product.id} />
+          </TabsContent>
         </Tabs>
-
-        {/* Product Reviews */}
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold mb-8">Reviews</h2>
-          <ProductReviews productId={product.id} />
-        </div>
-
-        {/* Product Threads */}
-        <div className="mt-16">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold">Discussions</h2>
-            <Button onClick={() => router.push(`/threads/new?product=${product.id}`)}>
-              <MessageSquarePlus className="mr-2 h-5 w-5" />
-              New Thread
-            </Button>
-          </div>
-          <ProductThreads productId={product.id} />
-        </div>
       </div>
     </div>
   )

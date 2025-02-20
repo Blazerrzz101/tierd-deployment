@@ -21,13 +21,32 @@ export const PLACEHOLDER_IMAGE = `data:image/svg+xml;base64,${Buffer.from(`
 </svg>
 `).toString('base64')}`
 
+// Placeholder image configuration
+export const PLACEHOLDER_IMAGES = {
+  // Default placeholder for all products
+  DEFAULT: "/images/products/placeholder.svg",
+  
+  // Category-specific placeholders
+  GAMING_MICE: "/images/products/placeholder-mouse.svg",
+  KEYBOARDS: "/images/products/placeholder-keyboard.svg",
+  HEADSETS: "/images/products/placeholder-headset.svg",
+  MONITORS: "/images/products/placeholder-monitor.svg"
+}
+
+// Function to get placeholder image based on category
+export function getPlaceholderImage(category?: string): string {
+  if (!category) return PLACEHOLDER_IMAGES.DEFAULT
+  
+  const categoryKey = category.toUpperCase().replace(/\s+/g, '_') as keyof typeof PLACEHOLDER_IMAGES
+  return PLACEHOLDER_IMAGES[categoryKey] || PLACEHOLDER_IMAGES.DEFAULT
+}
+
 // Category IDs
 export const CATEGORY_IDS = {
   MICE: 'Gaming Mice',
   KEYBOARDS: 'Gaming Keyboards',
   MONITORS: 'Gaming Monitors',
-  HEADSETS: 'Gaming Headsets',
-  CHAIRS: 'Gaming Chairs'
+  HEADSETS: 'Gaming Headsets'
 } as const
 
 // Vote types

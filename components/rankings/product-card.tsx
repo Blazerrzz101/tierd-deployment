@@ -11,6 +11,7 @@ import { Star } from 'lucide-react'
 import { VoteButtons } from '@/components/products/vote-buttons'
 import { useVote } from '@/hooks/use-vote'
 import type { Database } from '@/types/supabase'
+import { ProductImage } from "@/components/ui/product-image"
 
 type ProductRanking = Database['public']['Views']['product_rankings']['Row']
 
@@ -34,19 +35,16 @@ export function ProductCard({ product, variant = 'default', className }: Product
         "relative overflow-hidden",
         isCompact ? "aspect-[4/3]" : "aspect-square"
       )}>
-        <Image
-          src={product.image_url || "/images/products/placeholder.svg"}
+        <ProductImage
+          src={product.image_url}
           alt={product.name}
+          category={product.category}
           fill
           sizes={isCompact 
             ? "(max-width: 768px) 50vw, 33vw"
             : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           }
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => {
-            const img = e.target as HTMLImageElement
-            img.src = "/images/products/placeholder.svg"
-          }}
+          className="transition-transform duration-300 group-hover:scale-105"
         />
       </div>
 

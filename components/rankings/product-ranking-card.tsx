@@ -1,12 +1,14 @@
 'use client'
 
-import { cn } from '@/lib/utils'
+import { cn, normalizeProduct } from '@/lib/utils'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Star } from 'lucide-react'
 import { VoteButtons } from '@/components/products/vote-buttons'
 import { useVote } from '@/hooks/use-vote'
 import type { Database } from '@/types/supabase'
+import { ProductImage } from "@/components/ui/product-image"
+import { Product } from '@/types/product'
 
 type ProductRanking = Database['public']['Views']['product_rankings']['Row']
 
@@ -15,8 +17,9 @@ interface ProductRankingCardProps {
   rank: number
 }
 
-export function ProductRankingCard({ product, rank }: ProductRankingCardProps) {
+export function ProductRankingCard({ product: rawProduct, rank }: ProductRankingCardProps) {
   const { vote } = useVote()
+  const product = normalizeProduct(rawProduct) as Required<Product>
 
   return (
     <div className="group relative flex items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-4 transition-colors hover:bg-white/10">
@@ -32,17 +35,15 @@ export function ProductRankingCard({ product, rank }: ProductRankingCardProps) {
       </div>
 
       {/* Product Image */}
-      <div className="relative aspect-square w-16 overflow-hidden rounded-lg bg-zinc-100">
-        <Image
-          src={product.image_url || "/images/products/placeholder.svg"}
+      <div className="relative aspect-square w-16 overflow-hidden rounded-lg">
+        <ProductImage
+          src={product.imageUrl}
           alt={product.name}
+          category={product.category}
           fill
-          sizes="(max-width: 768px) 64px, 64px"
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => {
-            const img = e.target as HTMLImageElement
-            img.src = "/images/products/placeholder.svg"
-          }}
+          sizes="64px"
+          className="transition-transform duration-300 group-hover:scale-105"
+          showPlaceholderIcon={false}
         />
       </div>
 
@@ -57,14 +58,14 @@ export function ProductRankingCard({ product, rank }: ProductRankingCardProps) {
         <div className="flex items-center gap-2 text-sm text-white/60">
           <span className="capitalize">{product.category.replace('-', ' ')}</span>
           <span>•</span>
-          <span>${product.price?.toFixed(2)}</span>
-          {(product.rating ?? 0) > 0 && (
+          <span>${product.price.toFixed(2)}</span>
+          {product.rating > 0 && (
             <>
               <span>•</span>
               <div className="flex items-center gap-1">
                 <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                <span>{(product.rating ?? 0).toFixed(1)}</span>
-                <span>({product.review_count ?? 0})</span>
+                <span>{product.rating.toFixed(1)}</span>
+                <span>({product.review_count})</span>
               </div>
             </>
           )}
@@ -75,9 +76,9 @@ export function ProductRankingCard({ product, rank }: ProductRankingCardProps) {
       <VoteButtons 
         product={{
           id: product.id,
-          userVote: null, // We'll implement this later with auth
-          upvotes: product.upvotes || 0,
-          downvotes: product.downvotes || 0
+          userVote: product.userVote,
+          upvotes: product.upvotes,
+          downvotes: product.downvotes
         }}
         onVote={vote}
         className="shrink-0"

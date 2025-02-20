@@ -1,16 +1,16 @@
 "use client"
 
 import { useState, useEffect, useRef, KeyboardEvent } from "react"
-import { Search } from "lucide-react"
+import { Search, Filter, X, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { motion, AnimatePresence } from "framer-motion"
 import { useDebounce } from "@/app/hooks/use-debounce"
 import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { fuzzySearch, highlightMatches } from "@/lib/search/fuzzy-search"
-import { categories } from "@/lib/data"
+import { CATEGORY_IDS } from "@/lib/constants"
 import { Badge } from "@/components/ui/badge"
-import { Filter } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface SearchSuggestion {
   id: string
@@ -23,15 +23,27 @@ interface SearchSuggestion {
   }
 }
 
-export function SearchBar() {
+interface SearchBarProps {
+  onSearch?: (query: string) => void;
+}
+
+export function SearchBar({ onSearch }: SearchBarProps) {
   const [query, setQuery] = useState("")
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [isLoading, setIsLoading] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const debouncedQuery = useDebounce(query, 300)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  // Notify parent component of search changes
+  useEffect(() => {
+    if (onSearch) {
+      onSearch(debouncedQuery);
+    }
+  }, [debouncedQuery, onSearch]);
 
   // Fetch and process suggestions
   useEffect(() => {
@@ -46,12 +58,17 @@ export function SearchBar() {
         const { data, error } = await supabase
           .from('products')
           .select('id, name, category, votes')
+          .textSearch('name', debouncedQuery)
           .order('votes', { ascending: false })
           .limit(5)
 
         if (error) throw error
 
-        setSuggestions(data.map(item => ({
+        const filteredData = selectedCategories.length > 0
+          ? data.filter(item => selectedCategories.includes(item.category))
+          : data
+
+        setSuggestions(filteredData.map(item => ({
           ...item,
           highlight: {
             start: item.name.toLowerCase().indexOf(debouncedQuery.toLowerCase()),
@@ -66,7 +83,7 @@ export function SearchBar() {
     }
 
     fetchSuggestions()
-  }, [debouncedQuery])
+  }, [debouncedQuery, selectedCategories])
 
   // Toggle category filter
   const toggleCategory = (categoryId: string) => {
@@ -80,7 +97,15 @@ export function SearchBar() {
     })
   }
 
-  // Enhanced text highlighting using fuzzy match
+  // Clear search
+  const clearSearch = () => {
+    setQuery("")
+    setSuggestions([])
+    setSelectedIndex(-1)
+    inputRef.current?.focus()
+  }
+
+  // Enhanced text highlighting
   const HighlightedText = ({ text }: { text: string }) => {
     const parts = highlightMatches(text, debouncedQuery)
     
@@ -122,15 +147,21 @@ export function SearchBar() {
         break
       case 'Escape':
         e.preventDefault()
-        setSelectedIndex(-1)
-        inputRef.current?.blur()
+        clearSearch()
         break
     }
   }
 
   return (
     <div className="relative w-full">
-      <div className="relative">
+      <motion.div 
+        className={cn(
+          "relative rounded-lg transition-all duration-200",
+          isFocused && "ring-2 ring-[#ff4b26]/20"
+        )}
+        animate={{ scale: isFocused ? 1.01 : 1 }}
+        transition={{ duration: 0.2 }}
+      >
         <Input
           ref={inputRef}
           type="text"
@@ -138,62 +169,113 @@ export function SearchBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-full pl-10 pr-4 py-3 bg-black/50 backdrop-blur-sm border border-white/10 
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className="w-full pl-10 pr-12 py-3 bg-black/50 backdrop-blur-sm border border-white/10 
                      rounded-lg focus:border-[#ff4b26]/50 focus:ring-2 focus:ring-[#ff4b26]/20
-                     transition-colors duration-300"
+                     transition-all duration-300"
         />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50" />
         
-        {isLoading && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 border-2 border-[#ff4b26] border-t-transparent rounded-full animate-spin" />
-        )}
-      </div>
+        <AnimatePresence>
+          {query && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full 
+                       hover:bg-white/10 transition-colors"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 text-white/50 animate-spin" />
+              ) : (
+                <X className="h-4 w-4 text-white/50" />
+              )}
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Category filters */}
-      <div className="mt-2 flex flex-wrap gap-2">
-        {categories.map(category => (
-          <Badge
-            key={category.id}
-            variant="outline"
-            className={`cursor-pointer transition-all duration-300 ${
-              selectedCategories.includes(category.id)
-                ? "bg-[#ff4b26]/20 text-[#ff4b26] border-[#ff4b26]"
-                : "hover:bg-white/5"
-            }`}
-            onClick={() => toggleCategory(category.id)}
+      <motion.div 
+        className="mt-3 flex flex-wrap gap-2"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        {Object.values(CATEGORY_IDS).map(category => (
+          <motion.div
+            key={category}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <Filter className={`mr-1 h-3 w-3 transition-colors duration-300 ${
-              selectedCategories.includes(category.id)
-                ? "text-[#ff4b26]"
-                : "text-white/50"
-            }`} />
-            {category.name}
-          </Badge>
-        ))}
-      </div>
-
-      {suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-lg rounded-xl border border-white/10 overflow-hidden shadow-xl">
-          {suggestions.map((suggestion, index) => (
-            <button
-              key={suggestion.id}
-              onClick={() => router.push(`/products/${suggestion.id}`)}
-              className={`w-full px-4 py-3 flex items-center gap-4 transition-colors
-                        ${index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'}`}
+            <Badge
+              variant="outline"
+              className={cn(
+                "cursor-pointer transition-all duration-300",
+                selectedCategories.includes(category)
+                  ? "bg-[#ff4b26]/20 text-[#ff4b26] border-[#ff4b26]"
+                  : "hover:bg-white/5"
+              )}
+              onClick={() => toggleCategory(category)}
             >
-              <div className="flex-1 text-left">
-                <div className="font-medium text-white">
-                  {suggestion.name}
+              <Filter className={cn(
+                "mr-1 h-3 w-3 transition-colors duration-300",
+                selectedCategories.includes(category)
+                  ? "text-[#ff4b26]"
+                  : "text-white/50"
+              )} />
+              {category.replace('Gaming ', '')}
+            </Badge>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Suggestions dropdown */}
+      <AnimatePresence>
+        {suggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-lg 
+                     rounded-xl border border-white/10 overflow-hidden shadow-xl z-50"
+          >
+            {suggestions.map((suggestion, index) => (
+              <motion.button
+                key={suggestion.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() => router.push(`/products/${suggestion.id}`)}
+                className={cn(
+                  "w-full px-4 py-3 flex items-center gap-4 transition-colors",
+                  index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'
+                )}
+              >
+                <div className="flex-1 text-left">
+                  <div className="font-medium text-white">
+                    <HighlightedText text={suggestion.name} />
+                  </div>
+                  <div className="text-sm text-white/50">
+                    {suggestion.category.replace('Gaming ', '')} · {suggestion.votes} votes
+                  </div>
                 </div>
-                <div className="text-sm text-white/50">
-                  {suggestion.category} · {suggestion.votes} votes
-                </div>
-              </div>
-              <Search className={`h-4 w-4 ${index === selectedIndex ? 'text-[#ff4b26]' : 'text-white/50'}`} />
-            </button>
-          ))}
-        </div>
-      )}
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Search className={cn(
+                    "h-4 w-4",
+                    index === selectedIndex ? 'text-[#ff4b26]' : 'text-white/50'
+                  )} />
+                </motion.div>
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
