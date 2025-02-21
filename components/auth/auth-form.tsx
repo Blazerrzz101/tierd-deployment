@@ -1,9 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
+import * as React from "react"
+import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Loader2 } from "lucide-react"
+import { useForm } from "react-hook-form"
 import * as z from "zod"
+
+import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -14,40 +18,41 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useAuth } from "@/hooks/use-auth"
-import { Icons } from "@/components/icons"
 
-const authSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  username: z.string().min(3, "Username must be at least 3 characters").optional(),
+const formSchema = z.object({
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
 })
 
 interface AuthFormProps {
-  type: "sign-in" | "sign-up"
+  mode: "sign-in" | "sign-up"
 }
 
-export function AuthForm({ type }: AuthFormProps) {
-  const [isLoading, setIsLoading] = useState(false)
+export function AuthForm({ mode }: AuthFormProps) {
+  const router = useRouter()
   const { signIn, signUp } = useAuth()
+  const [isLoading, setIsLoading] = React.useState(false)
 
-  const form = useForm<z.infer<typeof authSchema>>({
-    resolver: zodResolver(authSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
       password: "",
-      username: "",
     },
   })
 
-  async function onSubmit(values: z.infer<typeof authSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
     try {
-      if (type === "sign-in") {
+      if (mode === "sign-in") {
         await signIn(values.email, values.password)
       } else {
-        await signUp(values.email, values.password, values.username!)
+        await signUp(values.email, values.password)
       }
     } finally {
       setIsLoading(false)
@@ -57,22 +62,6 @@ export function AuthForm({ type }: AuthFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {type === "sign-up" && (
-          <FormField
-            control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Username</FormLabel>
-                <FormControl>
-                  <Input placeholder="johndoe" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
         <FormField
           control={form.control}
           name="email"
@@ -80,13 +69,20 @@ export function AuthForm({ type }: AuthFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="name@example.com" type="email" {...field} />
+                <Input
+                  placeholder="name@example.com"
+                  type="email"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect="off"
+                  disabled={isLoading}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="password"
@@ -94,18 +90,23 @@ export function AuthForm({ type }: AuthFormProps) {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input placeholder="••••••••" type="password" {...field} />
+                <Input
+                  placeholder="••••••••"
+                  type="password"
+                  autoCapitalize="none"
+                  autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+                  autoCorrect="off"
+                  disabled={isLoading}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        <Button className="w-full" type="submit" disabled={isLoading}>
-          {isLoading && (
-            <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          {type === "sign-in" ? "Sign In" : "Create Account"}
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {mode === "sign-in" ? "Sign In" : "Sign Up"}
         </Button>
       </form>
     </Form>

@@ -1,5 +1,14 @@
 import Link from "next/link"
 import { Icons } from "@/components/icons"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: {
+    default: "Authentication",
+    template: "%s | Tierd"
+  },
+  description: "Authentication pages for Tierd - your gaming gear community."
+}
 
 export default function AuthLayout({
   children,

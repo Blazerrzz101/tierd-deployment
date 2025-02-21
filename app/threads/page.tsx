@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Thread } from "@/types/thread"
-import { getSupabaseClient } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase/client"
 import { ThreadCard } from "@/components/threads/thread-card"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
@@ -11,8 +11,9 @@ import { CreateThreadDialog } from "@/components/threads/create-thread-dialog"
 import { useAuth } from "@/hooks/use-auth"
 import { Product } from "@/types/product"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { categories } from "@/lib/data"
+import { CATEGORY_IDS } from "@/lib/constants"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useToast } from "@/hooks/use-toast"
 
 interface ThreadResponse {
   id: string
@@ -26,13 +27,11 @@ interface ThreadResponse {
   mentioned_products: string[]
   is_pinned: boolean
   is_locked: boolean
-  user: Array<{
+  user: {
     username: string
     avatar_url?: string | null
-  }>
-  products: Array<{
-    products: Product
-  }>
+  }
+  products: Product[]
 }
 
 export default function ThreadsPage() {
@@ -43,60 +42,58 @@ export default function ThreadsPage() {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
   const router = useRouter()
-  const supabase = getSupabaseClient()
+  const { toast } = useToast()
+
+  const fetchThreads = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      // Base query with all necessary joins
+      let query = supabase
+        .rpc('get_threads_with_products', {
+          p_category: selectedCategory === "all" ? null : selectedCategory
+        })
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      const { data, error } = await query
+
+      if (error) {
+        throw error
+      }
+
+      const transformedThreads = data?.map((thread: ThreadResponse) => ({
+        ...thread,
+        user: thread.user,
+        products: Array.isArray(thread.products) ? thread.products : []
+      })) || []
+
+      setThreads(transformedThreads)
+    } catch (error) {
+      console.error('Error fetching threads:', error)
+      setError('Failed to load discussions. Please try again.')
+      setThreads([])
+      toast({
+        title: "Error loading discussions",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [selectedCategory, toast])
 
   useEffect(() => {
     let isMounted = true
     
-    async function fetchThreads() {
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        let query = supabase
-          .from('threads')
-          .select(`
-            *,
-            user:users(username, avatar_url),
-            products:thread_products(products(*))
-          `)
-          .order('created_at', { ascending: false })
-
-        if (selectedCategory !== "all") {
-          query = query.eq('products.products.category', selectedCategory)
-        }
-
-        const { data, error } = await query
-
-        if (error) throw error
-
-        if (data && isMounted) {
-          const transformedThreads = data.map(thread => ({
-            ...thread,
-            user: {
-              ...thread.user[0],
-              avatar_url: thread.user[0]?.avatar_url || undefined
-            },
-            products: thread.products?.map((p: { products: Product }) => p.products) || []
-          }))
-          setThreads(transformedThreads)
-        }
-      } catch (error) {
-        console.error('Error fetching threads:', error)
-        if (isMounted) {
-          setError('Failed to load discussions. Please try again.')
-          setThreads([])
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
-      }
+    const loadThreads = async () => {
+      if (!isMounted) return
+      await fetchThreads()
     }
 
-    fetchThreads()
+    loadThreads()
     return () => { isMounted = false }
-  }, [supabase, selectedCategory])
+  }, [fetchThreads])
 
   const handleCreateClick = () => {
     if (!user) {
@@ -130,13 +127,13 @@ export default function ThreadsPage() {
           <TabsTrigger value="all" onClick={() => setSelectedCategory("all")}>
             All Discussions
           </TabsTrigger>
-          {categories.map(category => (
+          {Object.values(CATEGORY_IDS).map(category => (
             <TabsTrigger 
-              key={category.id}
-              value={category.id}
-              onClick={() => setSelectedCategory(category.id)}
+              key={category}
+              value={category}
+              onClick={() => setSelectedCategory(category)}
             >
-              {category.name}
+              {category.replace('Gaming ', '')}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -154,12 +151,13 @@ export default function ThreadsPage() {
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
             <h3 className="text-lg font-semibold text-destructive mb-2">Error Loading Discussions</h3>
             <p className="text-destructive/80 mb-4">{error}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-sm font-medium text-destructive hover:text-destructive/80 underline underline-offset-4"
+            <Button 
+              onClick={fetchThreads}
+              variant="outline"
+              className="text-destructive hover:text-destructive/80"
             >
               Try Again
-            </button>
+            </Button>
           </div>
         ) : threads.length > 0 ? (
           threads.map(thread => (
@@ -171,7 +169,7 @@ export default function ThreadsPage() {
             <p className="mt-2 text-muted-foreground">
               {selectedCategory === "all"
                 ? "Be the first to start a discussion"
-                : `No discussions yet in ${categories.find(c => c.id === selectedCategory)?.name}`
+                : `No discussions yet in ${selectedCategory.replace('Gaming ', '')}`
               }
             </p>
             <Button 

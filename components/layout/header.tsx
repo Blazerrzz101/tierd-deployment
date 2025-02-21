@@ -1,52 +1,68 @@
 "use client"
 
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
+import { AuthNav } from "@/components/auth/auth-nav"
+import { UserNav } from "@/components/auth/user-nav"
 import { useAuth } from "@/hooks/use-auth"
-import { UserNav } from "./user-nav"
-import { Icons } from "@/components/icons"
 
 export function Header() {
-  const { user, userDetails, isLoading } = useAuth()
+  const pathname = usePathname()
+  const { user } = useAuth()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <Icons.logo className="h-6 w-6" />
-            <span className="font-bold">Tier'd</span>
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/50 backdrop-blur-xl">
+      <div className="container flex h-16 items-center">
+        <div className="mr-8">
+          <Link href="/" className="flex items-center space-x-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-6 w-6"
+            >
+              <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
+            </svg>
+            <span className="text-lg font-bold">Tierd</span>
           </Link>
-          <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link href="/" className="transition-colors hover:text-primary">
-              Home
-            </Link>
-            <Link href="/rankings" className="transition-colors hover:text-primary">
-              Rankings
-            </Link>
-            <Link href="/threads" className="transition-colors hover:text-primary">
-              Threads
-            </Link>
-          </nav>
         </div>
-        
-        <div className="flex flex-1 items-center justify-end space-x-4">
-          {isLoading ? (
-            <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
-          ) : user ? (
-            <UserNav user={user} userDetails={userDetails} />
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Link href="/auth/sign-in">
-                <Button variant="ghost" size="sm">Sign In</Button>
-              </Link>
-              <Link href="/auth/sign-up">
-                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  Sign Up
-                </Button>
-              </Link>
-            </div>
-          )}
+        <nav className="flex flex-1 items-center space-x-6 text-sm">
+          <Link
+            href="/rankings"
+            className={cn(
+              "transition-colors hover:text-foreground/80",
+              pathname === "/rankings" ? "text-foreground" : "text-foreground/60"
+            )}
+          >
+            Rankings
+          </Link>
+          <Link
+            href="/threads"
+            className={cn(
+              "transition-colors hover:text-foreground/80",
+              pathname === "/threads" ? "text-foreground" : "text-foreground/60"
+            )}
+          >
+            Discussions
+          </Link>
+          <Link
+            href="/about"
+            className={cn(
+              "transition-colors hover:text-foreground/80",
+              pathname === "/about" ? "text-foreground" : "text-foreground/60"
+            )}
+          >
+            About
+          </Link>
+        </nav>
+        <div className="ml-auto flex items-center space-x-4">
+          {user ? <UserNav /> : <AuthNav />}
         </div>
       </div>
     </header>
