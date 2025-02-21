@@ -1,0 +1,1 @@
+[Cursor] Implement comprehensive auth system and UI components
