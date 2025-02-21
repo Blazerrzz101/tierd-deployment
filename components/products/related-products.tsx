@@ -2,35 +2,42 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase/client"
-import { Product } from "@/hooks/use-product"
+import { Product } from "@/types/product"
+import { normalizeProduct } from "@/lib/utils"
 import { ProductCard } from "@/components/products/product-card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 interface RelatedProductsProps {
-  categoryId: string
-  currentProductId: string
+  product: Product
+  limit?: number
 }
 
-export function RelatedProducts({ categoryId, currentProductId }: RelatedProductsProps) {
-  const { data: relatedProducts, isLoading } = useQuery<Product[]>({
-    queryKey: ['related-products', categoryId, currentProductId],
+export function RelatedProducts({ product, limit = 4 }: RelatedProductsProps) {
+  // Early return if no product or category
+  if (!product?.category) {
+    return null
+  }
+
+  const { data: relatedProducts, isLoading } = useQuery({
+    queryKey: ["related-products", product.category, product.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('category', categoryId)
-        .neq('id', currentProductId)
-        .limit(4)
+        .from("products")
+        .select("*")
+        .eq("category", product.category)
+        .neq("id", product.id)
+        .order("score", { ascending: false })
+        .limit(limit)
 
       if (error) throw error
-      return data
+      return data.map(p => normalizeProduct(p)) as Product[]
     },
-    staleTime: 1000 * 60 * 5 // Consider data fresh for 5 minutes
+    enabled: !!product.category, // Only run query if we have a category
   })
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
+      <div className="flex h-[200px] items-center justify-center">
         <LoadingSpinner />
       </div>
     )
@@ -38,19 +45,19 @@ export function RelatedProducts({ categoryId, currentProductId }: RelatedProduct
 
   if (!relatedProducts?.length) {
     return (
-      <p className="text-center text-gray-500">
-        No related products found
-      </p>
+      <div className="text-center text-muted-foreground">
+        No related products found in {product.category}
+      </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {relatedProducts.map((product) => (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {relatedProducts.map((relatedProduct) => (
         <ProductCard
-          key={product.id}
-          product={product}
-          className="h-full"
+          key={relatedProduct.id}
+          product={relatedProduct}
+          variant="compact"
         />
       ))}
     </div>

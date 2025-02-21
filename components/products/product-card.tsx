@@ -20,13 +20,15 @@ import { ProductImage } from "@/components/ui/product-image"
 interface ProductCardProps {
   product: any
   className?: string
+  variant?: "default" | "compact"
 }
 
-export function ProductCard({ product: rawProduct, className }: ProductCardProps) {
+export function ProductCard({ product: rawProduct, className, variant }: ProductCardProps) {
   const { addToCart } = useCart()
   const { addToWishlist, isInWishlist } = useWishlist()
   const { toast } = useToast()
   const product = normalizeProduct(rawProduct) as Required<Product>
+  const isCompact = variant === "compact"
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -75,18 +77,24 @@ export function ProductCard({ product: rawProduct, className }: ProductCardProps
         transition={{ duration: 0.2 }}
       >
         {/* Product Image */}
-        <div className="relative aspect-square overflow-hidden rounded-lg">
+        <div className={cn(
+          "relative overflow-hidden rounded-lg",
+          isCompact ? "aspect-[4/3]" : "aspect-square"
+        )}>
           <ProductImage
             src={product.imageUrl}
             alt={product.name}
             category={product.category}
             fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            sizes={isCompact 
+              ? "(max-width: 768px) 50vw, 33vw"
+              : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            }
             className="transition-transform duration-300 group-hover:scale-110"
           />
           
           {/* Quick Actions */}
-          {product.url_slug && (
+          {product.url_slug && !isCompact && (
             <div className="absolute right-2 top-2 flex flex-col gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -123,26 +131,42 @@ export function ProductCard({ product: rawProduct, className }: ProductCardProps
         </div>
 
         {/* Product Info */}
-        <div className="mt-4 space-y-2">
+        <div className={cn(
+          "mt-4",
+          isCompact ? "space-y-1" : "space-y-2"
+        )}>
           <div className="flex items-center justify-between">
-            <h3 className="font-medium text-white/90 line-clamp-1">
+            <h3 className={cn(
+              "font-medium text-white/90 line-clamp-1",
+              isCompact ? "text-sm" : "text-base"
+            )}>
               {product.name}
             </h3>
-            <Badge variant="secondary" className="capitalize">
-              {product.category}
-            </Badge>
+            {!isCompact && (
+              <Badge variant="secondary" className="capitalize">
+                {product.category}
+              </Badge>
+            )}
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-white/90">
+          <div className={cn(
+            "flex items-center",
+            isCompact ? "justify-between" : "gap-4"
+          )}>
+            <span className={cn(
+              "font-bold text-white/90",
+              isCompact ? "text-base" : "text-lg"
+            )}>
               ${product.price}
             </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => addToCart(product)}
-            >
-              <ShoppingCart className="h-4 w-4" />
-            </Button>
+            {!isCompact && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => addToCart(product)}
+              >
+                <ShoppingCart className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </motion.div>

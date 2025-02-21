@@ -4,30 +4,100 @@ import Link from "next/link"
 import { formatTimeAgo } from "@/lib/utils"
 import { Thread } from "@/types/thread"
 import { Button } from "@/components/ui/button"
-import { Tag, MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react"
+import { Tag, MessageSquare, ThumbsUp, ThumbsDown, Trash2 } from "lucide-react"
 import { ProductImage } from "@/components/ui/product-image"
+import { useAuth } from "@/hooks/use-auth"
+import { threadStore } from "@/lib/local-storage/thread-store"
+import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface ThreadCardProps {
   thread: Thread
 }
 
 export function ThreadCard({ thread }: ThreadCardProps) {
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const router = useRouter()
+  const isOwner = user?.id === thread.user_id
+
+  const handleDelete = () => {
+    const threadId = thread.localId || thread.id
+    if (!threadId) {
+      toast({
+        title: "Error",
+        children: "Invalid thread ID",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      threadStore.deleteThread(threadId)
+      toast({
+        title: "Thread deleted",
+        children: "Your thread has been deleted successfully."
+      })
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: "Error",
+        children: "Failed to delete thread. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 p-6 transition-colors hover:bg-white/10">
       <div className="flex items-start justify-between">
         <div className="space-y-4">
-          <div>
+          <div className="flex items-center justify-between">
             <Link
               href={`/threads/${thread.localId || thread.id}`}
               className="text-xl font-semibold hover:underline"
             >
               {thread.title}
             </Link>
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{thread.user.username}</span>
-              <span>•</span>
-              <span>{formatTimeAgo(thread.created_at)}</span>
-            </div>
+            {isOwner && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Thread</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this thread? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{thread.user.username}</span>
+            <span>•</span>
+            <span>{formatTimeAgo(thread.created_at)}</span>
           </div>
           <p className="text-sm text-muted-foreground line-clamp-3">
             {thread.content}

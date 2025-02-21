@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Star, ShoppingCart, Heart, Share2, MessageSquarePlus, ChevronLeft, ChevronRight } from "lucide-react"
+import { Star, ShoppingCart, Heart, Share2, MessageSquarePlus, ChevronLeft, ChevronRight, RotateCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,47 +17,68 @@ import { VoteButtons } from "@/components/products/vote-buttons"
 import { useRouter } from "next/navigation"
 import { cn, normalizeProduct } from "@/lib/utils"
 import { ProductImage } from "@/components/ui/product-image"
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/lib/supabase/client"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { RelatedProducts } from "@/components/products/related-products"
 
 interface ProductDetailsProps {
-  product: any
+  product: Product
 }
 
-export function ProductDetails({ product: rawProduct }: ProductDetailsProps) {
-  const [selectedImage, setSelectedImage] = useState(0)
-  const [isRotating, setIsRotating] = useState(false)
-  const { toast } = useToast()
+export function ProductDetails({ product: initialProduct }: ProductDetailsProps) {
   const { addToCart } = useCart()
-  const { addToWishlist } = useWishlist()
-  const { vote } = useVote()
+  const { addToWishlist, isInWishlist } = useWishlist()
+  const { toast } = useToast()
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [isRotating, setIsRotating] = useState(false)
   const router = useRouter()
-  const product = normalizeProduct(rawProduct) as Required<Product>
 
-  if (!product) {
-    return null;
-  }
+  // Fetch the latest product data
+  const { data: product, isLoading } = useQuery({
+    queryKey: ["product", initialProduct.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", initialProduct.id)
+        .single()
 
-  // Get the base image URL and any additional images from specs
-  const baseImageUrl = product.imageUrl
-  const additionalImages = product.specs?.additional_images as string[] || []
-  
-  // Create array of image URLs
-  const images = [baseImageUrl, ...additionalImages].filter(Boolean)
+      if (error) throw error
+      return normalizeProduct(data) as Required<Product>
+    },
+    initialData: initialProduct as Required<Product>,
+  })
+
+  // Fetch related products
+  const { data: relatedProducts = [] } = useQuery({
+    queryKey: ["related-products", product.category, product.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("category", product.category)
+        .neq("id", product.id)
+        .limit(4)
+
+      if (error) throw error
+      return data.map(p => normalizeProduct(p)) as Product[]
+    },
+  })
 
   const handleAddToCart = () => {
     addToCart(product)
     toast({
-      title: "Added to cart",
-      variant: "default",
-      children: `${product.name} has been added to your cart.`,
+      title: "Added to Cart",
+      children: `${product.name} has been added to your cart.`
     })
   }
 
   const handleAddToWishlist = () => {
     addToWishlist(product)
     toast({
-      title: "Added to wishlist",
-      variant: "default",
-      children: `${product.name} has been added to your wishlist.`,
+      title: "Added to Wishlist",
+      children: `${product.name} has been added to your wishlist.`
     })
   }
 
@@ -66,177 +87,127 @@ export function ProductDetails({ product: rawProduct }: ProductDetailsProps) {
   }
 
   const nextImage = () => {
-    setSelectedImage((prev) => (prev + 1) % images.length)
+    setCurrentImageIndex((prev) => (prev + 1) % product.images?.length || 0)
   }
 
   const previousImage = () => {
-    setSelectedImage((prev) => (prev - 1 + images.length) % images.length)
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? (product.images?.length || 1) - 1 : prev - 1
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {/* Product Images */}
-      <div className="space-y-4">
-        <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-100">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedImage}
-              className="absolute inset-0"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ 
-                opacity: 1, 
-                scale: 1,
-                rotate: isRotating ? 360 : 0
-              }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              transition={{ 
-                duration: isRotating ? 10 : 0.3,
-                repeat: isRotating ? Infinity : 0,
-                ease: isRotating ? "linear" : "easeInOut"
-              }}
-            >
-              <ProductImage
-                src={images[selectedImage]}
-                alt={`${product.name} - View ${selectedImage + 1}`}
-                category={product.category}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                priority
-                className="object-contain"
-              />
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Navigation Arrows */}
-          {images.length > 1 && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white/90"
-                onClick={previousImage}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white/90"
-                onClick={nextImage}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
-            </>
-          )}
-
-          {/* 3D Rotation Toggle */}
-          <Button
-            variant="outline"
-            size="sm"
+    <div className="space-y-8">
+      <div className="grid gap-8 lg:grid-cols-2">
+        {/* Product Image */}
+        <div className="relative aspect-square overflow-hidden rounded-lg bg-white/5">
+          <ProductImage
+            src={product.imageUrl}
+            alt={product.name}
+            category={product.category}
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 50vw"
             className={cn(
-              "absolute bottom-4 right-4 bg-white/80 hover:bg-white/90",
-              isRotating && "bg-blue-100 hover:bg-blue-200"
+              "object-cover transition-transform duration-500",
+              isRotating && "animate-rotate-y"
             )}
+          />
+          <Button
+            size="icon"
+            variant="secondary"
+            className="absolute right-4 top-4"
             onClick={toggleRotation}
           >
-            {isRotating ? "Stop 3D" : "View 3D"}
+            <RotateCw className="h-4 w-4" />
           </Button>
         </div>
-        
-        {/* Thumbnail Gallery */}
-        {images.length > 1 && (
-          <div className="grid grid-cols-4 gap-2">
-            {images.map((image, index) => (
-              <button
-                key={index}
-                className={`relative aspect-square rounded-md overflow-hidden 
-                           ${selectedImage === index ? 'ring-2 ring-[#ff4b26]' : ''}`}
-                onClick={() => setSelectedImage(index)}
-              >
-                <ProductImage
-                  src={image}
-                  alt={`${product.name} - Thumbnail ${index + 1}`}
-                  category={product.category}
-                  fill
-                  sizes="25vw"
-                  showPlaceholderIcon={false}
-                />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Product Info */}
-      <div className="space-y-8">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold tracking-tight text-white/90">
-              {product.name}
-            </h1>
-            <Button variant="ghost" size="icon">
-              <Share2 className="h-4 w-4" />
-            </Button>
+        {/* Product Info */}
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold">{product.name}</h1>
+              <Badge variant="secondary" className="capitalize">
+                {product.category}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center">
+                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                <span className="ml-1 text-lg font-semibold">
+                  {product.rating?.toFixed(1) || "N/A"}
+                </span>
+                <span className="ml-1 text-sm text-muted-foreground">
+                  ({product.review_count || 0} reviews)
+                </span>
+              </div>
+              <div className="text-2xl font-bold">
+                ${product.price?.toFixed(2)}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary" className="capitalize">
-              {product.category}
-            </Badge>
-            <span className="text-2xl font-bold text-white/90">
-              ${product.price}
-            </span>
-          </div>
-        </div>
 
-        <div className="space-y-4">
-          <p className="text-sm leading-relaxed text-white/70">
+          <p className="text-muted-foreground">
             {product.description}
           </p>
-          <VoteButtons product={product} onVote={vote} />
-        </div>
 
-        <div className="flex gap-4">
-          <Button className="flex-1" onClick={handleAddToCart}>
-            <ShoppingCart className="mr-2 h-4 w-4" />
-            Add to Cart
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleAddToWishlist}>
-            <Heart className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <Tabs defaultValue="specs">
-          <TabsList>
-            <TabsTrigger value="specs">Specifications</TabsTrigger>
-            <TabsTrigger value="reviews">
-              Reviews
-              <Badge variant="secondary" className="ml-2">
-                {product.review_count}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="discussions">Discussions</TabsTrigger>
-          </TabsList>
-          <TabsContent value="specs" className="space-y-4">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Specifications</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              {Object.entries(product.specs).map(([key, value]) => (
-                key !== 'additional_images' && (
-                  <div key={key} className="space-y-1">
-                    <p className="text-sm text-white/50 capitalize">
-                      {key.replace(/_/g, ' ')}
-                    </p>
-                    <p className="text-sm font-medium text-white/90">{String(value)}</p>
+              {Object.entries(product.specs || {}).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="rounded-lg border border-white/10 bg-white/5 p-4"
+                >
+                  <div className="text-sm text-muted-foreground">
+                    {key}
                   </div>
-                )
+                  <div className="mt-1 font-medium">
+                    {value}
+                  </div>
+                </div>
               ))}
             </div>
-          </TabsContent>
-          <TabsContent value="reviews">
-            <ProductReviews productId={product.id} />
-          </TabsContent>
-          <TabsContent value="discussions">
-            <ProductThreads productId={product.id} />
-          </TabsContent>
-        </Tabs>
+          </div>
+
+          <div className="flex gap-4">
+            <Button
+              size="lg"
+              className="flex-1"
+              onClick={handleAddToCart}
+            >
+              <ShoppingCart className="mr-2 h-5 w-5" />
+              Add to Cart
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className={cn(
+                "flex-1",
+                isInWishlist(product.id) && "text-red-500"
+              )}
+              onClick={handleAddToWishlist}
+            >
+              <Heart className="mr-2 h-5 w-5" />
+              {isInWishlist(product.id) ? "In Wishlist" : "Add to Wishlist"}
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Related Products */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold">Related Products</h2>
+        <RelatedProducts product={product} limit={4} />
       </div>
     </div>
   )
