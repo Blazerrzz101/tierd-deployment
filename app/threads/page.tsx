@@ -1,99 +1,67 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { Thread } from "@/types/thread"
-import { supabase } from "@/lib/supabase/client"
 import { ThreadCard } from "@/components/threads/thread-card"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { CreateThreadDialog } from "@/components/threads/create-thread-dialog"
 import { useAuth } from "@/hooks/use-auth"
-import { Product } from "@/types/product"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CATEGORY_IDS } from "@/lib/constants"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { useToast } from "@/hooks/use-toast"
-
-interface ThreadResponse {
-  id: string
-  title: string
-  content: string
-  user_id: string
-  created_at: string
-  updated_at: string
-  upvotes: number
-  downvotes: number
-  mentioned_products: string[]
-  is_pinned: boolean
-  is_locked: boolean
-  user: {
-    username: string
-    avatar_url?: string | null
-  }
-  products: Product[]
-}
+import { threadStore } from "@/lib/local-storage/thread-store"
 
 export default function ThreadsPage() {
   const [threads, setThreads] = useState<Thread[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
   const router = useRouter()
-  const { toast } = useToast()
-
-  const fetchThreads = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      // Base query with all necessary joins
-      let query = supabase
-        .rpc('get_threads_with_products', {
-          p_category: selectedCategory === "all" ? null : selectedCategory
-        })
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-
-      const { data, error } = await query
-
-      if (error) {
-        throw error
-      }
-
-      const transformedThreads = data?.map((thread: ThreadResponse) => ({
-        ...thread,
-        user: thread.user,
-        products: Array.isArray(thread.products) ? thread.products : []
-      })) || []
-
-      setThreads(transformedThreads)
-    } catch (error) {
-      console.error('Error fetching threads:', error)
-      setError('Failed to load discussions. Please try again.')
-      setThreads([])
-      toast({
-        title: "Error loading discussions",
-        variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [selectedCategory, toast])
 
   useEffect(() => {
-    let isMounted = true
-    
-    const loadThreads = async () => {
-      if (!isMounted) return
-      await fetchThreads()
+    const loadThreads = () => {
+      setIsLoading(true)
+      try {
+        let allThreads = threadStore.getThreads()
+        
+        // Filter by category if selected
+        if (selectedCategory !== "all") {
+          allThreads = allThreads.filter(thread => 
+            thread.taggedProducts.some(product => 
+              product.category === selectedCategory
+            )
+          )
+        }
+
+        // Sort by creation date
+        allThreads.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+
+        setThreads(allThreads)
+      } catch (error) {
+        console.error("Error loading threads:", error)
+        setThreads([])
+      } finally {
+        setIsLoading(false)
+      }
     }
 
     loadThreads()
-    return () => { isMounted = false }
-  }, [fetchThreads])
+
+    // Add event listener for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "tierd_threads") {
+        loadThreads()
+      }
+    }
+    
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
+  }, [selectedCategory])
 
   const handleCreateClick = () => {
     if (!user) {
@@ -147,21 +115,9 @@ export default function ThreadsPage() {
               Loading discussions...
             </p>
           </div>
-        ) : error ? (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
-            <h3 className="text-lg font-semibold text-destructive mb-2">Error Loading Discussions</h3>
-            <p className="text-destructive/80 mb-4">{error}</p>
-            <Button 
-              onClick={fetchThreads}
-              variant="outline"
-              className="text-destructive hover:text-destructive/80"
-            >
-              Try Again
-            </Button>
-          </div>
         ) : threads.length > 0 ? (
           threads.map(thread => (
-            <ThreadCard key={thread.id} thread={thread} />
+            <ThreadCard key={thread.localId || thread.id} thread={thread} />
           ))
         ) : (
           <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">

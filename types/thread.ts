@@ -1,7 +1,14 @@
 import { Product } from "./product"
 
-export interface Thread {
+export interface ThreadUser {
   id: string
+  username: string
+  avatar_url?: string | null
+}
+
+export interface Thread {
+  id?: string
+  localId?: string
   title: string
   content: string
   user_id: string
@@ -12,12 +19,9 @@ export interface Thread {
   mentioned_products: string[]
   is_pinned: boolean
   is_locked: boolean
+  user: ThreadUser
+  taggedProducts: Product[]
   userVote?: 'up' | 'down' | null
-  user?: {
-    username: string
-    avatar_url?: string
-  }
-  products?: Product[]
 }
 
 export interface ThreadComment {

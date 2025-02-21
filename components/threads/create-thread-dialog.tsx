@@ -1,95 +1,112 @@
 "use client"
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import * as React from "react"
+import { useRouter } from "next/navigation"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { Loader2 } from "lucide-react"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ProductMentionInput } from "@/components/threads/product-mention-input"
-import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/lib/supabase/client"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
+import { threadStore } from "@/lib/local-storage/thread-store"
+import { ProductTagger } from "@/components/threads/product-tagger"
 import { Product } from "@/types/product"
+
+const formSchema = z.object({
+  title: z.string().min(1, "Title is required").max(100, "Title is too long"),
+  content: z.string().min(1, "Content is required").max(2000, "Content is too long"),
+})
 
 interface CreateThreadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  defaultProduct?: Product
 }
 
-export function CreateThreadDialog({ open, onOpenChange, defaultProduct }: CreateThreadDialogProps) {
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>(
-    defaultProduct ? [defaultProduct] : []
-  )
-  const [isSubmitting, setIsSubmitting] = useState(false)
+export function CreateThreadDialog({ open, onOpenChange }: CreateThreadDialogProps) {
+  const { user } = useAuth()
   const router = useRouter()
-  const supabase = getSupabaseClient()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [taggedProducts, setTaggedProducts] = React.useState<Product[]>([])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!title.trim() || !content.trim()) {
-      toast.error("Please fill in all fields")
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      content: "",
+    },
+  })
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        children: "You must be signed in to create a thread.",
+        variant: "destructive",
+      })
       return
     }
 
+    setIsLoading(true)
+
     try {
-      setIsSubmitting(true)
+      const now = new Date().toISOString()
+      const thread = threadStore.addThread({
+        title: values.title,
+        content: values.content,
+        user_id: user.id,
+        created_at: now,
+        updated_at: now,
+        upvotes: 0,
+        downvotes: 0,
+        user: {
+          id: user.id,
+          username: user.email?.split("@")[0] || "Anonymous",
+          avatar_url: null,
+        },
+        taggedProducts,
+        mentioned_products: taggedProducts.map(p => p.id),
+        is_pinned: false,
+        is_locked: false,
+      })
 
-      // Get current user
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        toast.error("You must be signed in to create a thread")
-        return
-      }
+      toast({
+        title: "Thread created",
+        children: "Your thread has been created successfully.",
+      })
 
-      // Create thread
-      const { data: thread, error: threadError } = await supabase
-        .from('threads')
-        .insert({
-          title,
-          content,
-          user_id: session.user.id,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (threadError) throw threadError
-
-      // Link products to thread
-      if (selectedProducts.length > 0) {
-        const { error: productError } = await supabase
-          .from('thread_products')
-          .insert(
-            selectedProducts.map(product => ({
-              thread_id: thread.id,
-              product_id: product.id
-            }))
-          )
-
-        if (productError) throw productError
-      }
-
-      toast.success("Thread created successfully")
+      form.reset()
+      setTaggedProducts([])
       onOpenChange(false)
-      setTitle("")
-      setContent("")
-      setSelectedProducts(defaultProduct ? [defaultProduct] : [])
-      
-      // Navigate to the thread
-      router.push(`/threads/${thread.id}`)
       router.refresh()
-
-    } catch (error: any) {
-      console.error('Error creating thread:', error)
-      toast.error("Error creating thread", {
-        description: error.message
+    } catch (error) {
+      console.error("Error creating thread:", error)
+      toast({
+        title: "Error",
+        children: "Failed to create thread. Please try again.",
+        variant: "destructive",
       })
     } finally {
-      setIsSubmitting(false)
+      setIsLoading(false)
     }
   }
 
@@ -98,44 +115,66 @@ export function CreateThreadDialog({ open, onOpenChange, defaultProduct }: Creat
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Thread</DialogTitle>
+          <DialogDescription>
+            Start a discussion about gaming gear. Tag relevant products to help others find your thread.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Input
-              placeholder="Thread title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="h-12"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="What's on your mind?" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Textarea
-              placeholder="What's on your mind?"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="min-h-[200px]"
+            <FormField
+              control={form.control}
+              name="content"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Content</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Share your thoughts..."
+                      className="min-h-[100px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <ProductMentionInput
-              selectedProducts={selectedProducts}
-              onProductsChange={setSelectedProducts}
-              disabled={defaultProduct !== undefined}
-            />
-          </div>
-          <div className="flex justify-end gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Thread"}
-            </Button>
-          </div>
-        </form>
+            <div className="space-y-2">
+              <FormLabel>Tagged Products</FormLabel>
+              <ProductTagger
+                onProductsTagged={setTaggedProducts}
+                initialProducts={taggedProducts}
+              />
+            </div>
+            <div className="flex justify-end space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Create Thread
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )

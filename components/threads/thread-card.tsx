@@ -1,94 +1,91 @@
 "use client"
 
-import { Thread } from "@/types/thread"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { Badge } from "@/components/ui/badge"
-import { formatTimeAgo } from "@/lib/utils"
 import Link from "next/link"
+import { formatTimeAgo } from "@/lib/utils"
+import { Thread } from "@/types/thread"
+import { Button } from "@/components/ui/button"
+import { Tag, MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react"
+import { ProductImage } from "@/components/ui/product-image"
 
 interface ThreadCardProps {
   thread: Thread
 }
 
 export function ThreadCard({ thread }: ThreadCardProps) {
-  const router = useRouter()
-
   return (
-    <Card className="overflow-hidden transition-colors hover:bg-muted/50">
-      <CardHeader className="flex flex-row items-start gap-4 space-y-0">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={thread.user?.avatar_url || ""} />
-          <AvatarFallback>
-            {thread.user?.username?.[0]?.toUpperCase() || "U"}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">
-              {thread.user?.username || "Anonymous"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {formatTimeAgo(thread.created_at)}
-            </span>
-            {thread.is_pinned && (
-              <Badge variant="secondary">Pinned</Badge>
-            )}
+    <div className="rounded-lg border border-white/10 bg-white/5 p-6 transition-colors hover:bg-white/10">
+      <div className="flex items-start justify-between">
+        <div className="space-y-4">
+          <div>
+            <Link
+              href={`/threads/${thread.localId || thread.id}`}
+              className="text-xl font-semibold hover:underline"
+            >
+              {thread.title}
+            </Link>
+            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{thread.user.username}</span>
+              <span>•</span>
+              <span>{formatTimeAgo(thread.created_at)}</span>
+            </div>
           </div>
-          <h3 
-            className="text-lg font-semibold leading-none tracking-tight hover:text-primary"
-            onClick={() => router.push(`/threads/${thread.id}`)}
-            style={{ cursor: 'pointer' }}
-          >
-            {thread.title}
-          </h3>
+          <p className="text-sm text-muted-foreground line-clamp-3">
+            {thread.content}
+          </p>
+          {thread.taggedProducts && thread.taggedProducts.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Tag className="h-4 w-4" />
+                <span>Tagged Products:</span>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                {thread.taggedProducts.map(product => (
+                  <Link
+                    key={product.id}
+                    href={`/products/${product.url_slug || product.id}`}
+                    className="group flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-2 transition-colors hover:bg-white/10"
+                  >
+                    <div className="relative h-12 w-12 overflow-hidden rounded-md">
+                      <ProductImage
+                        src={product.imageUrl}
+                        alt={product.name}
+                        category={product.category}
+                        fill
+                        sizes="48px"
+                        className="object-cover transition-transform group-hover:scale-110"
+                      />
+                    </div>
+                    <div>
+                      <div className="font-medium group-hover:underline">
+                        {product.name}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {product.category}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      </CardHeader>
-      <CardContent>
-        <p className="line-clamp-2 text-muted-foreground">
-          {thread.content}
-        </p>
-        {thread.products && thread.products.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {thread.products.map(product => (
-              <Link 
-                key={product.id} 
-                href={`/products/${product.url_slug}`}
-                className="inline-flex items-center"
-              >
-                <Badge variant="outline" className="hover:bg-primary hover:text-primary-foreground">
-                  @{product.name}
-                </Badge>
-              </Link>
-            ))}
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex items-center gap-4">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <ThumbsUp className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {thread.upvotes - thread.downvotes}
-          </span>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <ThumbsDown className="h-4 w-4" />
-          </Button>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex items-center gap-1"
-          onClick={() => router.push(`/threads/${thread.id}`)}
-        >
+      </div>
+      <div className="mt-6 flex items-center gap-4">
+        <Button variant="ghost" size="sm" className="gap-2">
           <MessageSquare className="h-4 w-4" />
-          <span>Reply</span>
+          Discuss
         </Button>
-      </CardFooter>
-    </Card>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="gap-1">
+            <ThumbsUp className="h-4 w-4" />
+            {thread.upvotes}
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-1">
+            <ThumbsDown className="h-4 w-4" />
+            {thread.downvotes}
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 } 
