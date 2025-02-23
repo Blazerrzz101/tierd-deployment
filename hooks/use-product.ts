@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase/client"
-import { Product, Review, Thread, UserProfile } from "@/types/product"
+import { Product, Review, Thread, UserProfile, VoteType } from "@/types/product"
 
 interface ReviewResponse {
   id: string
@@ -52,6 +52,25 @@ export function useProduct(slug: string) {
       }
 
       const product = productData[0]
+
+      // Get user's vote if authenticated
+      const { data: { user } } = await supabase.auth.getUser()
+      let userVote: VoteType | null = null
+      
+      if (user) {
+        const { data: voteData } = await supabase
+          .from('votes')
+          .select('vote_type')
+          .eq('product_id', product.id)
+          .eq('user_id', user.id)
+          .single()
+          
+        if (voteData) {
+          // Convert the vote_type to a number and ensure it's either 1 or -1
+          const voteType = parseInt(voteData.vote_type)
+          userVote = voteType === 1 ? 1 : voteType === -1 ? -1 : null
+        }
+      }
 
       // Get reviews with user profiles
       const { data: reviews, error: reviewsError } = await supabase
@@ -123,6 +142,9 @@ export function useProduct(slug: string) {
         updated_at: product.updated_at,
         upvotes: product.upvotes || 0,
         downvotes: product.downvotes || 0,
+        score: product.score || 0,
+        rank: product.rank || 0,
+        userVote,
         rating: averageRating,
         review_count: reviewsList.length,
         reviews: reviewsList.map(review => ({

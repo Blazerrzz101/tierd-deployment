@@ -1,49 +1,88 @@
 "use client";
 
-import { useAuth } from "@/hooks/use-auth";
-import { VoteType } from "@/types/product";
-import { useToast } from "@/components/ui/use-toast";
-import { useCallback } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useState } from "react";
+import { Product, VoteType } from "@/types/product";
+import { supabase } from "@/lib/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "./use-auth";
+import { useRouter } from "next/navigation";
+
+function generateClientId() {
+  return 'anon_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+function getClientId() {
+  if (typeof window === 'undefined') return null;
+  
+  let clientId = localStorage.getItem('vote_client_id');
+  if (!clientId) {
+    clientId = generateClientId();
+    localStorage.setItem('vote_client_id', clientId);
+  }
+  return clientId;
+}
 
 export function useVote() {
-  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const supabase = createClientComponentClient();
+  const { user } = useAuth();
+  const router = useRouter();
 
-  const vote = useCallback(async (productId: string, voteType: VoteType) => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to vote",
-        variant: "destructive",
-      });
-      return;
+  const vote = async (product: Product | undefined, voteType: VoteType) => {
+    if (!product) {
+      console.error('No product provided to vote function');
+      return false;
+    }
+
+    if (loading) {
+      return false;
     }
 
     try {
-      const { error } = await supabase.rpc("vote_for_product", {
-        p_product_id: productId,
-        p_vote_type: voteType === "up" ? 1 : -1,
+      setLoading(true);
+      const clientId = getClientId();
+
+      const { data, error } = await supabase.rpc('vote_for_product', {
+        p_product_id: product.id,
+        p_vote_type: voteType === 1 ? 'upvote' : 'downvote',
+        p_client_id: clientId
       });
 
       if (error) {
-        throw error;
+        console.error('Error voting:', error);
+        toast({
+          title: "Error",
+          children: "Failed to submit vote. Please try again.",
+          variant: "destructive"
+        });
+        return false;
       }
 
       toast({
-        title: "Vote recorded",
-        description: "Your vote has been recorded successfully",
+        title: "Success",
+        children: `Successfully ${voteType === 1 ? 'upvoted' : 'downvoted'} ${product.name}`,
       });
+
+      // Refresh the page to update the UI
+      router.refresh();
+      return true;
+
     } catch (error) {
-      console.error("Error voting:", error);
+      console.error('Error in vote function:', error);
       toast({
         title: "Error",
-        description: "Failed to record your vote. Please try again.",
-        variant: "destructive",
+        children: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
       });
+      return false;
+    } finally {
+      setLoading(false);
     }
-  }, [user, supabase, toast]);
+  };
 
-  return { vote };
+  return {
+    vote,
+    loading,
+    isAuthenticated: !!user
+  };
 }

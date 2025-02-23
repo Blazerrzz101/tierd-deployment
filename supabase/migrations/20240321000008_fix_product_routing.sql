@@ -49,22 +49,22 @@ BEGIN
         p.id,
         p.name,
         p.description,
-        p.category,
-        LOWER(REPLACE(p.category, ' ', '-')) as category_slug,
+        p.category::text,
+        LOWER(REPLACE(p.category::text, ' ', '-')) as category_slug,
         p.price,
-        COALESCE(p.image_url, '/images/products/' || LOWER(p.category) || '/placeholder.jpg') as image_url,
+        COALESCE(p.image_url, '/images/products/' || LOWER(p.category::text) || '/placeholder.jpg') as image_url,
         p.url_slug,
         p.specifications,
         p.created_at,
         p.updated_at,
-        vs.upvotes,
-        vs.downvotes,
-        vs.rating,
-        vs.review_count,
-        vs.score,
-        RANK() OVER (ORDER BY vs.score DESC, vs.rating DESC, p.created_at DESC)
+        COALESCE(vs.upvotes, 0),
+        COALESCE(vs.downvotes, 0),
+        COALESCE(vs.rating, 0),
+        COALESCE(vs.review_count, 0),
+        COALESCE(vs.score, 0),
+        COALESCE(RANK() OVER (ORDER BY vs.score DESC, vs.rating DESC, p.created_at DESC), 0)
     FROM products p
-    JOIN vote_stats vs ON vs.id = p.id
+    LEFT JOIN vote_stats vs ON vs.id = p.id
     WHERE p.url_slug = p_slug;
 END;
 $$;

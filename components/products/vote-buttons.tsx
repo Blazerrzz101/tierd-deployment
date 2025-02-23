@@ -1,81 +1,104 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ThumbsUp, ThumbsDown } from "lucide-react"
+import { ThumbsUp, ThumbsDown, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/hooks/use-auth"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { VoteType } from "@/types/product"
+import { useVote } from "@/hooks/use-vote"
+import { Product, VoteType } from "@/types/product"
 
 interface VoteButtonsProps {
-  product: {
-    id: string
-    userVote: VoteType
-    upvotes: number
-    downvotes: number
-  }
-  onVote: (productId: string, voteType: VoteType) => Promise<void>
-  className?: string
+  product: Product;
+  className?: string;
 }
 
-export function VoteButtons({ product, onVote, className }: VoteButtonsProps) {
-  const { user } = useAuth()
-  const router = useRouter()
-  const { toast } = useToast()
+export function VoteButtons({ product, className }: VoteButtonsProps) {
+  const { vote, loading: isVoting, isAuthenticated } = useVote();
+  const [loadingState, setLoadingState] = useState<{[K in VoteType]?: boolean}>({});
+  const [localVotes, setLocalVotes] = useState({
+    upvotes: product.upvotes || 0,
+    downvotes: product.downvotes || 0,
+    userVote: product.userVote
+  });
 
   const handleVote = async (voteType: VoteType) => {
-    if (!user) {
-      router.push('/auth/sign-in')
-      return
+    if (!isAuthenticated) {
+      // Let useVote handle the redirect
+      await vote(product, voteType);
+      return;
     }
 
+    setLoadingState(prev => ({ ...prev, [voteType]: true }));
     try {
-      await onVote(product.id, voteType)
-      toast({
-        title: "Vote recorded",
-        children: `Your ${voteType === 'up' ? 'up' : 'down'}vote has been recorded.`
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        children: "Failed to record vote. Please try again.",
-        variant: "destructive"
-      })
+      const success = await vote(product, voteType);
+      
+      // Only update local state if vote was successful
+      if (success) {
+        setLocalVotes(prev => {
+          const isRemovingVote = prev.userVote === voteType;
+          const newUserVote = isRemovingVote ? null : voteType;
+          
+          return {
+            upvotes: prev.upvotes + (
+              voteType === 1 
+                ? (isRemovingVote ? -1 : 1) 
+                : (prev.userVote === 1 ? -1 : 0)
+            ),
+            downvotes: prev.downvotes + (
+              voteType === -1 
+                ? (isRemovingVote ? -1 : 1) 
+                : (prev.userVote === -1 ? -1 : 0)
+            ),
+            userVote: newUserVote
+          };
+        });
+      }
+    } finally {
+      setLoadingState(prev => ({ ...prev, [voteType]: false }));
     }
-  }
+  };
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => handleVote('up')}
+        onClick={() => handleVote(1)}
+        disabled={loadingState[1] || loadingState[-1] || isVoting}
         className={cn(
           "gap-1 transition-colors",
-          product.userVote === 'up' && "text-green-500 hover:text-green-600"
+          localVotes.userVote === 1 && "text-green-500 hover:text-green-600"
         )}
       >
-        <ThumbsUp className={cn(
-          "h-4 w-4",
-          product.userVote === 'up' && "fill-green-500"
-        )} />
-        {product.upvotes}
+        {loadingState[1] ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ThumbsUp className={cn(
+            "h-4 w-4",
+            localVotes.userVote === 1 && "fill-green-500"
+          )} />
+        )}
+        <span>{localVotes.upvotes}</span>
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => handleVote('down')}
+        onClick={() => handleVote(-1)}
+        disabled={loadingState[1] || loadingState[-1] || isVoting}
         className={cn(
           "gap-1 transition-colors",
-          product.userVote === 'down' && "text-red-500 hover:text-red-600"
+          localVotes.userVote === -1 && "text-red-500 hover:text-red-600"
         )}
       >
-        <ThumbsDown className={cn(
-          "h-4 w-4",
-          product.userVote === 'down' && "fill-red-500"
-        )} />
-        {product.downvotes}
+        {loadingState[-1] ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ThumbsDown className={cn(
+            "h-4 w-4",
+            localVotes.userVote === -1 && "fill-red-500"
+          )} />
+        )}
+        <span>{localVotes.downvotes}</span>
       </Button>
     </div>
   )

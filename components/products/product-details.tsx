@@ -153,15 +153,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             </Button>
           </div>
 
-          <VoteButtons
-            product={{
-              id: product.id,
-              upvotes: product.upvotes,
-              downvotes: product.downvotes,
-              userVote: null
-            }}
-            onVote={vote}
-          />
+          <VoteButtons product={product} />
 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Key Features</h3>

@@ -16,6 +16,9 @@ export interface Product {
   updated_at: string;
   upvotes: number;
   downvotes: number;
+  score: number;
+  rank: number;
+  userVote: VoteType | null;
   rating: number;
   review_count: number;
   reviews: Review[];
@@ -56,7 +59,7 @@ export interface Category {
   description: string;
 }
 
-export type VoteType = 'up' | 'down' | null;
+export type VoteType = 1 | -1;
 
 export interface ProductWithVotes extends Product {
   ranking_score: number;
