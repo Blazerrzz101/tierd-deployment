@@ -1,105 +1,110 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ThumbsUp, ThumbsDown, Loader2 } from "lucide-react"
+import { ArrowBigUp, ArrowBigDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useVote } from "@/hooks/use-vote"
-import { Product, VoteType } from "@/types/product"
+import { useVote, VoteProduct } from "@/hooks/use-vote"
+import { VoteType } from "@/types/product"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface VoteButtonsProps {
-  product: Product;
+  product: VoteProduct;
   className?: string;
 }
 
+interface LocalVotes {
+  upvotes: number;
+  downvotes: number;
+  userVote: VoteType | null;
+}
+
 export function VoteButtons({ product, className }: VoteButtonsProps) {
-  const { vote, loading: isVoting, isAuthenticated } = useVote();
-  const [loadingState, setLoadingState] = useState<{[K in VoteType]?: boolean}>({});
-  const [localVotes, setLocalVotes] = useState({
+  const { vote, isLoading, isAuthenticated } = useVote()
+  const [localVotes, setLocalVotes] = useState<LocalVotes>({
     upvotes: product.upvotes || 0,
     downvotes: product.downvotes || 0,
-    userVote: product.userVote
-  });
+    userVote: product.userVote || null
+  })
+
+  // Update local state when product props change
+  useEffect(() => {
+    setLocalVotes({
+      upvotes: product.upvotes || 0,
+      downvotes: product.downvotes || 0,
+      userVote: product.userVote || null
+    })
+  }, [product.upvotes, product.downvotes, product.userVote])
 
   const handleVote = async (voteType: VoteType) => {
-    if (!isAuthenticated) {
-      // Let useVote handle the redirect
-      await vote(product, voteType);
-      return;
-    }
+    if (isLoading) return
 
-    setLoadingState(prev => ({ ...prev, [voteType]: true }));
+    const previousState = { ...localVotes }
+    const isRemovingVote = localVotes.userVote === voteType
+    const newVoteType = isRemovingVote ? null : voteType
+
+    // Optimistically update UI
+    setLocalVotes(prev => ({
+      upvotes: prev.upvotes + (
+        voteType === 1 ? (isRemovingVote ? -1 : 1) : 
+        prev.userVote === 1 ? -1 : 0
+      ),
+      downvotes: prev.downvotes + (
+        voteType === -1 ? (isRemovingVote ? -1 : 1) :
+        prev.userVote === -1 ? -1 : 0
+      ),
+      userVote: newVoteType
+    }))
+
     try {
-      const success = await vote(product, voteType);
-      
-      // Only update local state if vote was successful
-      if (success) {
-        setLocalVotes(prev => {
-          const isRemovingVote = prev.userVote === voteType;
-          const newUserVote = isRemovingVote ? null : voteType;
-          
-          return {
-            upvotes: prev.upvotes + (
-              voteType === 1 
-                ? (isRemovingVote ? -1 : 1) 
-                : (prev.userVote === 1 ? -1 : 0)
-            ),
-            downvotes: prev.downvotes + (
-              voteType === -1 
-                ? (isRemovingVote ? -1 : 1) 
-                : (prev.userVote === -1 ? -1 : 0)
-            ),
-            userVote: newUserVote
-          };
-        });
+      const result = await vote(product, voteType)
+      if (result === undefined) {
+        setLocalVotes(previousState)
       }
-    } finally {
-      setLoadingState(prev => ({ ...prev, [voteType]: false }));
+    } catch (error) {
+      setLocalVotes(previousState)
     }
-  };
+  }
+
+  const renderVoteButton = (voteType: VoteType, Icon: typeof ArrowBigUp | typeof ArrowBigDown) => {
+    const isUpvote = voteType === 1
+    const tooltipText = isAuthenticated
+      ? `Click to ${localVotes.userVote === voteType ? 'remove' : ''} ${isUpvote ? 'upvote' : 'downvote'}`
+      : 'Sign in to keep your votes'
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-8 w-8 rounded-full transition-colors",
+              localVotes.userVote === voteType
+                ? "text-primary bg-primary/10 hover:bg-primary/20"
+                : "hover:bg-primary/10",
+              isLoading && "opacity-50 cursor-not-allowed"
+            )}
+            onClick={() => handleVote(voteType)}
+            disabled={isLoading}
+          >
+            <Icon className="h-6 w-6" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{tooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleVote(1)}
-        disabled={loadingState[1] || loadingState[-1] || isVoting}
-        className={cn(
-          "gap-1 transition-colors",
-          localVotes.userVote === 1 && "text-green-500 hover:text-green-600"
-        )}
-      >
-        {loadingState[1] ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <ThumbsUp className={cn(
-            "h-4 w-4",
-            localVotes.userVote === 1 && "fill-green-500"
-          )} />
-        )}
-        <span>{localVotes.upvotes}</span>
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleVote(-1)}
-        disabled={loadingState[1] || loadingState[-1] || isVoting}
-        className={cn(
-          "gap-1 transition-colors",
-          localVotes.userVote === -1 && "text-red-500 hover:text-red-600"
-        )}
-      >
-        {loadingState[-1] ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <ThumbsDown className={cn(
-            "h-4 w-4",
-            localVotes.userVote === -1 && "fill-red-500"
-          )} />
-        )}
-        <span>{localVotes.downvotes}</span>
-      </Button>
+    <div className={cn("flex flex-col gap-2 items-center", className)}>
+      {renderVoteButton(1, ArrowBigUp)}
+      <span className="text-center text-sm font-medium min-w-[2rem]">
+        {localVotes.upvotes - localVotes.downvotes}
+      </span>
+      {renderVoteButton(-1, ArrowBigDown)}
     </div>
   )
 }

@@ -1,14 +1,5 @@
--- Drop all existing versions of the function
-DO $$ 
-BEGIN
-    -- Drop all versions of vote_for_product function
-    DROP FUNCTION IF EXISTS public.vote_for_product(uuid, text);
-    DROP FUNCTION IF EXISTS public.vote_for_product(uuid, text, text);
-    DROP FUNCTION IF EXISTS public.vote_for_product(uuid, integer);
-    DROP FUNCTION IF EXISTS public.vote_for_product(uuid, integer, text);
-EXCEPTION 
-    WHEN undefined_function THEN NULL;
-END $$;
+-- Drop existing function
+DROP FUNCTION IF EXISTS public.vote_for_product;
 
 -- Create the vote function with proper parameter names
 CREATE OR REPLACE FUNCTION public.vote_for_product(
@@ -23,15 +14,22 @@ SET search_path = public
 AS $$
 DECLARE
     v_user_id uuid;
-    v_existing_vote text;
-    v_new_vote_type text;
+    v_existing_vote integer;
+    v_new_vote_type integer;
 BEGIN
     -- Get current user ID
     v_user_id := auth.uid();
     
+    -- Convert text vote type to integer
+    v_new_vote_type := CASE p_vote_type
+        WHEN 'up' THEN 1
+        WHEN 'down' THEN -1
+        ELSE NULL
+    END;
+
     -- Validate vote type
-    IF p_vote_type NOT IN ('up', 'down') THEN
-        RAISE EXCEPTION 'Invalid vote type';
+    IF v_new_vote_type IS NULL THEN
+        RAISE EXCEPTION 'Invalid vote type. Must be either up or down';
     END IF;
 
     -- Check for existing vote
@@ -51,13 +49,13 @@ BEGIN
         VALUES (
             p_product_id,
             v_user_id,
-            p_vote_type,
+            v_new_vote_type,
             CASE 
                 WHEN v_user_id IS NULL THEN jsonb_build_object('client_id', p_client_id)
                 ELSE '{}'::jsonb
             END
         );
-    ELSIF v_existing_vote = p_vote_type THEN
+    ELSIF v_existing_vote = v_new_vote_type THEN
         -- Remove vote if same type
         DELETE FROM votes
         WHERE product_id = p_product_id
@@ -69,7 +67,7 @@ BEGIN
     ELSE
         -- Update vote type
         UPDATE votes
-        SET vote_type = p_vote_type,
+        SET vote_type = v_new_vote_type,
             updated_at = now()
         WHERE product_id = p_product_id
         AND (
@@ -78,6 +76,9 @@ BEGIN
             (user_id IS NULL AND metadata->>'client_id' = p_client_id)
         );
     END IF;
+
+    -- Refresh the rankings
+    PERFORM refresh_product_rankings();
 
     -- Return success response
     RETURN jsonb_build_object(
@@ -90,17 +91,16 @@ $$;
 -- Grant execute permission to all users
 GRANT EXECUTE ON FUNCTION public.vote_for_product(uuid, text, text) TO authenticated, anon;
 
--- Ensure votes table exists and has proper structure
-CREATE TABLE IF NOT EXISTS public.votes (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
-    user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
-    vote_type text CHECK (vote_type IN ('up', 'down')),
-    metadata jsonb DEFAULT '{}'::jsonb,
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
+-- Ensure votes table has proper structure
+ALTER TABLE public.votes 
+    ALTER COLUMN vote_type TYPE integer USING 
+    CASE 
+        WHEN vote_type = 'up' THEN 1
+        WHEN vote_type = 'down' THEN -1
+        ELSE NULL
+    END,
+    ADD CONSTRAINT vote_type_check CHECK (vote_type IN (1, -1));
 
--- Create index for vote lookups
+-- Create index for vote lookups if they don't exist
 CREATE INDEX IF NOT EXISTS idx_votes_product_user ON votes(product_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_votes_client_id ON votes((metadata->>'client_id')) WHERE user_id IS NULL; 

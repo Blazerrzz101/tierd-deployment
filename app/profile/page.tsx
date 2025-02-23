@@ -8,109 +8,160 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { supabase } from "@/lib/supabase/client"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { formatDistanceToNow } from "date-fns"
+import Link from "next/link"
+import { ThumbsUp, ThumbsDown, MessageSquare, Tag, ArrowBigUp, ArrowBigDown } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
-export default function ProfilePage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [username, setUsername] = useState("")
-  const [email, setEmail] = useState("")
+interface Activity {
+  id: string
+  type: string
+  details: {
+    action: 'created' | 'updated' | 'removed'
+    product_id: string
+    product_name: string
+    vote_type: number
+  }
+  created_at: string
+}
 
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
+interface Vote {
+  product_id: string
+  vote_type: number
+  products: {
+    name: string
+    category: string
+  }
+}
 
-      toast.success("Signed out successfully")
-      router.push("/auth/sign-in")
-    } catch (error) {
-      toast.error("Error signing out", {
-        description: "There was a problem signing you out. Please try again."
-      })
-    }
+export const dynamic = 'force-dynamic'
+
+export default async function ProfilePage() {
+  const supabase = createServerComponentClient({ cookies })
+  
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    redirect('/auth/sign-in')
   }
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  // Get user activity
+  const { data: activities } = await supabase
+    .rpc('get_user_activity', {
+      p_user_id: session.user.id
+    }) as { data: Activity[] | null }
 
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError) throw userError
-
-      if (!user) {
-        throw new Error("User not found")
-      }
-
-      const updates = {
-        username: username || undefined,
-        email: email || undefined,
-        updated_at: new Date().toISOString(),
-      }
-
-      const { error } = await supabase
-        .from("users")
-        .update(updates)
-        .eq("id", user.id)
-
-      if (error) throw error
-
-      toast.success("Profile updated successfully")
-    } catch (error) {
-      toast.error("Error updating profile", {
-        description: "There was a problem updating your profile. Please try again."
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Get user's current votes
+  const { data: votes } = await supabase
+    .from('votes')
+    .select('product_id, vote_type, products(name, category)')
+    .eq('user_id', session.user.id)
+    .order('created_at', { ascending: false }) as { data: Vote[] | null }
 
   return (
-    <div className="container max-w-2xl space-y-8 py-10">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Profile Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account settings and preferences.
-        </p>
-      </div>
-      <Separator />
-      <form onSubmit={handleUpdateProfile} className="space-y-8">
-        <div className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              disabled={isLoading}
-            />
+    <div className="container mx-auto py-10 space-y-8">
+      {/* Profile Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={session.user.user_metadata.avatar_url} />
+              <AvatarFallback>
+                {session.user.email?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {session.user.user_metadata.full_name || session.user.email}
+              </h1>
+              <p className="text-muted-foreground">
+                Member since {formatDistanceToNow(new Date(session.user.created_at), { addSuffix: true })}
+              </p>
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-            />
+        </CardHeader>
+      </Card>
+
+      {/* Activity Feed */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {activities?.map((activity: Activity) => (
+              <div key={activity.id} className="flex items-center gap-4 py-2 border-b last:border-0">
+                <div className="flex-1">
+                  <p className="font-medium">
+                    {activity.details.action === 'created' && 'Voted on '}
+                    {activity.details.action === 'updated' && 'Changed vote for '}
+                    {activity.details.action === 'removed' && 'Removed vote from '}
+                    {activity.details.product_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                  </p>
+                </div>
+                {activity.type === 'vote' && (
+                  <div className="flex items-center gap-2">
+                    {activity.details.vote_type === 1 ? (
+                      <ArrowBigUp className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <ArrowBigDown className="h-5 w-5 text-red-500" />
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {!activities?.length && (
+              <p className="text-center text-muted-foreground py-4">
+                No activity yet
+              </p>
+            )}
           </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Button type="submit" disabled={isLoading}>
-            Update Profile
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleSignOut}
-            disabled={isLoading}
-          >
-            Sign Out
-          </Button>
-        </div>
-      </form>
+        </CardContent>
+      </Card>
+
+      {/* Current Votes */}
+      <Card>
+        <CardHeader>
+          <CardTitle>My Votes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {votes?.map((vote: Vote) => (
+              <div key={vote.product_id} className="flex items-center gap-4 py-2 border-b last:border-0">
+                <div className="flex-1">
+                  <p className="font-medium">{vote.products.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {vote.products.category}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {vote.vote_type === 1 ? (
+                    <ArrowBigUp className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <ArrowBigDown className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+              </div>
+            ))}
+            {!votes?.length && (
+              <p className="text-center text-muted-foreground py-4">
+                No votes yet
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

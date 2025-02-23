@@ -66,7 +66,7 @@ INSERT INTO votes (product_id, user_id, vote_type)
 SELECT 
     p.id,
     '00000000-0000-0000-0000-000000000001'::uuid,
-    1
+    'up'
 FROM products p;
 
 INSERT INTO reviews (product_id, user_id, rating, title, content)

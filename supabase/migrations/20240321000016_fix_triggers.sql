@@ -2,8 +2,22 @@
 DROP TRIGGER IF EXISTS refresh_rankings_vote ON votes;
 DROP TRIGGER IF EXISTS refresh_rankings_review ON reviews;
 
+-- Drop existing functions
+DROP FUNCTION IF EXISTS refresh_product_rankings();
+DROP FUNCTION IF EXISTS trigger_refresh_rankings();
+
+-- Create refresh function
+CREATE FUNCTION refresh_product_rankings()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW CONCURRENTLY product_rankings;
+END;
+$$;
+
 -- Create trigger function
-CREATE OR REPLACE FUNCTION trigger_refresh_rankings()
+CREATE FUNCTION trigger_refresh_rankings()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
@@ -25,4 +39,4 @@ CREATE TRIGGER refresh_rankings_review
   EXECUTE FUNCTION trigger_refresh_rankings();
 
 -- Refresh rankings
-SELECT refresh_product_rankings(); 
+REFRESH MATERIALIZED VIEW CONCURRENTLY product_rankings; 

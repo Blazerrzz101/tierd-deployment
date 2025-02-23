@@ -2,50 +2,61 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Github } from "lucide-react"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Icons } from "@/components/icons"
-import { supabase } from "@/lib/supabase/client"
+import Link from "next/link"
+
+// Get or create client ID from local storage
+const getClientId = () => {
+  if (typeof window === 'undefined') return null
+  
+  const clientId = localStorage.getItem('vote_client_id')
+  return clientId || null
+}
 
 export default function SignUpPage() {
-  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const router = useRouter()
+  const supabase = createClientComponentClient()
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      if (password !== confirmPassword) {
-        throw new Error("Passwords do not match")
-      }
+      const clientId = getClientId()
+      const metadata = clientId ? { client_id: clientId } : {}
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: `${location.origin}/auth/callback`,
+          data: metadata
         }
       })
 
       if (error) {
-        throw error
+        toast.error("Failed to sign up", {
+          description: error.message
+        })
+        return
       }
 
-      toast.success("Check your email", {
-        description: "We've sent you a confirmation link to complete your registration."
+      toast.success("Verification email sent", {
+        description: "Please check your email to verify your account."
       })
-
       router.push("/auth/verify-email")
     } catch (error) {
-      toast.error("Error", {
-        description: error instanceof Error ? error.message : "Could not create account. Please try again."
+      console.error("Sign up error:", error)
+      toast.error("Failed to sign up", {
+        description: "There was a problem signing you up. Please try again."
       })
     } finally {
       setIsLoading(false)
@@ -54,19 +65,25 @@ export default function SignUpPage() {
 
   const handleOAuthSignIn = async (provider: 'github' | 'google') => {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const clientId = getClientId()
+      const queryParams: Record<string, string> = {}
+      if (clientId) {
+        queryParams.client_id = clientId
+      }
+      
+      const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${location.origin}/auth/callback`,
+          queryParams
         }
       })
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
     } catch (error) {
-      toast.error("Error", {
-        description: `Could not authenticate with ${provider}. Please try again.`
+      console.error("OAuth sign in error:", error)
+      toast.error("Failed to sign in", {
+        description: "There was a problem signing you in. Please try again."
       })
     }
   }
@@ -80,6 +97,53 @@ export default function SignUpPage() {
         </p>
       </div>
       <div className="space-y-4">
+        <form onSubmit={onSubmit}>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading && (
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Sign up
+            </Button>
+          </div>
+        </form>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
         <div className="grid gap-2">
           <Button
             variant="outline"
@@ -89,9 +153,9 @@ export default function SignUpPage() {
             {isLoading ? (
               <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Github className="mr-2 h-4 w-4" />
+              <Icons.gitHub className="mr-2 h-4 w-4" />
             )}
-            Continue with GitHub
+            GitHub
           </Button>
           <Button
             variant="outline"
@@ -103,94 +167,18 @@ export default function SignUpPage() {
             ) : (
               <Icons.google className="mr-2 h-4 w-4" />
             )}
-            Continue with Google
+            Google
           </Button>
         </div>
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
-            </span>
-          </div>
-        </div>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              placeholder="name@example.com"
-              type="email"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect="off"
-              disabled={isLoading}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              placeholder="••••••••"
-              type="password"
-              autoComplete="new-password"
-              disabled={isLoading}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="confirm-password">Confirm Password</Label>
-            <Input
-              id="confirm-password"
-              placeholder="••••••••"
-              type="password"
-              autoComplete="new-password"
-              disabled={isLoading}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
-          <Button className="w-full" type="submit" disabled={isLoading}>
-            {isLoading && (
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Sign Up
-          </Button>
-        </form>
       </div>
-      <div className="text-center text-sm">
+      <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Button
-          variant="link"
-          className="underline"
-          onClick={() => router.push("/auth/sign-in")}
+        <Link
+          href="/auth/sign-in"
+          className="underline underline-offset-4 hover:text-primary"
         >
           Sign in
-        </Button>
-      </div>
-      <p className="px-8 text-center text-sm text-muted-foreground">
-        By clicking continue, you agree to our{" "}
-        <Button
-          variant="link"
-          className="underline"
-          onClick={() => router.push("/terms")}
-        >
-          Terms of Service
-        </Button>{" "}
-        and{" "}
-        <Button
-          variant="link"
-          className="underline"
-          onClick={() => router.push("/privacy")}
-        >
-          Privacy Policy
-        </Button>
-        .
+        </Link>
       </p>
     </div>
   )

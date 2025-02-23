@@ -3,7 +3,20 @@ DROP TRIGGER IF EXISTS refresh_rankings_vote ON votes;
 DROP TRIGGER IF EXISTS refresh_rankings_review ON reviews;
 
 -- Drop policies that depend on functions
-ALTER TABLE votes DROP POLICY IF EXISTS "Anonymous users can vote with rate limiting";
+DO $$ 
+DECLARE
+    policy_exists boolean;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'votes' 
+        AND policyname = 'Anonymous users can vote with rate limiting'
+    ) INTO policy_exists;
+
+    IF policy_exists THEN
+        DROP POLICY "Anonymous users can vote with rate limiting" ON public.votes;
+    END IF;
+END $$;
 
 -- Now we can safely drop the functions
 DROP FUNCTION IF EXISTS refresh_product_rankings() CASCADE;
@@ -79,11 +92,12 @@ CREATE INDEX ON product_rankings(confidence_score DESC);
 
 -- Update the refresh function
 CREATE OR REPLACE FUNCTION refresh_product_rankings()
-RETURNS void
+RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
   REFRESH MATERIALIZED VIEW CONCURRENTLY product_rankings;
+  RETURN NULL;
 END
 $$;
 

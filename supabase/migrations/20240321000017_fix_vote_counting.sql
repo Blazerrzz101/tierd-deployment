@@ -6,8 +6,8 @@ CREATE MATERIALIZED VIEW product_rankings AS
 WITH vote_stats AS (
   SELECT 
     p.id,
-    COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type::integer = 1), 0) as upvotes,
-    COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type::integer = -1), 0) as downvotes,
+    COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type = 'up'), 0) as upvotes,
+    COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type = 'down'), 0) as downvotes,
     COALESCE(AVG(r.rating), 0)::DECIMAL(3,2) as rating,
     COUNT(DISTINCT r.id) as review_count,
     GREATEST(1, EXTRACT(EPOCH FROM (now() - p.created_at))/3600) as hours_since_created
@@ -67,4 +67,4 @@ CREATE INDEX ON product_rankings(hot_score DESC);
 CREATE INDEX ON product_rankings(confidence_score DESC);
 
 -- Refresh rankings
-SELECT refresh_product_rankings(); 
+REFRESH MATERIALIZED VIEW CONCURRENTLY product_rankings; 

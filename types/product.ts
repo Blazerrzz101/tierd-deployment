@@ -18,7 +18,7 @@ export interface Product {
   downvotes: number;
   score: number;
   rank: number;
-  userVote: VoteType | null;
+  userVote: VoteType;
   rating: number;
   review_count: number;
   reviews: Review[];
@@ -59,7 +59,7 @@ export interface Category {
   description: string;
 }
 
-export type VoteType = 1 | -1;
+export type VoteType = 1 | -1 | null;
 
 export interface ProductWithVotes extends Product {
   ranking_score: number;

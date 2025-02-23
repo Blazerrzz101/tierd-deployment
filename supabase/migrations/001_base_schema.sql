@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS votes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID REFERENCES products(id) ON DELETE CASCADE,
     user_id UUID,
-    vote_type INTEGER CHECK (vote_type IN (-1, 1)),
+    vote_type TEXT CHECK (vote_type IN ('up', 'down')),
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),

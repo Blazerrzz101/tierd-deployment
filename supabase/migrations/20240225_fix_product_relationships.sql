@@ -7,14 +7,8 @@ ALTER TABLE threads DROP CONSTRAINT IF EXISTS threads_user_id_fkey;
 ALTER TABLE threads ADD CONSTRAINT threads_user_id_fkey 
   FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
--- Create user_profiles view that joins with auth.users
-CREATE OR REPLACE VIEW user_profiles AS
-SELECT 
-  au.id,
-  au.email,
-  COALESCE(au.raw_user_meta_data->>'username', 'Anonymous') as username,
-  COALESCE(au.raw_user_meta_data->>'avatar_url', NULL) as avatar_url
-FROM auth.users au;
+-- Drop and recreate get_product_details function with updated return type
+DROP FUNCTION IF EXISTS get_product_details(TEXT);
 
 -- Update get_product_details function to include user data
 CREATE OR REPLACE FUNCTION get_product_details(p_slug TEXT)
@@ -32,7 +26,7 @@ RETURNS TABLE (
   updated_at timestamptz,
   upvotes bigint,
   downvotes bigint,
-  user_vote smallint
+  user_vote text
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -50,13 +44,13 @@ BEGIN
     p.updated_at,
     COALESCE(v.upvotes, 0) as upvotes,
     COALESCE(v.downvotes, 0) as downvotes,
-    COALESCE(uv.vote_type, 0) as user_vote
+    COALESCE(uv.vote_type, NULL) as user_vote
   FROM products p
   LEFT JOIN (
     SELECT 
       product_id,
-      COUNT(*) FILTER (WHERE vote_type = 1) as upvotes,
-      COUNT(*) FILTER (WHERE vote_type = -1) as downvotes
+      COUNT(*) FILTER (WHERE vote_type = 'up') as upvotes,
+      COUNT(*) FILTER (WHERE vote_type = 'down') as downvotes
     FROM votes 
     GROUP BY product_id
   ) v ON v.product_id = p.id
@@ -68,5 +62,4 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant necessary permissions
-GRANT SELECT ON user_profiles TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION get_product_details(TEXT) TO authenticated, anon; 

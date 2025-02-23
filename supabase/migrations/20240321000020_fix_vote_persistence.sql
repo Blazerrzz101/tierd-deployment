@@ -1,19 +1,41 @@
--- Drop all existing versions of the function
-DO $$ 
-BEGIN
-    -- Drop all versions of vote_for_product function
-    DROP FUNCTION IF EXISTS public.vote_for_product(uuid, text);
-    DROP FUNCTION IF EXISTS public.vote_for_product(uuid, text, text);
-    DROP FUNCTION IF EXISTS public.vote_for_product(uuid, integer);
-    DROP FUNCTION IF EXISTS public.vote_for_product(uuid, integer, text);
-EXCEPTION 
-    WHEN undefined_function THEN NULL;
-END $$;
+-- Drop existing function if exists
+DROP FUNCTION IF EXISTS public.get_user_votes;
+DROP FUNCTION IF EXISTS public.vote_for_product;
 
--- Create the vote function with proper parameter names
-CREATE OR REPLACE FUNCTION public.vote_for_product(
+-- Create function to get user votes
+CREATE OR REPLACE FUNCTION get_user_votes(
+    p_product_ids uuid[],
+    p_client_id text DEFAULT NULL
+)
+RETURNS TABLE (
+    product_id uuid,
+    vote_type integer,
+    created_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        v.product_id,
+        v.vote_type,
+        v.created_at
+    FROM votes v
+    WHERE v.product_id = ANY(p_product_ids)
+    AND (
+        (v.user_id = auth.uid() AND auth.uid() IS NOT NULL)
+        OR 
+        (v.user_id IS NULL AND v.metadata->>'client_id' = p_client_id AND p_client_id IS NOT NULL)
+    );
+END;
+$$;
+
+-- Create function to vote for product
+CREATE OR REPLACE FUNCTION vote_for_product(
     p_product_id uuid,
-    p_vote_type text,
+    p_vote_type integer,
     p_client_id text DEFAULT NULL
 )
 RETURNS jsonb
@@ -23,15 +45,32 @@ SET search_path = public
 AS $$
 DECLARE
     v_user_id uuid;
-    v_existing_vote text;
-    v_new_vote_type text;
+    v_existing_vote integer;
+    v_vote_count integer;
 BEGIN
     -- Get current user ID
     v_user_id := auth.uid();
     
     -- Validate vote type
-    IF p_vote_type NOT IN ('up', 'down') THEN
-        RAISE EXCEPTION 'Invalid vote type';
+    IF p_vote_type NOT IN (1, -1) THEN
+        RAISE EXCEPTION 'Invalid vote type. Must be either 1 or -1';
+    END IF;
+
+    -- For anonymous users, check vote limit
+    IF v_user_id IS NULL THEN
+        IF p_client_id IS NULL THEN
+            RAISE EXCEPTION 'Client ID is required for anonymous voting';
+        END IF;
+
+        -- Check anonymous vote limit
+        SELECT COUNT(*) INTO v_vote_count
+        FROM votes
+        WHERE user_id IS NULL 
+        AND metadata->>'client_id' = p_client_id;
+
+        IF v_vote_count >= 5 THEN
+            RAISE EXCEPTION 'Anonymous vote limit reached';
+        END IF;
     END IF;
 
     -- Check for existing vote
@@ -79,6 +118,9 @@ BEGIN
         );
     END IF;
 
+    -- Refresh materialized views
+    PERFORM refresh_product_rankings();
+
     -- Return success response
     RETURN jsonb_build_object(
         'success', true,
@@ -87,20 +129,10 @@ BEGIN
 END;
 $$;
 
--- Grant execute permission to all users
-GRANT EXECUTE ON FUNCTION public.vote_for_product(uuid, text, text) TO authenticated, anon;
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION get_user_votes(uuid[], text) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION vote_for_product(uuid, integer, text) TO authenticated, anon;
 
--- Ensure votes table exists and has proper structure
-CREATE TABLE IF NOT EXISTS public.votes (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
-    user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
-    vote_type text CHECK (vote_type IN ('up', 'down')),
-    metadata jsonb DEFAULT '{}'::jsonb,
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
-
--- Create index for vote lookups
+-- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_votes_product_user ON votes(product_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_votes_client_id ON votes((metadata->>'client_id')) WHERE user_id IS NULL; 

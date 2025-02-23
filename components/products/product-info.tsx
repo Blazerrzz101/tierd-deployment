@@ -18,8 +18,6 @@ interface ProductInfoProps {
 }
 
 export function ProductInfo({ product }: ProductInfoProps) {
-  const { vote } = useVote();
-
   if (!product) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] space-y-4">
@@ -54,7 +52,18 @@ export function ProductInfo({ product }: ProductInfoProps) {
   };
 
   return (
-    <Card className="p-6 space-y-6">
+    <Card className="p-6 space-y-6 relative">
+      <VoteButtons
+        product={{
+          id: product.id,
+          name: product.name,
+          upvotes: product.upvotes || 0,
+          downvotes: product.downvotes || 0,
+          userVote: product.userVote || null
+        }}
+        className="absolute right-6 top-6"
+      />
+      
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight">
@@ -134,16 +143,6 @@ export function ProductInfo({ product }: ProductInfoProps) {
             <Heart className="h-5 w-5" />
           </Button>
         </div>
-
-        <VoteButtons
-          product={{
-            id: product.id,
-            userVote: null,
-            upvotes: product.upvotes || 0,
-            downvotes: product.downvotes || 0
-          }}
-          onVote={vote}
-        />
       </div>
     </Card>
   );

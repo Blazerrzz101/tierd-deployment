@@ -6,8 +6,8 @@ CREATE MATERIALIZED VIEW product_rankings AS
 WITH vote_counts AS (
     SELECT 
         product_id,
-        COUNT(CASE WHEN vote_type = 1 THEN 1 END) as upvotes,
-        COUNT(CASE WHEN vote_type = -1 THEN 1 END) as downvotes,
+        COUNT(CASE WHEN vote_type = 'up' THEN 1 END) as upvotes,
+        COUNT(CASE WHEN vote_type = 'down' THEN 1 END) as downvotes,
         COUNT(*) as total_votes
     FROM public.votes
     GROUP BY product_id

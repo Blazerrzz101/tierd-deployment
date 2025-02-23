@@ -35,8 +35,9 @@ export interface Product {
   description: string;
   price: number;
   rank: number;
-  votes: number;
-  userVote?: VoteType | null;
+  upvotes: number;
+  downvotes: number;
+  userVote: VoteType;
   imageUrl: string;
   category: string;
   specs: Record<string, string>;

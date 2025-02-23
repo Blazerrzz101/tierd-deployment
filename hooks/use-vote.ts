@@ -1,88 +1,82 @@
 "use client";
 
-import { useState } from "react";
-import { Product, VoteType } from "@/types/product";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "./use-auth";
-import { useRouter } from "next/navigation";
+import { VoteType } from "@/types/product";
+import { toast } from "sonner";
 
-function generateClientId() {
-  return 'anon_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+export interface VoteProduct {
+  id: string;
+  name: string;
+  upvotes: number;
+  downvotes: number;
+  userVote?: VoteType;
 }
 
-function getClientId() {
-  if (typeof window === 'undefined') return null;
-  
-  let clientId = localStorage.getItem('vote_client_id');
+const generateClientId = () => {
+  return `${Math.random().toString(36).substring(2)}_${Date.now()}`;
+};
+
+const getClientId = () => {
+  let clientId = localStorage.getItem('clientId');
   if (!clientId) {
     clientId = generateClientId();
-    localStorage.setItem('vote_client_id', clientId);
+    localStorage.setItem('clientId', clientId);
   }
   return clientId;
-}
+};
 
-export function useVote() {
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const router = useRouter();
+export const useVote = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const clientId = getClientId();
 
-  const vote = async (product: Product | undefined, voteType: VoteType) => {
-    if (!product) {
-      console.error('No product provided to vote function');
-      return false;
-    }
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+  }, []);
 
-    if (loading) {
-      return false;
-    }
-
+  const vote = async (product: VoteProduct, voteType: VoteType) => {
     try {
-      setLoading(true);
-      const clientId = getClientId();
+      setIsLoading(true);
 
       const { data, error } = await supabase.rpc('vote_for_product', {
         p_product_id: product.id,
-        p_vote_type: voteType === 1 ? 'upvote' : 'downvote',
+        p_vote_type: voteType,
         p_client_id: clientId
       });
 
       if (error) {
-        console.error('Error voting:', error);
-        toast({
-          title: "Error",
-          children: "Failed to submit vote. Please try again.",
-          variant: "destructive"
-        });
-        return false;
+        console.error('Vote error:', error);
+        throw error;
       }
 
-      toast({
-        title: "Success",
-        children: `Successfully ${voteType === 1 ? 'upvoted' : 'downvoted'} ${product.name}`,
-      });
+      toast.success(
+        voteType === null ? 'Vote removed' : `Vote ${voteType === 1 ? 'up' : 'down'} recorded`,
+        {
+          description: isAuthenticated
+            ? 'Your vote has been saved'
+            : 'Sign in to keep your votes permanently'
+        }
+      );
 
-      // Refresh the page to update the UI
-      router.refresh();
-      return true;
-
+      return voteType;
     } catch (error) {
-      console.error('Error in vote function:', error);
-      toast({
-        title: "Error",
-        children: "An unexpected error occurred. Please try again.",
-        variant: "destructive"
+      console.error('Error voting:', error);
+      toast.error('Failed to vote', {
+        description: 'Please try again later'
       });
-      return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return {
     vote,
-    loading,
-    isAuthenticated: !!user
+    isLoading,
+    isAuthenticated
   };
-}
+};

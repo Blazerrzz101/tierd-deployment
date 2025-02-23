@@ -53,11 +53,10 @@ CREATE TABLE public.votes (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    vote_type INTEGER CHECK (vote_type IN (-1, 1)),
+    vote_type TEXT CHECK (vote_type IN ('up', 'down')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    metadata JSONB DEFAULT '{}'::jsonb,
-    UNIQUE(product_id, user_id)
+    metadata JSONB DEFAULT '{}'::jsonb
 );
 
 -- Create reviews table
@@ -80,8 +79,8 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS public.product_rankings AS
 WITH vote_counts AS (
     SELECT 
         product_id,
-        COUNT(CASE WHEN vote_type = 1 THEN 1 END) as upvotes,
-        COUNT(CASE WHEN vote_type = -1 THEN 1 END) as downvotes,
+        COUNT(CASE WHEN vote_type = 'up' THEN 1 END) as upvotes,
+        COUNT(CASE WHEN vote_type = 'down' THEN 1 END) as downvotes,
         COUNT(*) as total_votes
     FROM public.votes
     GROUP BY product_id
@@ -163,13 +162,13 @@ SET search_path = public
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_vote_value INTEGER;
+    v_vote_value TEXT;
     v_result JSONB;
 BEGIN
-    -- Convert vote_type to integer
+    -- Convert vote_type to text
     v_vote_value := CASE 
-        WHEN p_vote_type = 'upvote' THEN 1
-        WHEN p_vote_type = 'downvote' THEN -1
+        WHEN p_vote_type = 'upvote' THEN 'up'
+        WHEN p_vote_type = 'downvote' THEN 'down'
         ELSE NULL
     END;
 
