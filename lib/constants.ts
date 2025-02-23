@@ -24,20 +24,20 @@ export const PLACEHOLDER_IMAGE = `data:image/svg+xml;base64,${Buffer.from(`
 // Placeholder image configuration
 export const PLACEHOLDER_IMAGES = {
   // Default placeholder for all products
-  DEFAULT: "/images/products/placeholder.svg",
+  DEFAULT: PLACEHOLDER_IMAGE,
   
   // Category-specific placeholders
-  GAMING_MICE: "/images/products/placeholder-mouse.svg",
-  KEYBOARDS: "/images/products/placeholder-keyboard.svg",
-  HEADSETS: "/images/products/placeholder-headset.svg",
-  MONITORS: "/images/products/placeholder-monitor.svg"
+  GAMING_MICE: PLACEHOLDER_IMAGE,
+  KEYBOARDS: PLACEHOLDER_IMAGE,
+  HEADSETS: PLACEHOLDER_IMAGE,
+  MONITORS: PLACEHOLDER_IMAGE
 }
 
 // Function to get placeholder image based on category
 export function getPlaceholderImage(category?: string): string {
   if (!category) return PLACEHOLDER_IMAGES.DEFAULT
   
-  const categoryKey = category.toUpperCase().replace(/\s+/g, '_') as keyof typeof PLACEHOLDER_IMAGES
+  const categoryKey = category.toUpperCase().replace(/[^A-Z]/g, '_') as keyof typeof PLACEHOLDER_IMAGES
   return PLACEHOLDER_IMAGES[categoryKey] || PLACEHOLDER_IMAGES.DEFAULT
 }
 

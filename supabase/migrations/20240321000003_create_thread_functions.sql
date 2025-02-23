@@ -15,7 +15,7 @@ RETURNS TABLE (
     mentioned_products text[],
     is_pinned boolean,
     is_locked boolean,
-    user jsonb,
+    user_info jsonb,
     products jsonb[]
 ) 
 LANGUAGE plpgsql
@@ -64,7 +64,7 @@ BEGIN
             'id', u.id,
             'username', u.username,
             'avatar_url', u.avatar_url
-        ) as user,
+        ) as user_info,
         COALESCE(tp.product_array, ARRAY[]::jsonb[]) as products
     FROM public.threads t
     LEFT JOIN public.users u ON u.id = t.user_id

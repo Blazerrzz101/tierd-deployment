@@ -9,7 +9,7 @@ import { ErrorBoundary } from "react-error-boundary"
 import { ErrorFallback } from "@/components/error-fallback"
 import { FC } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { products as localProducts } from "@/lib/data"
+import { products as localProducts, productImages } from "@/lib/data"
 import { generateSlug } from "@/lib/utils"
 
 function slugToName(url_slug: string): string {
@@ -20,61 +20,143 @@ function slugToName(url_slug: string): string {
     .join(' ')
 }
 
-async function fetchProduct(supabase: ReturnType<typeof createClientComponentClient<Database>>, url_slug: string) {
-  console.log('Attempting to fetch product with url_slug:', url_slug)
-  
+interface DatabaseThread {
+  id: string;
+  title: string;
+  content: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  upvotes: number;
+  downvotes: number;
+  mentioned_products: string[];
+  is_pinned: boolean;
+  is_locked: boolean;
+}
+
+interface DatabaseUser {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+}
+
+interface DatabaseReview {
+  id: string;
+  rating: number;
+  title: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+}
+
+interface Thread {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+}
+
+export async function fetchProduct(slug: string): Promise<Product | null> {
+  const supabase = createClientComponentClient<Database>()
   try {
-    // First try to find the product by querying the product_rankings view
-    const { data: products, error } = await supabase
+    console.log('Fetching product with slug:', slug)
+    
+    // Get the basic product data
+    const { data: productData, error: productError } = await supabase
+      .from('products')
+      .select('*')
+      .eq('url_slug', slug)
+      .single()
+
+    if (productError) {
+      console.error('Error fetching product:', productError)
+      return null
+    }
+
+    if (!productData) {
+      console.error('No product found with slug:', slug)
+      return null
+    }
+
+    // Get rankings data
+    const { data: rankingsData } = await supabase
       .from('product_rankings')
       .select('*')
-      .limit(50)
+      .eq('id', productData.id)
+      .single()
 
-    if (error) {
-      console.error('Error fetching products:', error)
-      throw new Error('Failed to fetch products. Please try again later.')
+    // Get reviews data
+    const { data: reviewsData } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('product_id', productData.id)
+
+    // Get threads data
+    const { data: threadProductsData } = await supabase
+      .from('thread_products')
+      .select('thread_id, product_id')
+      .eq('product_id', productData.id)
+
+    // If we have thread products, get the actual threads
+    let threadsData: Thread[] = []
+    if (threadProductsData && threadProductsData.length > 0) {
+      const threadIds = threadProductsData.map(tp => tp.thread_id)
+      const { data: threads } = await supabase
+        .from('threads')
+        .select('*')
+        .in('id', threadIds)
+      threadsData = (threads || []) as Thread[]
     }
 
-    if (!products || products.length === 0) {
-      console.error('No products found in the database')
-      throw new Error('No products available. Please try again later.')
+    // Transform the data into the expected format
+    const product: Product = {
+      id: productData.id,
+      name: productData.name,
+      description: productData.description || '',
+      category: productData.category,
+      price: productData.price || 0,
+      url_slug: productData.url_slug,
+      image_url: productData.image_url || `/images/products/${productData.category.toLowerCase()}.png`,
+      specifications: productData.specifications as Record<string, any> | null,
+      created_at: productData.created_at,
+      updated_at: productData.updated_at,
+      upvotes: rankingsData?.upvotes || 0,
+      downvotes: rankingsData?.downvotes || 0,
+      rating: rankingsData?.rating || 0,
+      review_count: rankingsData?.review_count || 0,
+      reviews: (reviewsData || []).map(review => ({
+        id: review.id,
+        content: review.content || '',
+        rating: review.rating || 0,
+        title: review.title || '',
+        created_at: review.created_at,
+        user: {
+          id: review.user_id || 'anonymous',
+          email: '',
+          display_name: 'Anonymous',
+          avatar_url: null
+        }
+      })),
+      threads: (threadsData || []).map(thread => ({
+        id: thread.id,
+        title: thread.title || '',
+        content: thread.content || '',
+        created_at: thread.created_at,
+        user: {
+          id: thread.user_id || 'anonymous',
+          email: '',
+          display_name: 'Anonymous',
+          avatar_url: null
+        }
+      }))
     }
 
-    // Find the product by matching the generated slug
-    const product = products.find(p => generateSlug(p.name || '') === url_slug)
-
-    if (!product) {
-      console.error('No product found with slug:', url_slug)
-      throw new Error(`Product "${url_slug}" not found. Please check the URL and try again.`)
-    }
-
-    if (!product.name || !product.id) {
-      console.error('Invalid product data:', product)
-      throw new Error('Invalid product data. Please try again later.')
-    }
-
-    // Transform the database product to match our Product type
-    const transformedProduct: Product = {
-      id: String(product.id),
-      name: String(product.name),
-      description: product.description || '',
-      category: product.category || '',
-      price: product.price || 0,
-      imageUrl: product.image_url || '/placeholder.png',
-      votes: (product.upvotes || 0) - (product.downvotes || 0),
-      rank: product.rank || 0,
-      specs: {},
-      userVote: null,
-      url_slug: generateSlug(product.name)
-    }
-
-    return transformedProduct
+    console.log('Successfully fetched product:', product.name)
+    return product
   } catch (error) {
     console.error('Error in fetchProduct:', error)
-    if (error instanceof Error) {
-      throw error
-    }
-    throw new Error('An unexpected error occurred. Please try again later.')
+    return null
   }
 }
 
@@ -83,7 +165,7 @@ function useProduct(url_slug: string) {
 
   return useQuery({
     queryKey: ['product', url_slug],
-    queryFn: () => fetchProduct(supabase, url_slug),
+    queryFn: () => fetchProduct(url_slug),
     retry: 1,
     staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
     gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes

@@ -1,13 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { notFound } from "next/navigation"
-import { supabase } from "@/lib/supabase/client"
+import { Suspense } from "react"
+import { useProduct } from "@/hooks/use-product"
 import { ProductDetails } from "@/components/products/product-details"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { normalizeProduct } from "@/lib/utils"
-import { Product } from "@/types/product"
+import { ProductSkeleton } from "@/components/products/product-skeleton"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 interface ProductPageProps {
   params: {
@@ -16,49 +13,39 @@ interface ProductPageProps {
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
-  const { data: product, isLoading, error } = useQuery({
-    queryKey: ["product", params.slug],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("url_slug", params.slug)
-        .single()
+  const { data: product, isLoading, error } = useProduct(params.slug)
 
-      if (error || !data) {
-        throw new Error("Product not found")
-      }
-
-      const normalized = normalizeProduct(data)
-      
-      // Ensure all required fields are present
-      if (!normalized.id || !normalized.name || !normalized.category) {
-        throw new Error("Invalid product data")
-      }
-
-      return normalized as Required<Product>
-    },
-  })
-
-  // Handle loading state
-  if (isLoading) {
+  if (error) {
     return (
-      <div className="container py-8">
-        <div className="flex min-h-[50vh] items-center justify-center">
-          <LoadingSpinner size="lg" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold">Error Loading Product</h2>
+          <p className="mt-2 text-muted-foreground">
+            {error instanceof Error ? error.message : 'Failed to load product. Please try again.'}
+          </p>
         </div>
       </div>
     )
   }
 
-  // Handle error state
-  if (error || !product) {
-    notFound()
-  }
-
   return (
-    <div className="container py-8">
-      <ProductDetails product={product} />
-    </div>
+    <ErrorBoundary>
+      <Suspense fallback={<ProductSkeleton />}>
+        {isLoading ? (
+          <ProductSkeleton />
+        ) : product ? (
+          <ProductDetails product={product} />
+        ) : (
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold">Product Not Found</h2>
+              <p className="mt-2 text-muted-foreground">
+                The product you're looking for doesn't exist or has been removed.
+              </p>
+            </div>
+          </div>
+        )}
+      </Suspense>
+    </ErrorBoundary>
   )
 } 

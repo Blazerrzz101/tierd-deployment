@@ -82,7 +82,7 @@ export function ProductCard({ product: rawProduct, className, variant }: Product
           isCompact ? "aspect-[4/3]" : "aspect-square"
         )}>
           <ProductImage
-            src={product.imageUrl}
+            src={product.image_url || product.imageUrl}
             alt={product.name}
             category={product.category}
             fill

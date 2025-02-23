@@ -1,226 +1,144 @@
 "use client"
 
-import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase/client"
-import { useAuth } from "@/hooks/use-auth"
-import { Star, ThumbsUp, Flag } from "lucide-react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar } from "@/components/ui/avatar"
-import { useToast } from "@/hooks/use-toast"
-import { formatDistanceToNow } from "date-fns"
-
-interface Review {
-  id: string
-  user_id: string
-  product_id: string
-  rating: number
-  comment: string
-  helpful_count: number
-  created_at: string
-  user: {
-    display_name: string
-    avatar_url: string
-  }
-}
+import { Star, MessageSquarePlus } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
+import { formatTimeAgo } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 interface ProductReviewsProps {
   productId: string
+  reviews?: Array<{
+    id: string
+    rating: number
+    content: string
+    title: string
+    created_at: string
+    user: {
+      id: string
+      username: string
+      avatar_url: string | null
+    }
+  }>
 }
 
-export function ProductReviews({ productId }: ProductReviewsProps) {
-  const [newReview, setNewReview] = useState("")
-  const [rating, setRating] = useState(5)
+export function ProductReviews({ productId, reviews: initialReviews }: ProductReviewsProps) {
   const { user } = useAuth()
-  const { toast } = useToast()
+  const router = useRouter()
 
-  // Fetch reviews
-  const { data: reviews, refetch } = useQuery<Review[]>({
-    queryKey: ['product-reviews', productId],
+  const { data: reviews, isLoading } = useQuery({
+    queryKey: ["product-reviews", productId],
     queryFn: async () => {
+      if (initialReviews) return initialReviews
+
       const { data, error } = await supabase
-        .from('product_reviews')
+        .from("reviews")
         .select(`
           *,
-          user:user_profiles (
-            display_name,
+          user:users (
+            id,
+            username,
             avatar_url
           )
         `)
-        .eq('product_id', productId)
-        .order('created_at', { ascending: false })
+        .eq("product_id", productId)
+        .order("created_at", { ascending: false })
 
       if (error) throw error
       return data
-    }
+    },
+    initialData: initialReviews
   })
 
-  // Submit review
-  const handleSubmitReview = async () => {
+  const handleWriteReview = () => {
     if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be signed in to leave a review."
-      })
+      router.push("/auth/sign-in")
       return
     }
-
-    try {
-      const { error } = await supabase
-        .from('product_reviews')
-        .insert({
-          product_id: productId,
-          user_id: user.id,
-          rating,
-          comment: newReview
-        })
-
-      if (error) throw error
-
-      toast({
-        title: "Review submitted",
-        description: "Thank you for your feedback!"
-      })
-
-      setNewReview("")
-      setRating(5)
-      refetch()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit review. Please try again.",
-        variant: "destructive"
-      })
-    }
+    // TODO: Implement review creation dialog
   }
 
-  // Mark review as helpful
-  const handleHelpful = async (reviewId: string) => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be signed in to mark reviews as helpful."
-      })
-      return
-    }
-
-    try {
-      const { error } = await supabase.rpc('increment_helpful_count', {
-        review_id: reviewId
-      })
-
-      if (error) throw error
-      refetch()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to mark review as helpful.",
-        variant: "destructive"
-      })
-    }
+  if (isLoading) {
+    return (
+      <div className="flex h-[200px] items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-8">
-      {/* Write a review */}
-      {user && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            {[1, 2, 3, 4, 5].map((value) => (
-              <button
-                key={value}
-                onClick={() => setRating(value)}
-                className="focus:outline-none"
-              >
-                <Star
-                  className={`h-6 w-6 ${
-                    value <= rating
-                      ? "text-yellow-400 fill-current"
-                      : "text-gray-300"
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold">
+          Reviews ({reviews?.length || 0})
+        </h3>
+        <Button onClick={handleWriteReview}>
+          <MessageSquarePlus className="mr-2 h-4 w-4" />
+          Write a Review
+        </Button>
+      </div>
 
-          <Textarea
-            value={newReview}
-            onChange={(e) => setNewReview(e.target.value)}
-            placeholder="Write your review..."
-            className="min-h-[100px]"
-          />
-
-          <Button
-            onClick={handleSubmitReview}
-            disabled={!newReview.trim()}
-          >
-            Submit Review
-          </Button>
-        </div>
-      )}
-
-      {/* Reviews list */}
-      <div className="space-y-6">
-        {reviews?.map((review) => (
-          <div key={review.id} className="space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <img
-                    src={review.user.avatar_url || "/default-avatar.png"}
-                    alt={review.user.display_name}
-                  />
-                </Avatar>
-                <div>
-                  <p className="font-medium">{review.user.display_name}</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${
-                            i < review.rating
-                              ? "text-yellow-400 fill-current"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {formatDistanceToNow(new Date(review.created_at), {
-                        addSuffix: true
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleHelpful(review.id)}
-                >
-                  <ThumbsUp className="h-4 w-4 mr-1" />
-                  {review.helpful_count}
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <Flag className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <p className="text-gray-600">{review.comment}</p>
-          </div>
-        ))}
-
-        {!reviews?.length && (
-          <p className="text-center text-gray-500">
+      {reviews?.length === 0 ? (
+        <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-center">
+          <p className="text-muted-foreground">
             No reviews yet. Be the first to review this product!
           </p>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {reviews?.map((review) => (
+            <div
+              key={review.id}
+              className="rounded-lg border border-white/10 bg-white/5 p-6"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                    {review.user.avatar_url ? (
+                      <img
+                        src={review.user.avatar_url}
+                        alt={review.user.username}
+                        className="h-8 w-8 rounded-full"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {review.user.username[0].toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-medium">{review.user.username}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {formatTimeAgo(review.created_at)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={cn(
+                        "h-4 w-4",
+                        i < review.rating
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-muted-foreground"
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="mb-2 font-medium">{review.title}</h4>
+                <p className="text-muted-foreground">{review.content}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

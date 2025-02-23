@@ -1,86 +1,119 @@
 "use client"
 
-import { Product } from "@/types"
-import { Card, CardContent } from "@/components/ui/card"
-import { products } from "@/lib/data"
-import Image from "next/image"
-import { Check, Minus } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/lib/supabase/client"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+import { Product } from "@/types/product"
+import { ProductImage } from "@/components/ui/product-image"
+import Link from "next/link"
 
 interface ProductComparisonProps {
   product: Product
 }
 
 export function ProductComparison({ product }: ProductComparisonProps) {
-  // Get similar products from the same category
-  const similarProducts = products
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 2)
+  const { data: similarProducts, isLoading } = useQuery({
+    queryKey: ["similar-products", product.category, product.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("category", product.category)
+        .neq("id", product.id)
+        .order("score", { ascending: false })
+        .limit(3)
 
-  const comparisonProducts = [product, ...similarProducts]
+      if (error) throw error
+      return data.map(p => ({
+        ...p,
+        specs: p.specs || {},
+        imageUrl: p.image_url,
+        category: p.category || "Unknown"
+      })) as Product[]
+    },
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[200px] items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    )
+  }
+
+  const allProducts = [product, ...(similarProducts || [])]
+  const allSpecs = Array.from(
+    new Set(
+      allProducts.flatMap(p => Object.keys(p.specs || {}))
+    )
+  ).sort()
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {comparisonProducts.map((p) => (
-          <Card key={p.id} className={cn(
-            p.id === product.id && "border-primary"
-          )}>
-            <CardContent className="p-6">
-              <div className="relative aspect-square overflow-hidden rounded-lg">
-                <Image
-                  src={p.imageUrl}
-                  alt={p.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <h4 className="mt-4 text-lg font-semibold">{p.name}</h4>
-              <p className="mt-1 text-sm text-muted-foreground">
-                ${p.price.toFixed(2)}
-              </p>
-              <div className="mt-4 space-y-2">
-                {[
-                  { label: "Rank", value: `#${p.rank}` },
-                  { label: "Votes", value: p.votes },
-                  { label: "Category", value: p.category },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{item.label}</span>
-                    <span className="font-medium">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold">
+          Compare with Similar Products
+        </h3>
+        <Button asChild>
+          <Link href={`/products?category=${product.category}`}>
+            <Plus className="mr-2 h-4 w-4" />
+            Compare More
+          </Link>
+        </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <div className="grid gap-4">
-            {[
-              { feature: "Wireless", products: [true, false, true] },
-              { feature: "RGB Lighting", products: [true, true, false] },
-              { feature: "Software Support", products: [true, true, true] },
-              { feature: "On-board Memory", products: [true, false, false] },
-            ].map((row, index) => (
-              <div key={index} className="grid grid-cols-4 items-center gap-4">
-                <span className="text-sm font-medium">{row.feature}</span>
-                {row.products.map((hasFeature, i) => (
-                  <div key={i} className="flex justify-center">
-                    {hasFeature ? (
-                      <Check className="h-4 w-4 text-primary" />
-                    ) : (
-                      <Minus className="h-4 w-4 text-muted-foreground" />
-                    )}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[800px] border-collapse">
+          <thead>
+            <tr>
+              <th className="p-4 text-left font-medium text-muted-foreground">
+                Specification
+              </th>
+              {allProducts.map((p) => (
+                <th key={p.id} className="p-4 text-left">
+                  <div className="space-y-2">
+                    <div className="relative aspect-square w-24 overflow-hidden rounded-lg">
+                      <ProductImage
+                        src={p.imageUrl}
+                        alt={p.name}
+                        category={p.category}
+                        fill
+                        sizes="96px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <Link
+                      href={`/products/${p.url_slug || p.id}`}
+                      className="block font-medium hover:underline"
+                    >
+                      {p.name}
+                    </Link>
+                    <div className="text-lg font-bold">
+                      ${p.price?.toFixed(2)}
+                    </div>
                   </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {allSpecs.map((spec) => (
+              <tr key={spec} className="border-t border-white/10">
+                <td className="p-4 font-medium text-muted-foreground">
+                  {spec}
+                </td>
+                {allProducts.map((p) => (
+                  <td key={p.id} className="p-4">
+                    {p.specs?.[spec] || "—"}
+                  </td>
                 ))}
-              </div>
+              </tr>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

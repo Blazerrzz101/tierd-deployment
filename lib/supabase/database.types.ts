@@ -117,6 +117,7 @@ export type Database = {
           image_url: string | null
           name: string
           price: number | null
+          specifications: Json | null
           url_slug: string
           updated_at: string
         }
@@ -128,6 +129,7 @@ export type Database = {
           image_url?: string | null
           name: string
           price?: number | null
+          specifications?: Json | null
           url_slug: string
           updated_at?: string
         }
@@ -139,10 +141,19 @@ export type Database = {
           image_url?: string | null
           name?: string
           price?: number | null
+          specifications?: Json | null
           url_slug?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "product_rankings"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       reviews: {
         Row: {
@@ -180,16 +191,16 @@ export type Database = {
             foreignKeyName: "reviews_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "product_rankings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reviews_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
         ]
       }
       thread_comments: {
@@ -261,13 +272,6 @@ export type Database = {
             foreignKeyName: "thread_products_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "product_rankings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "thread_products_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -277,7 +281,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "threads"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
       thread_votes: {
@@ -323,6 +327,7 @@ export type Database = {
           updated_at: string
           upvotes: number | null
           user_id: string
+          title: string
         }
         Insert: {
           comment_count?: number | null
@@ -334,6 +339,7 @@ export type Database = {
           updated_at?: string
           upvotes?: number | null
           user_id: string
+          title: string
         }
         Update: {
           comment_count?: number | null
@@ -345,8 +351,17 @@ export type Database = {
           updated_at?: string
           upvotes?: number | null
           user_id?: string
+          title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "threads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       user_preferences: {
         Row: {
@@ -414,6 +429,7 @@ export type Database = {
           activity_log: Json
           created_at: string
           last_seen: string
+          display_name: string | null
         }
         Insert: {
           id: string
@@ -426,6 +442,7 @@ export type Database = {
           activity_log?: Json
           created_at?: string
           last_seen?: string
+          display_name?: string | null
         }
         Update: {
           id?: string
@@ -438,6 +455,7 @@ export type Database = {
           activity_log?: Json
           created_at?: string
           last_seen?: string
+          display_name?: string | null
         }
         Relationships: [
           {
@@ -453,20 +471,36 @@ export type Database = {
     Views: {
       product_rankings: {
         Row: {
-          category: string | null
+          id: string
+          name: string
           description: string | null
-          downvotes: number | null
-          id: string | null
-          image_url: string | null
-          name: string | null
-          net_score: number | null
+          category: string
           price: number | null
-          rank: number | null
-          rating: number | null
-          review_count: number | null
-          upvotes: number | null
+          image_url: string | null
+          url_slug: string
+          specifications: Json | null
+          upvotes: number
+          downvotes: number
+          total_votes: number
+          rating: number
+          review_count: number
+          score: number
+          ranking_score: number
+          rank: number
+          created_at: string
+          updated_at: string
         }
-        Relationships: []
+        Insert: never
+        Update: never
+        Relationships: [
+          {
+            foreignKeyName: "product_rankings_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Functions: {

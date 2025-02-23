@@ -301,67 +301,100 @@ CREATE TYPE product_result AS (
 
 -- Create function to get product rankings by category
 CREATE OR REPLACE FUNCTION get_product_rankings(p_category TEXT DEFAULT NULL)
-RETURNS SETOF product_result
-SECURITY DEFINER
+RETURNS TABLE (
+    id UUID,
+    name VARCHAR(255),
+    description TEXT,
+    category product_category,
+    price DECIMAL(10,2),
+    image_url TEXT,
+    url_slug VARCHAR(255),
+    specifications JSONB,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    upvotes BIGINT,
+    downvotes BIGINT,
+    rating DECIMAL(3,2),
+    review_count BIGINT,
+    score BIGINT,
+    rank BIGINT
+) SECURITY DEFINER
 SET search_path = public
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_current_time TIMESTAMP WITH TIME ZONE;
+    v_current_time TIMESTAMPTZ;
 BEGIN
     -- Get current time once to ensure consistency
     v_current_time := now();
     
-    -- Refresh the materialized view to ensure latest data
-    PERFORM refresh_rankings();
-
     RETURN QUERY
+    WITH product_stats AS (
+        SELECT 
+            p.id,
+            COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type = 'upvote'), 0) as upvotes,
+            COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type = 'downvote'), 0) as downvotes,
+            COALESCE(AVG(r.rating), 0)::DECIMAL(3,2) as rating,
+            COUNT(DISTINCT r.id) as review_count,
+            COALESCE(
+                COUNT(v.*) FILTER (WHERE v.vote_type = 'upvote') -
+                COUNT(v.*) FILTER (WHERE v.vote_type = 'downvote'),
+                0
+            ) as score
+        FROM public.products p
+        LEFT JOIN public.votes v ON p.id = v.product_id
+        LEFT JOIN public.reviews r ON p.id = r.product_id
+        WHERE (p_category IS NULL OR p.category::text = p_category)
+        GROUP BY p.id
+    ),
+    ranked_products AS (
+        SELECT 
+            p.*,
+            ps.upvotes,
+            ps.downvotes,
+            ps.rating,
+            ps.review_count,
+            ps.score,
+            ROW_NUMBER() OVER (
+                ORDER BY ps.score DESC, ps.rating DESC, p.created_at DESC
+            ) as rank
+        FROM public.products p
+        JOIN product_stats ps ON p.id = ps.id
+        WHERE (p_category IS NULL OR p.category::text = p_category)
+    )
     SELECT 
-        pr.id,
-        pr.name,
-        pr.description,
-        pr.category,
-        pr.price,
-        COALESCE(pr.image_url, 'https://placehold.co/400x400/1a1a1a/ff4b26?text=No+Image'),
-        pr.url_slug,
-        pr.specifications,
-        pr.upvotes,
-        pr.downvotes,
-        pr.rating,
-        pr.review_count,
-        pr.rank,
-        v_current_time,
-        v_current_time,
-        NULL::TEXT
-    FROM public.product_rankings pr
-    WHERE (p_category IS NULL OR pr.category = p_category)
-    ORDER BY 
-        CASE WHEN p_category IS NOT NULL THEN pr.rank ELSE 1 END,
-        (pr.upvotes - pr.downvotes) DESC,
-        pr.rating DESC;
-
-    -- If no rows were returned
-    IF NOT FOUND THEN
-        RETURN QUERY SELECT
-            NULL::UUID,
-            'No Products Found'::TEXT,
-            'No products are currently available in this category.'::TEXT,
-            p_category,
-            NULL::DECIMAL,
-            'https://placehold.co/400x400/1a1a1a/ff4b26?text=No+Image'::TEXT,
-            NULL::TEXT,
-            '{}'::JSONB,
-            0::BIGINT,
-            0::BIGINT,
-            0::DECIMAL,
-            0::BIGINT,
-            0::BIGINT,
-            v_current_time,
-            v_current_time,
-            'No products found'::TEXT;
-    END IF;
+        rp.id,
+        rp.name,
+        rp.description,
+        rp.category,
+        rp.price,
+        COALESCE(rp.image_url, '/placeholder.png'),
+        rp.url_slug,
+        rp.specifications,
+        rp.created_at,
+        rp.updated_at,
+        rp.upvotes,
+        rp.downvotes,
+        rp.rating,
+        rp.review_count,
+        rp.score,
+        rp.rank
+    FROM ranked_products rp
+    ORDER BY rp.rank ASC;
 END;
 $$;
+
+-- Grant execute permission to authenticated and anon users
+GRANT EXECUTE ON FUNCTION public.get_product_rankings(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_product_rankings(text) TO anon;
+
+-- Create indexes to improve performance
+CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category);
+CREATE INDEX IF NOT EXISTS idx_votes_product_id ON public.votes(product_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON public.reviews(product_id);
+
+-- Refresh the materialized view
+REFRESH MATERIALIZED VIEW product_rankings;
 
 -- Create function to get product details
 CREATE OR REPLACE FUNCTION get_product_details(p_slug TEXT)
@@ -563,6 +596,63 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE NOTICE 'Error granting permissions: %', SQLERRM;
 END $$;
+
+-- Create the vote_for_product function
+CREATE OR REPLACE FUNCTION public.vote_for_product(
+    p_product_id UUID,
+    p_vote_type TEXT
+)
+RETURNS void
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_user_id UUID;
+    v_existing_vote TEXT;
+BEGIN
+    -- Get the current user ID
+    v_user_id := auth.uid();
+    
+    -- Check if user is authenticated
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'Not authenticated';
+    END IF;
+
+    -- Validate vote type
+    IF p_vote_type NOT IN ('upvote', 'downvote') THEN
+        RAISE EXCEPTION 'Invalid vote type. Must be either upvote or downvote';
+    END IF;
+
+    -- Check for existing vote
+    SELECT vote_type INTO v_existing_vote
+    FROM votes
+    WHERE product_id = p_product_id AND user_id = v_user_id;
+
+    -- Handle the vote
+    IF v_existing_vote IS NULL THEN
+        -- Insert new vote
+        INSERT INTO votes (product_id, user_id, vote_type)
+        VALUES (p_product_id, v_user_id, p_vote_type);
+    ELSIF v_existing_vote = p_vote_type THEN
+        -- Remove vote if clicking the same type again
+        DELETE FROM votes
+        WHERE product_id = p_product_id AND user_id = v_user_id;
+    ELSE
+        -- Update vote if changing from upvote to downvote or vice versa
+        UPDATE votes
+        SET vote_type = p_vote_type,
+            updated_at = now()
+        WHERE product_id = p_product_id AND user_id = v_user_id;
+    END IF;
+
+    -- Refresh the rankings
+    REFRESH MATERIALIZED VIEW CONCURRENTLY product_rankings;
+END;
+$$;
+
+-- Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION public.vote_for_product(UUID, TEXT) TO authenticated;
 
 -- Commit transaction if everything succeeded
 COMMIT;

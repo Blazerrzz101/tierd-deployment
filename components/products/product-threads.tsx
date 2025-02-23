@@ -1,76 +1,145 @@
-import { useQuery } from '@tanstack/react-query'
-import { ThreadCard } from '@/components/threads/thread-card'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { ThreadManager } from '@/lib/supabase/thread-manager'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { AlertCircle, MessageSquare } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
+"use client"
+
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/lib/supabase/client"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Button } from "@/components/ui/button"
+import { MessageSquarePlus } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
+import { formatTimeAgo } from "@/lib/utils"
+import { ThreadCard } from "@/components/threads/thread-card"
+import { Thread } from "@/types/thread"
 
 interface ProductThreadsProps {
   productId: string
+  threads?: Array<{
+    id: string
+    title: string
+    content: string
+    created_at: string
+    user: {
+      id: string
+      username: string
+      avatar_url: string | null
+    }
+  }>
 }
 
-export function ProductThreads({ productId }: ProductThreadsProps) {
-  const { data: threads, isLoading, error, refetch } = useQuery({
-    queryKey: ['product-threads', productId],
-    queryFn: () => ThreadManager.getThreadsForProduct(productId),
-    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
-    retry: 2
+interface ThreadWithCounts extends Omit<Thread, 'taggedProducts'> {
+  _count: {
+    replies: number
+    votes: number
+  }
+}
+
+export function ProductThreads({ productId, threads: initialThreads }: ProductThreadsProps) {
+  const { user } = useAuth()
+  const router = useRouter()
+
+  const { data: product } = useQuery({
+    queryKey: ["product", productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", productId)
+        .single()
+
+      if (error) throw error
+      return data
+    },
   })
+
+  const { data: threads, isLoading } = useQuery({
+    queryKey: ["product-threads", productId],
+    queryFn: async () => {
+      if (initialThreads) return initialThreads
+
+      const { data, error } = await supabase
+        .from("threads")
+        .select(`
+          *,
+          user:users (
+            id,
+            username,
+            avatar_url
+          ),
+          _count (
+            replies,
+            votes
+          )
+        `)
+        .eq("product_id", productId)
+        .order("created_at", { ascending: false })
+
+      if (error) throw error
+      return data
+    },
+    initialData: initialThreads
+  })
+
+  const handleCreateThread = () => {
+    if (!user) {
+      router.push("/auth/sign-in")
+      return
+    }
+    // TODO: Implement thread creation dialog
+  }
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
+      <div className="flex h-[200px] items-center justify-center">
         <LoadingSpinner />
       </div>
     )
   }
 
-  if (error) {
-    return (
-      <Alert variant="destructive" className="my-4">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>
-          <div className="space-y-2">
-            <p>Failed to load discussions. {error.message}</p>
-            <Button onClick={() => refetch()} variant="outline" size="sm">
-              Try again
-            </Button>
-          </div>
-        </AlertDescription>
-      </Alert>
-    )
-  }
-
-  if (!threads?.length) {
-    return (
-      <div className="rounded-lg border border-white/10 bg-white/5 p-8 text-center">
-        <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground" />
-        <p className="mt-2 text-muted-foreground">
-          No discussions mentioning this product yet
-        </p>
-        <Button asChild className="mt-4">
-          <Link href="/threads/new">Start a Discussion</Link>
-        </Button>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">Discussions</h3>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/threads/new">New Discussion</Link>
+        <h3 className="text-xl font-semibold">
+          Discussions ({threads?.length || 0})
+        </h3>
+        <Button onClick={handleCreateThread}>
+          <MessageSquarePlus className="mr-2 h-4 w-4" />
+          Start Discussion
         </Button>
       </div>
-      <div className="divide-y divide-white/10">
-        {threads.map((thread) => (
-          <ThreadCard key={thread.id} thread={thread} />
-        ))}
-      </div>
+
+      {threads?.length === 0 ? (
+        <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-center">
+          <p className="text-muted-foreground">
+            No discussions yet. Start a new discussion about this product!
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {threads?.map((thread) => (
+            <ThreadCard
+              key={thread.id}
+              thread={{
+                ...thread,
+                taggedProducts: [{
+                  id: productId,
+                  name: product?.name || "",
+                  description: product?.description || "",
+                  category: product?.category || "",
+                  url_slug: product?.url_slug || "",
+                  image_url: product?.image_url || "",
+                  price: product?.price || 0,
+                  specifications: product?.specifications || {},
+                  is_active: product?.is_active || false,
+                  upvotes: product?.upvotes || 0,
+                  downvotes: product?.downvotes || 0,
+                  score: product?.score || 0,
+                  rank: product?.rank || 0
+                }]
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 } 

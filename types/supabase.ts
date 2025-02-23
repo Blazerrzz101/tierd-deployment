@@ -328,25 +328,24 @@ export interface Database {
       }
       get_product_rankings: {
         Args: {
-          p_category?: string
+          p_category?: string | null
         }
         Returns: {
           id: string
           name: string
-          description: string
+          description: string | null
           category: string
-          category_slug: string
-          price: number
-          image_url: string
+          price: number | null
+          image_url: string | null
           url_slug: string
-          specifications: Json
+          specifications: Json | null
+          created_at: string
+          updated_at: string
           upvotes: number
           downvotes: number
           rating: number
           review_count: number
-          total_votes: number
           score: number
-          ranking_score: number
           rank: number
         }[]
       }
@@ -376,13 +375,14 @@ export interface Database {
       vote_for_product: {
         Args: {
           p_product_id: string
-          p_vote_type: number
+          p_vote_type: string
         }
-        Returns: void
+        Returns: undefined
       }
     }
     Enums: {
       vote_type: 'upvote' | 'downvote'
+      product_category: "gaming-mice" | "gaming-keyboards" | "gaming-monitors" | "gaming-headsets" | "gaming-chairs"
     }
   }
 } 

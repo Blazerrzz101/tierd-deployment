@@ -1,16 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import { Product } from "@/types/product"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { Maximize2 } from "lucide-react"
+import { ZoomIn } from "lucide-react"
+import { ProductImage } from "@/components/ui/product-image"
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
-  DialogTitle,
 } from "@/components/ui/dialog"
 
 interface ProductGalleryProps {
@@ -20,45 +19,43 @@ interface ProductGalleryProps {
 export function ProductGallery({ product }: ProductGalleryProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   
-  // Get the base image URL
-  const baseImageUrl = product.imageUrl || '/placeholder.jpg'
-  
-  // Create array of image URLs
+  // Generate additional images based on category
   const images = [
-    baseImageUrl,
-    baseImageUrl,
-    baseImageUrl,
-    baseImageUrl
-  ]
+    product.image_url,
+    `/images/products/${product.category}/detail-1.jpg`,
+    `/images/products/${product.category}/detail-2.jpg`,
+    `/images/products/${product.category}/detail-3.jpg`,
+  ].filter(Boolean) // Filter out any undefined/null values
 
   return (
     <div className="space-y-4">
       <Dialog>
         <DialogTrigger asChild>
-          <Card className="group relative aspect-square w-full max-w-[500px] cursor-zoom-in overflow-hidden">
-            <Image
+          <Card className="relative aspect-square overflow-hidden cursor-zoom-in group">
+            <ProductImage
               src={images[selectedImage]}
               alt={product.name}
+              category={product.category}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, 50vw"
               priority
+              className="object-cover transition-transform group-hover:scale-105"
             />
-            <div className="absolute right-4 top-4">
-              <Maximize2 className="h-5 w-5 opacity-50 transition-opacity group-hover:opacity-100" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              <ZoomIn className="h-8 w-8 text-white" />
             </div>
           </Card>
         </DialogTrigger>
         <DialogContent className="max-w-3xl">
-          <DialogTitle className="sr-only">
-            {product.name} - Image {selectedImage + 1}
-          </DialogTitle>
           <div className="relative aspect-square">
-            <Image
+            <ProductImage
               src={images[selectedImage]}
               alt={product.name}
+              category={product.category}
               fill
-              className="object-contain"
+              sizes="100vw"
               priority
+              className="object-contain"
             />
           </div>
         </DialogContent>
@@ -69,15 +66,17 @@ export function ProductGallery({ product }: ProductGalleryProps) {
           <Card
             key={index}
             className={cn(
-              "relative aspect-square cursor-pointer overflow-hidden transition-all hover:ring-2 hover:ring-primary",
+              "relative aspect-square overflow-hidden cursor-pointer transition-all",
               selectedImage === index && "ring-2 ring-primary"
             )}
             onClick={() => setSelectedImage(index)}
           >
-            <Image
+            <ProductImage
               src={image}
-              alt={`${product.name} view ${index + 1}`}
+              alt={`${product.name} - View ${index + 1}`}
+              category={product.category}
               fill
+              sizes="(max-width: 768px) 25vw, 15vw"
               className="object-cover"
             />
           </Card>

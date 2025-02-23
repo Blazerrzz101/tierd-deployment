@@ -24,8 +24,8 @@ export function ProductImage({
   src,
   alt,
   category,
-  width,
-  height,
+  width = 300,
+  height = 300,
   fill = false,
   sizes,
   priority = false,
@@ -42,15 +42,18 @@ export function ProductImage({
   return (
     <div className={cn(
       "relative bg-muted overflow-hidden",
+      fill ? "w-full h-full" : "w-fit h-fit",
       !fill && "flex items-center justify-center",
       containerClassName
-    )}>
+    )}
+    style={fill ? { aspectRatio: "1/1" } : undefined}
+    >
       {/* Main Image */}
       <Image
         src={imageSource}
         alt={alt}
-        width={!fill ? (width || 300) : undefined}
-        height={!fill ? (height || 300) : undefined}
+        width={!fill ? width : undefined}
+        height={!fill ? height : undefined}
         fill={fill}
         sizes={sizes}
         priority={priority}

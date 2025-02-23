@@ -1,58 +1,162 @@
+"use client"
+
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase/client"
+import { Product, Review, Thread, UserProfile } from "@/types/product"
 
-export interface Product {
+interface ReviewResponse {
   id: string
-  name: string
-  description: string
-  price: number
-  category: string
-  image_url: string
-  url_slug: string
-  details: {
-    images?: Record<string, string>
-    [key: string]: any
-  }
-  metadata: Record<string, any>
-  rating?: number
-  review_count?: number
-  stock_status?: "in_stock" | "low_stock" | "out_of_stock"
+  rating: number
+  title: string | null
+  content: string | null
+  pros: string[] | null
+  cons: string[] | null
   created_at: string
-  updated_at: string
+  user: {
+    id: string
+    email: string
+    username: string
+    avatar_url: string | null
+  } | null
+}
+
+interface ThreadResponse {
+  id: string
+  title: string | null
+  content: string | null
+  created_at: string
+  user: {
+    id: string
+    email: string
+    username: string
+    avatar_url: string | null
+  } | null
 }
 
 export function useProduct(slug: string) {
   return useQuery<Product>({
     queryKey: ['product', slug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
+      // First get the product details
+      const { data: productData, error: productError } = await supabase
+        .rpc('get_product_details', { p_slug: slug })
+
+      if (productError) {
+        console.error('Error fetching product:', productError)
+        throw productError
+      }
+      
+      if (!productData || productData.length === 0) {
+        console.error('No product found with slug:', slug)
+        throw new Error('Product not found')
+      }
+
+      const product = productData[0]
+
+      // Get reviews with user profiles
+      const { data: reviews, error: reviewsError } = await supabase
+        .from('reviews')
         .select(`
           id,
-          name,
-          description,
-          price,
-          category,
-          image_url,
-          url_slug,
-          details,
-          metadata,
+          rating,
+          title,
+          content,
+          pros,
+          cons,
           created_at,
-          updated_at
+          user:user_profiles (
+            id,
+            email,
+            username,
+            avatar_url
+          )
         `)
-        .eq('url_slug', slug)
-        .single()
+        .eq('product_id', product.id)
+        .order('created_at', { ascending: false })
+        .returns<ReviewResponse[]>()
 
-      if (error) throw error
-      
-      // Transform the data to match the expected interface
-      return {
-        ...data,
-        specs: data.details, // For backward compatibility
-        rating: data.metadata?.rating ?? 0,
-        review_count: data.metadata?.review_count ?? 0,
-        stock_status: data.metadata?.stock_status ?? "in_stock"
+      if (reviewsError) {
+        console.error('Error fetching reviews:', reviewsError)
       }
+
+      // Get threads with user profiles
+      const { data: threads, error: threadsError } = await supabase
+        .from('threads')
+        .select(`
+          id,
+          title,
+          content,
+          created_at,
+          user:user_profiles (
+            id,
+            email,
+            username,
+            avatar_url
+          )
+        `)
+        .eq('product_id', product.id)
+        .order('created_at', { ascending: false })
+        .returns<ThreadResponse[]>()
+
+      if (threadsError) {
+        console.error('Error fetching threads:', threadsError)
+      }
+
+      // Calculate average rating
+      const reviewsList = reviews || []
+      const averageRating = reviewsList.length > 0
+        ? reviewsList.reduce((acc, review) => acc + review.rating, 0) / reviewsList.length
+        : 0
+
+      // Transform the data to match the Product interface
+      const transformedProduct: Product = {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        price: product.price,
+        imageUrl: product.image_url || `/images/products/${product.category}/placeholder.jpg`,
+        image_url: product.image_url || `/images/products/${product.category}/placeholder.jpg`,
+        url_slug: product.url_slug,
+        specifications: product.specifications || {},
+        created_at: product.created_at,
+        updated_at: product.updated_at,
+        upvotes: product.upvotes || 0,
+        downvotes: product.downvotes || 0,
+        rating: averageRating,
+        review_count: reviewsList.length,
+        reviews: reviewsList.map(review => ({
+          id: review.id,
+          content: review.content || '',
+          title: review.title || '',
+          rating: review.rating,
+          pros: review.pros || [],
+          cons: review.cons || [],
+          created_at: review.created_at,
+          user: {
+            id: review.user?.id || 'anonymous',
+            email: review.user?.email || '',
+            display_name: review.user?.username || 'Anonymous',
+            username: review.user?.username || 'anonymous',
+            avatar_url: review.user?.avatar_url || null
+          }
+        })),
+        threads: (threads || []).map(thread => ({
+          id: thread.id,
+          title: thread.title || '',
+          content: thread.content || '',
+          created_at: thread.created_at,
+          user: {
+            id: thread.user?.id || 'anonymous',
+            email: thread.user?.email || '',
+            display_name: thread.user?.username || 'Anonymous',
+            username: thread.user?.username || 'anonymous',
+            avatar_url: thread.user?.avatar_url || null
+          }
+        }))
+      }
+
+      return transformedProduct
     },
     staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
     retry: 2

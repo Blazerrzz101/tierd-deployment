@@ -118,25 +118,122 @@ export function sanitizeData(data: any): any {
 }
 
 // Helper function to normalize product data
-export function normalizeProduct(product: any): Partial<Product> {
-  return {
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    category: product.category,
-    category_slug: product.category_slug,
-    price: product.price,
-    imageUrl: product.image_url || product.imageUrl,
-    url_slug: product.url_slug,
-    specs: product.specifications || product.specs || {},
-    votes: product.votes || 0,
-    upvotes: product.upvotes || 0,
-    downvotes: product.downvotes || 0,
-    total_votes: product.total_votes || 0,
-    score: product.score || 0,
-    rank: product.rank || 0,
-    userVote: product.userVote || null,
-    rating: product.rating || 0,
-    review_count: product.review_count || 0,
+export function normalizeProduct(data: any): Required<Product> {
+  if (!data) {
+    console.error("No product data provided")
+    throw new Error("No product data provided")
+  }
+
+  console.log("Normalizing product data:", {
+    id: data.id || data.product_id,
+    name: data.name || data.product_name,
+    category: data.category || data.product_category,
+    reviews: data.reviews?.length || 0,
+    threads: data.threads?.length || 0
+  })
+
+  // Handle various ID formats
+  const id = data.id || data.product_id
+  if (!id) {
+    console.error("Missing product ID in data:", data)
+    throw new Error("Missing product ID")
+  }
+
+  // Handle various name formats
+  const name = data.name || data.product_name || data.title
+  if (!name) {
+    console.error("Missing product name in data:", data)
+    throw new Error("Missing product name")
+  }
+
+  // Handle various category formats
+  const category = data.category || data.product_category || "Uncategorized"
+  const category_slug = data.category_slug || generateSlug(category)
+
+  // Generate URL slug if not provided
+  const url_slug = data.url_slug || data.slug || generateSlug(name)
+
+  // Handle various image URL formats
+  const imageUrl = data.image_url || data.imageUrl || data.image || "/placeholder.png"
+  const images = Array.isArray(data.images) ? data.images : [imageUrl]
+
+  // Handle various specification formats
+  const specs = data.specifications || data.specs || data.details || {}
+
+  // Handle vote-related fields
+  const upvotes = Number(data.upvotes || data.up_votes || data.positive_votes || 0)
+  const downvotes = Number(data.downvotes || data.down_votes || data.negative_votes || 0)
+  const votes = {
+    up: upvotes,
+    down: downvotes
+  }
+  const total_votes = upvotes + downvotes
+
+  // Handle review-related fields
+  const rating = Number(data.rating || data.average_rating || 0)
+  const review_count = Number(data.review_count || data.total_reviews || 0)
+
+  // Handle nested relationships
+  const reviews = Array.isArray(data.reviews) ? data.reviews.map((review: any) => ({
+    id: String(review.id),
+    rating: Number(review.rating || 0),
+    content: String(review.content || review.text || ""),
+    created_at: review.created_at || new Date().toISOString(),
+    user: review.user ? {
+      id: String(review.user.id || review.user_id || ""),
+      username: String(review.user.username || review.user_name || "Anonymous"),
+      avatar_url: review.user.avatar_url || null
+    } : {
+      id: String(review.user_id || ""),
+      username: "Anonymous",
+      avatar_url: null
+    }
+  })) : []
+
+  const threads = Array.isArray(data.threads) ? data.threads.map((thread: any) => ({
+    id: String(thread.id),
+    title: String(thread.title || ""),
+    content: String(thread.content || thread.text || ""),
+    created_at: thread.created_at || new Date().toISOString(),
+    user: thread.user ? {
+      id: String(thread.user.id || thread.user_id || ""),
+      username: String(thread.user.username || thread.user_name || "Anonymous"),
+      avatar_url: thread.user.avatar_url || null
+    } : {
+      id: String(thread.user_id || ""),
+      username: "Anonymous",
+      avatar_url: null
+    }
+  })) : []
+
+  try {
+    // Normalize the product data
+    return {
+      id: String(id),
+      name: String(name),
+      description: String(data.description || data.product_description || ""),
+      category: String(category),
+      category_slug,
+      price: Number(data.price || data.product_price || 0),
+      image_url: imageUrl,
+      imageUrl, // For backward compatibility
+      images,
+      url_slug,
+      specs,
+      rating,
+      review_count,
+      upvotes,
+      downvotes,
+      votes,
+      total_votes,
+      score: Number(data.score || data.ranking_score || data.total_score || 0),
+      rank: Number(data.rank || data.ranking || 0),
+      userVote: data.user_vote || data.userVote || null,
+      reviews,
+      threads
+    }
+  } catch (error) {
+    console.error("Error normalizing product data:", error, data)
+    throw error
   }
 }

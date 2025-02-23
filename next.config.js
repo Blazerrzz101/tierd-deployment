@@ -5,48 +5,22 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   },
   images: {
-    unoptimized: false,
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'source.unsplash.com'
+        hostname: '**',
       },
-      {
-        protocol: 'https',
-        hostname: '*.supabase.co'
-      },
-      {
-        protocol: 'https',
-        hostname: 'example.com'
-      },
-      {
-        protocol: 'https',
-        hostname: '*.cloudinary.com'
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com'
-      },
-      {
-        protocol: 'https',
-        hostname: '*.githubusercontent.com'
-      }
     ],
+    unoptimized: true,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     formats: ['image/webp'],
-    domains: [
-      'placehold.co',
-      'resource.logitechg.com',
-      'assets3.razerzone.com',
-      'zowie.benq.com',
-      'cdn.shopify.com',
-      'finalmouse.com'
-    ],
   },
   eslint: {
-    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
-    dirs: ['app', 'components', 'lib', 'hooks']
+    ignoreDuringBuilds: process.env.NODE_ENV === 'production'
   },
   typescript: {
     ignoreBuildErrors: process.env.NODE_ENV === 'production'

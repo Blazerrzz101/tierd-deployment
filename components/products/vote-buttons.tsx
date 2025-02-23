@@ -6,15 +6,16 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { VoteType } from "@/types/product"
 
 interface VoteButtonsProps {
   product: {
     id: string
-    userVote: 'up' | 'down' | null
+    userVote: VoteType
     upvotes: number
     downvotes: number
   }
-  onVote: (productId: string, voteType: 'up' | 'down') => Promise<void>
+  onVote: (productId: string, voteType: VoteType) => Promise<void>
   className?: string
 }
 
@@ -23,7 +24,7 @@ export function VoteButtons({ product, onVote, className }: VoteButtonsProps) {
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleVote = async (voteType: 'up' | 'down') => {
+  const handleVote = async (voteType: VoteType) => {
     if (!user) {
       router.push('/auth/sign-in')
       return
@@ -33,7 +34,7 @@ export function VoteButtons({ product, onVote, className }: VoteButtonsProps) {
       await onVote(product.id, voteType)
       toast({
         title: "Vote recorded",
-        children: `Your ${voteType}vote has been recorded.`
+        children: `Your ${voteType === 'up' ? 'up' : 'down'}vote has been recorded.`
       })
     } catch (error) {
       toast({
