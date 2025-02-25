@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { VoteType } from "@/types/product";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface VoteProduct {
   id: string;
@@ -30,6 +31,7 @@ export const useVote = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const clientId = getClientId();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -43,19 +45,21 @@ export const useVote = () => {
     try {
       setIsLoading(true);
 
-      const { data, error } = await supabase.rpc('vote_for_product', {
+      const { data: voteResult, error: voteError } = await supabase.rpc('vote_for_product', {
         p_product_id: product.id,
         p_vote_type: voteType,
         p_client_id: clientId
       });
 
-      if (error) {
-        console.error('Vote error:', error);
-        throw error;
+      if (voteError) {
+        console.error('Vote error:', voteError);
+        throw voteError;
       }
 
+      await queryClient.invalidateQueries({ queryKey: ['product'] });
+
       toast.success(
-        voteType === null ? 'Vote removed' : `Vote ${voteType === 1 ? 'up' : 'down'} recorded`,
+        voteResult.vote_type === null ? 'Vote removed' : `Vote ${voteType === 1 ? 'up' : 'down'} recorded`,
         {
           description: isAuthenticated
             ? 'Your vote has been saved'
@@ -63,12 +67,17 @@ export const useVote = () => {
         }
       );
 
-      return voteType;
+      return {
+        voteType: voteResult.vote_type,
+        upvotes: voteResult.upvotes,
+        downvotes: voteResult.downvotes
+      };
     } catch (error) {
       console.error('Error voting:', error);
       toast.error('Failed to vote', {
         description: 'Please try again later'
       });
+      return null;
     } finally {
       setIsLoading(false);
     }

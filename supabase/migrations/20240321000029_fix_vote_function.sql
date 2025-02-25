@@ -20,6 +20,7 @@ AS $$
 DECLARE
     v_user_id uuid;
     v_existing_vote integer;
+    v_result_vote_type integer;
 BEGIN
     -- Get current user ID
     v_user_id := auth.uid();
@@ -52,6 +53,7 @@ BEGIN
                 ELSE '{}'::jsonb
             END
         );
+        v_result_vote_type := p_vote_type;
     ELSIF v_existing_vote = p_vote_type THEN
         -- Remove vote if same type
         DELETE FROM votes
@@ -61,6 +63,7 @@ BEGIN
             OR
             (user_id IS NULL AND metadata->>'client_id' = p_client_id)
         );
+        v_result_vote_type := NULL;
     ELSE
         -- Update vote type
         UPDATE votes
@@ -72,13 +75,25 @@ BEGIN
             OR
             (user_id IS NULL AND metadata->>'client_id' = p_client_id)
         );
+        v_result_vote_type := p_vote_type;
     END IF;
 
-    -- Return success response
-    RETURN jsonb_build_object(
+    -- Get updated vote counts
+    WITH vote_counts AS (
+        SELECT 
+            COUNT(*) FILTER (WHERE vote_type = 1) as upvotes,
+            COUNT(*) FILTER (WHERE vote_type = -1) as downvotes
+        FROM votes
+        WHERE product_id = p_product_id
+    )
+    SELECT jsonb_build_object(
         'success', true,
-        'vote_type', p_vote_type
-    );
+        'vote_type', v_result_vote_type,
+        'upvotes', COALESCE((SELECT upvotes FROM vote_counts), 0),
+        'downvotes', COALESCE((SELECT downvotes FROM vote_counts), 0)
+    ) INTO STRICT result;
+
+    RETURN result;
 END;
 $$;
 
@@ -102,8 +117,28 @@ ALTER TABLE public.votes ADD CONSTRAINT vote_type_check CHECK (vote_type IN (1, 
 CREATE INDEX IF NOT EXISTS idx_votes_product_user ON votes(product_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_votes_client_id ON votes((metadata->>'client_id')) WHERE user_id IS NULL;
 
+-- Add unique constraint to prevent duplicate votes
+ALTER TABLE public.votes DROP CONSTRAINT IF EXISTS votes_product_user_unique;
+ALTER TABLE public.votes ADD CONSTRAINT votes_product_user_unique 
+    UNIQUE (product_id, user_id) 
+    WHERE user_id IS NOT NULL;
+
+ALTER TABLE public.votes DROP CONSTRAINT IF EXISTS votes_product_client_unique;
+ALTER TABLE public.votes ADD CONSTRAINT votes_product_client_unique 
+    UNIQUE (product_id, (metadata->>'client_id')) 
+    WHERE user_id IS NULL AND metadata->>'client_id' IS NOT NULL;
+
 -- Recreate materialized views
 CREATE MATERIALIZED VIEW product_rankings AS
+WITH vote_counts AS (
+    SELECT 
+        product_id,
+        COUNT(*) FILTER (WHERE vote_type = 1) as upvotes,
+        COUNT(*) FILTER (WHERE vote_type = -1) as downvotes,
+        COUNT(*) FILTER (WHERE vote_type = 1) - COUNT(*) FILTER (WHERE vote_type = -1) as score
+    FROM votes
+    GROUP BY product_id
+)
 SELECT 
     p.id,
     p.name,
@@ -113,20 +148,16 @@ SELECT
     p.image_url,
     p.url_slug,
     p.specifications,
-    COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type = 1), 0) as upvotes,
-    COALESCE(COUNT(v.*) FILTER (WHERE v.vote_type = -1), 0) as downvotes,
+    COALESCE(vc.upvotes, 0) as upvotes,
+    COALESCE(vc.downvotes, 0) as downvotes,
     COALESCE(AVG(r.rating), 0) as rating,
     COUNT(DISTINCT r.id) as review_count,
-    COALESCE(
-        COUNT(v.*) FILTER (WHERE v.vote_type = 1) -
-        COUNT(v.*) FILTER (WHERE v.vote_type = -1),
-        0
-    ) as score,
-    ROW_NUMBER() OVER (ORDER BY COUNT(v.*) DESC) as rank
+    COALESCE(vc.score, 0) as score,
+    ROW_NUMBER() OVER (ORDER BY COALESCE(vc.score, 0) DESC) as rank
 FROM products p
-LEFT JOIN votes v ON p.id = v.product_id
+LEFT JOIN vote_counts vc ON p.id = vc.product_id
 LEFT JOIN reviews r ON p.id = r.product_id
-GROUP BY p.id, p.name, p.description, p.category, p.price, p.image_url, p.url_slug, p.specifications;
+GROUP BY p.id, p.name, p.description, p.category, p.price, p.image_url, p.url_slug, p.specifications, vc.upvotes, vc.downvotes, vc.score;
 
 CREATE MATERIALIZED VIEW category_stats AS
 SELECT 
