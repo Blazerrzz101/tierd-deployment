@@ -6,7 +6,23 @@ import type { Database } from '@/types/supabase'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+// Create a Supabase client with explicit configuration for direct API access
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true, // Enable session persistence
+    autoRefreshToken: true, // Automatically refresh tokens
+    detectSessionInUrl: true // Detect session in URL on auth redirect
+  },
+  global: {
+    fetch: (...args) => {
+      // Log RPC calls for debugging (remove in production)
+      if (args[0] && typeof args[0] === 'string' && args[0].includes('/rpc/')) {
+        console.log('Making RPC call to:', args[0]);
+      }
+      return fetch(...args);
+    }
+  }
+})
 
 // Get or create the Supabase client instance
 export function getSupabaseClient() {

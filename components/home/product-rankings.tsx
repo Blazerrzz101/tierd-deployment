@@ -6,6 +6,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { ProductRankingCard } from '@/components/rankings/product-ranking-card'
 import { cn } from '@/lib/utils'
+import { Product } from '@/types/product'
 
 export const categories = [
   {
@@ -40,15 +41,42 @@ export const categories = [
   },
 ]
 
+// Helper function to calculate score
+const calculateScore = (product: Partial<Product>) => {
+  const upvotes = typeof product.upvotes === 'number' ? product.upvotes : 0;
+  const downvotes = typeof product.downvotes === 'number' ? product.downvotes : 0;
+  return upvotes - downvotes;
+};
+
 export function ProductRankings() {
   const [selectedCategory, setSelectedCategory] = useState(categories[0].id)
   const [displayCount, setDisplayCount] = useState(5)
   const { products, loading, error, fetchProducts } = useProducts()
 
-  // Filter products by category and limit display count
+  // Filter products by category, sort by score, and limit display count
   const displayedProducts = products
     .filter(product => selectedCategory === 'all' || product.category === selectedCategory)
-    .slice(0, displayCount)
+    .sort((a, b) => {
+      // First sort by score (upvotes - downvotes) in descending order
+      const scoreA = a.score !== undefined ? a.score : calculateScore(a);
+      const scoreB = b.score !== undefined ? b.score : calculateScore(b);
+      
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
+      }
+      
+      // If scores are equal, sort by total votes (upvotes + downvotes) in descending order
+      const totalVotesA = (a.upvotes || 0) + (a.downvotes || 0);
+      const totalVotesB = (b.upvotes || 0) + (b.downvotes || 0);
+      
+      if (totalVotesB !== totalVotesA) {
+        return totalVotesB - totalVotesA;
+      }
+      
+      // If total votes are equal, sort by name
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, displayCount);
 
   const hasMore = displayedProducts.length < products.filter(
     product => selectedCategory === 'all' || product.category === selectedCategory

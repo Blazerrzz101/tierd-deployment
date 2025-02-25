@@ -18,7 +18,10 @@ export interface Product {
   downvotes: number;
   score: number;
   rank: number;
-  userVote: VoteType;
+  userVote?: {
+    hasVoted: boolean;
+    voteType: VoteType;
+  };
   rating: number;
   review_count: number;
   reviews: Review[];

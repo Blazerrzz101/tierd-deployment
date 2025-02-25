@@ -10,7 +10,7 @@ import type { Database } from '@/types/supabase'
 import { ProductImage } from "@/components/ui/product-image"
 import { Product } from '@/types/product'
 
-type ProductRanking = Database['public']['Views']['product_rankings']['Row']
+type ProductRanking = Database['public']['Views']['product_rankings']['Row'] | Product
 
 interface ProductRankingCardProps {
   product: ProductRanking
@@ -19,7 +19,9 @@ interface ProductRankingCardProps {
 
 export function ProductRankingCard({ product: rawProduct, rank }: ProductRankingCardProps) {
   const { vote } = useVote()
-  const product = normalizeProduct(rawProduct) as Required<Product>
+  
+  // Normalize the product to ensure it has all required fields
+  const product = normalizeProduct(rawProduct)
 
   return (
     <div className="group relative flex items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-4 transition-colors hover:bg-white/10">
@@ -74,13 +76,18 @@ export function ProductRankingCard({ product: rawProduct, rank }: ProductRanking
 
       {/* Vote Buttons */}
       <VoteButtons 
+        productId={product.id}
         product={{
           id: product.id,
-          userVote: product.userVote,
+          name: product.name,
           upvotes: product.upvotes,
-          downvotes: product.downvotes
+          downvotes: product.downvotes,
+          score: product.score,
+          userVote: product.userVote || {
+            hasVoted: false,
+            voteType: null
+          }
         }}
-        onVote={vote}
         className="shrink-0"
       />
     </div>

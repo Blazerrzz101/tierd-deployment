@@ -1,91 +1,167 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from "@/lib/supabase/client";
-import { VoteType } from "@/types/product";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { VoteType } from '@/types/product';
 
-export interface VoteProduct {
-  id: string;
-  name: string;
-  upvotes: number;
-  downvotes: number;
-  userVote?: VoteType;
-}
+// Ensure a value is a number
+const ensureNumber = (value: any): number => {
+  if (value === null || value === undefined) return 0;
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+};
 
+// Generate a unique client ID for anonymous voting
 const generateClientId = () => {
   return `${Math.random().toString(36).substring(2)}_${Date.now()}`;
 };
 
-const getClientId = () => {
-  let clientId = localStorage.getItem('clientId');
-  if (!clientId) {
-    clientId = generateClientId();
-    localStorage.setItem('clientId', clientId);
+// Get the client ID from localStorage or create a new one
+const getClientId = (): string => {
+  if (typeof window === 'undefined') return generateClientId();
+  
+  try {
+    let clientId = localStorage.getItem('tierd_client_id');
+    if (!clientId) {
+      clientId = generateClientId();
+      localStorage.setItem('tierd_client_id', clientId);
+    }
+    return clientId;
+  } catch (error) {
+    console.error('Error accessing localStorage:', error);
+    return generateClientId(); // Fallback to a temporary ID
   }
-  return clientId;
 };
 
-export const useVote = () => {
+interface VoteProduct {
+  id: string;
+  name: string;
+}
+
+interface VoteResponse {
+  success: boolean;
+  error?: string;
+  result?: {
+    voteType: VoteType;
+    upvotes: number;
+    downvotes: number;
+    score: number;
+  };
+}
+
+export function useVote() {
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const clientId = getClientId();
+  const [clientId, setClientId] = useState<string>("");
   const queryClient = useQueryClient();
 
+  // Initialize or get clientId from localStorage for anonymous users
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-    };
-    checkAuth();
+    setClientId(getClientId());
   }, []);
 
-  const vote = async (product: VoteProduct, voteType: VoteType) => {
+  // Check if a user has voted for a product
+  const checkUserVote = useCallback(async (productId: string): Promise<number | null> => {
     try {
-      setIsLoading(true);
+      console.log('Checking user vote for product:', productId);
+      if (!productId) return null;
+      
+      // Get current client ID
+      const currentClientId = clientId || getClientId();
+      
+      // Try API endpoint first
+      try {
+        console.log('Attempting to check vote via API endpoint');
+        const response = await fetch(`/api/vote?productId=${productId}&clientId=${currentClientId}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('API vote check result:', data);
+          
+          if (data && data.success) {
+            return data.voteType;
+          }
+        }
+      } catch (apiError) {
+        console.error('API vote check failed:', apiError);
+      }
+      
+      // Fall back to direct query
+      console.log('Falling back to direct query for vote check');
+      
+      try {
+        const { data, error } = await supabase
+          .from('votes')
+          .select('vote_type')
+          .eq('product_id', productId)
+          .eq('metadata->client_id', currentClientId)
+          .maybeSingle();
+          
+        if (error) {
+          console.error('Vote check error:', error);
+          return null;
+        }
+        
+        return data?.vote_type || null;
+      } catch (error) {
+        console.error('Error in checkUserVote:', error);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error in checkUserVote:', error);
+      return null;
+    }
+  }, [clientId]);
 
-      const { data: voteResult, error: voteError } = await supabase.rpc('vote_for_product', {
-        p_product_id: product.id,
-        p_vote_type: voteType,
-        p_client_id: clientId
+  // Vote for a product
+  const vote = async (product: VoteProduct, voteType: 1 | -1): Promise<VoteResponse> => {
+    try {
+      const clientId = localStorage.getItem('clientId') || 'anonymous';
+      
+      const response = await fetch('/api/vote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId: product.id,
+          voteType,
+          clientId,
+        }),
       });
 
-      if (voteError) {
-        console.error('Vote error:', voteError);
-        throw voteError;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to vote');
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['product'] });
-
-      toast.success(
-        voteResult.vote_type === null ? 'Vote removed' : `Vote ${voteType === 1 ? 'up' : 'down'} recorded`,
-        {
-          description: isAuthenticated
-            ? 'Your vote has been saved'
-            : 'Sign in to keep your votes permanently'
-        }
-      );
+      if (!data.success) {
+        return {
+          success: false,
+          error: data.error || 'Vote operation failed',
+        };
+      }
 
       return {
-        voteType: voteResult.vote_type,
-        upvotes: voteResult.upvotes,
-        downvotes: voteResult.downvotes
+        success: true,
+        result: data.result,
       };
     } catch (error) {
-      console.error('Error voting:', error);
-      toast.error('Failed to vote', {
-        description: 'Please try again later'
-      });
-      return null;
-    } finally {
-      setIsLoading(false);
+      console.error('Vote error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to vote',
+      };
     }
   };
 
   return {
     vote,
+    checkUserVote,
     isLoading,
-    isAuthenticated
+    clientId
   };
-};
+}

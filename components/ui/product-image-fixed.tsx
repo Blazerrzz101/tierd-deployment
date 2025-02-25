@@ -3,7 +3,6 @@
 import Image from "next/image"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { getPlaceholderImage } from "@/lib/constants"
 import { ImageIcon } from "lucide-react"
 
 interface ProductImageProps {
@@ -18,6 +17,20 @@ interface ProductImageProps {
   className?: string
   containerClassName?: string
   showPlaceholderIcon?: boolean
+}
+
+// Default placeholder image
+const DEFAULT_PLACEHOLDER = "/images/placeholder.png"
+
+// Get placeholder image based on category
+function getPlaceholderImage(category?: string): string {
+  if (!category) return DEFAULT_PLACEHOLDER
+  
+  // Try category-specific placeholder
+  const categoryPlaceholder = `/images/products/${category.toLowerCase()}.png`
+  
+  // Return the category placeholder or default
+  return categoryPlaceholder
 }
 
 export function ProductImage({
@@ -36,28 +49,11 @@ export function ProductImage({
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
   
-  // Get appropriate placeholder image based on category
-  const getAppropriateImage = () => {
-    if (!category) return "/images/products/placeholder.svg";
-    
-    // Map category to placeholder image
-    const categoryMap: Record<string, string> = {
-      "mice": "/images/products/placeholder-mouse.svg",
-      "gaming-mice": "/images/products/placeholder-mouse.svg",
-      "keyboards": "/images/products/placeholder-keyboard.svg",
-      "gaming-keyboards": "/images/products/placeholder-keyboard.svg",
-      "headsets": "/images/products/placeholder-headset.svg",
-      "gaming-headsets": "/images/products/placeholder-headset.svg",
-      "headphones": "/images/products/placeholder-headset.svg",
-      "monitors": "/images/products/placeholder-monitor.svg",
-      "gaming-monitors": "/images/products/placeholder-monitor.svg",
-    };
-    
-    return categoryMap[category.toLowerCase()] || "/images/products/placeholder.svg";
-  };
+  // Get placeholder image based on category or use default
+  const placeholderImage = getPlaceholderImage(category)
   
-  // Use placeholder from constants as fallback, but prefer the SVG files
-  const placeholderImage = error || !src ? getAppropriateImage() : src;
+  // Use placeholder if src is missing or there was an error loading the image
+  const imageSource = error || !src || src === "" ? placeholderImage : src
   
   return (
     <div className={cn(
@@ -70,7 +66,7 @@ export function ProductImage({
     >
       {/* Main Image */}
       <Image
-        src={placeholderImage}
+        src={imageSource}
         alt={alt}
         width={!fill ? width : undefined}
         height={!fill ? height : undefined}
@@ -83,7 +79,10 @@ export function ProductImage({
           loaded && "scale-100 blur-0",
           className
         )}
-        onError={() => setError(true)}
+        onError={() => {
+          console.log(`Image error for: ${src}, using placeholder: ${placeholderImage}`)
+          setError(true)
+        }}
         onLoad={() => setLoaded(true)}
       />
       

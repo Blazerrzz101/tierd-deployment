@@ -11,17 +11,19 @@ if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing env.SUPABASE_SERVICE_ROLE_KEY')
 }
 
-// Create service role client for server-side access
-export const supabaseServer = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
+// Create a Supabase client specifically for server components and API routes
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+export const supabaseServer = createClient(
+  supabaseUrl,
+  supabaseKey,
   {
     auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+      persistSession: false,
+    },
   }
-)
+);
 
 // Create a Supabase client for server components
 export function createServerSupabaseClient() {

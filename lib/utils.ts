@@ -79,8 +79,7 @@ export function slugToCategory(slug: string): string | null {
     'gaming-mice': CATEGORY_IDS.MICE,
     'gaming-keyboards': CATEGORY_IDS.KEYBOARDS,
     'gaming-monitors': CATEGORY_IDS.MONITORS,
-    'gaming-headsets': CATEGORY_IDS.HEADSETS,
-    'gaming-chairs': CATEGORY_IDS.CHAIRS
+    'gaming-headsets': CATEGORY_IDS.HEADSETS
   }
   return categoryMap[slug as keyof typeof categoryMap] || null
 }
@@ -148,7 +147,6 @@ export function normalizeProduct(data: any): Required<Product> {
 
   // Handle various category formats
   const category = data.category || data.product_category || "Uncategorized"
-  const category_slug = data.category_slug || generateSlug(category)
 
   // Generate URL slug if not provided
   const url_slug = data.url_slug || data.slug || generateSlug(name)
@@ -168,6 +166,16 @@ export function normalizeProduct(data: any): Required<Product> {
     down: downvotes
   }
   const total_votes = upvotes + downvotes
+  
+  // Handle user vote data
+  const userVote = data.userVote || data.user_vote || null
+  const normalizedUserVote = userVote ? {
+    hasVoted: userVote.hasVoted !== undefined ? Boolean(userVote.hasVoted) : (userVote.voteType !== undefined && userVote.voteType !== null),
+    voteType: userVote.voteType !== undefined ? userVote.voteType : null
+  } : {
+    hasVoted: false,
+    voteType: null
+  }
 
   // Handle review-related fields
   const rating = Number(data.rating || data.average_rating || 0)
@@ -213,24 +221,23 @@ export function normalizeProduct(data: any): Required<Product> {
       name: String(name),
       description: String(data.description || data.product_description || ""),
       category: String(category),
-      category_slug,
       price: Number(data.price || data.product_price || 0),
       image_url: imageUrl,
       imageUrl, // For backward compatibility
       images,
       url_slug,
-      specs,
+      specifications: specs,
       rating,
       review_count,
       upvotes,
       downvotes,
-      votes,
-      total_votes,
       score: Number(data.score || data.ranking_score || data.total_score || 0),
       rank: Number(data.rank || data.ranking || 0),
-      userVote: data.user_vote || data.userVote || null,
+      userVote: normalizedUserVote,
       reviews,
-      threads
+      threads,
+      created_at: data.created_at || new Date().toISOString(),
+      updated_at: data.updated_at || new Date().toISOString()
     }
   } catch (error) {
     console.error("Error normalizing product data:", error, data)
