@@ -26,9 +26,6 @@ export function useProducts() {
       setLoading(true)
       console.log('Fetching products with category:', category)
       
-      // Store the previous products to use as fallback
-      const previousProducts = [...products];
-      
       // Try to fetch from API first
       try {
         const url = new URL('/api/products', window.location.origin);
@@ -163,35 +160,51 @@ export function useProducts() {
     } finally {
       setLoading(false)
     }
-  }, [toast, products])
+  }, [toast])
 
   const vote = useCallback(async (productId: string, voteType: 'upvote' | 'downvote') => {
     try {
-      const { error } = await supabase.rpc(
-        'vote_for_product',
-        {
-          p_product_id: productId,
-          p_vote_type: voteType
-        }
-      )
+      // Get client ID from localStorage
+      let clientId = 'anonymous';
+      if (typeof window !== 'undefined') {
+        clientId = localStorage.getItem('tierd_client_id') || 'anonymous';
+      }
 
-      if (error) throw error
+      // Call the vote API endpoint
+      const response = await fetch('/api/vote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId,
+          voteType: voteType === 'upvote' ? 1 : -1,
+          clientId
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to vote');
+      }
 
       // Refresh products to get updated rankings
-      await fetchProducts()
+      await fetchProducts();
+      
       toast({
         title: 'Success',
         description: 'Your vote has been recorded.',
-      })
+      });
     } catch (err) {
-      console.error('Error voting:', err)
+      console.error('Error voting:', err);
       toast({
         title: 'Error',
-        description: 'Failed to record your vote. Please try again.',
+        description: err instanceof Error ? err.message : 'Failed to record your vote. Please try again.',
         variant: 'destructive',
-      })
+      });
     }
-  }, [fetchProducts, toast])
+  }, [fetchProducts, toast]);
 
   const submitReview = useCallback(async (
     productId: string,
