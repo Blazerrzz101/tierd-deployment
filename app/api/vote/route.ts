@@ -1,230 +1,238 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
-import fs from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { promises as fs } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
+import { saveActivity } from '../activities/route';
+import { v4 as uuidv4 } from 'uuid';
+import { updateVote, getUserVote, getProductVoteCounts } from '../../lib/vote-utils';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-interface VoteCounts {
+export interface VoteCounts {
   upvotes: number;
   downvotes: number;
 }
 
-interface VoteState {
+export interface VoteState {
   votes: Record<string, number>;
   voteCounts: Record<string, VoteCounts>;
   lastUpdated: string;
 }
 
+// Use absolute paths
 const DATA_DIR = path.join(process.cwd(), 'data');
-const VOTE_FILE = path.join(DATA_DIR, 'votes.json');
+const VOTES_FILE = path.join(DATA_DIR, 'votes.json');
 
-// Ensure the data directory exists
+// Ensure the data directory and file exist
 try {
   if (!existsSync(DATA_DIR)) {
     mkdirSync(DATA_DIR, { recursive: true });
+    console.log('Created data directory:', DATA_DIR);
+  }
+  
+  if (!existsSync(VOTES_FILE)) {
+    writeFileSync(VOTES_FILE, JSON.stringify({
+      votes: {},
+      voteCounts: {},
+      lastUpdated: new Date().toISOString()
+    }, null, 2), 'utf8');
+    console.log('Created votes file:', VOTES_FILE);
   }
 } catch (error) {
-  console.error('Error creating data directory:', error);
+  console.error('Error setting up data storage:', error);
 }
 
 // Initialize or load vote state with retries
-async function getVoteState(retries = 3): Promise<VoteState> {
-  for (let i = 0; i < retries; i++) {
+async function getVoteState(): Promise<VoteState> {
+  let lastError;
+  
+  for (let i = 0; i < 3; i++) {
     try {
-      if (existsSync(VOTE_FILE)) {
-        const data = await fs.readFile(VOTE_FILE, 'utf8');
-        const state = JSON.parse(data);
-        return {
-          votes: state.votes || {},
-          voteCounts: state.voteCounts || {},
-          lastUpdated: state.lastUpdated || new Date().toISOString()
+      if (!existsSync(VOTES_FILE)) {
+        const initialState = {
+          votes: {},
+          voteCounts: {},
+          lastUpdated: new Date().toISOString()
         };
+        await fs.writeFile(VOTES_FILE, JSON.stringify(initialState, null, 2), 'utf8');
+        return initialState;
       }
+
+      const data = await fs.readFile(VOTES_FILE, 'utf8');
+      const state = JSON.parse(data);
+      
+      // Validate state structure
+      if (!state.votes || !state.voteCounts) {
+        throw new Error('Invalid vote state structure');
+      }
+      
+      return {
+        votes: state.votes,
+        voteCounts: state.voteCounts,
+        lastUpdated: state.lastUpdated || new Date().toISOString()
+      };
     } catch (error) {
       console.error(`Error reading vote state (attempt ${i + 1}):`, error);
-      if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, i))); // Exponential backoff
+      lastError = error;
+      
+      if (i < 2) {
+        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, i))); // Exponential backoff
+      }
     }
   }
-  return { votes: {}, voteCounts: {}, lastUpdated: new Date().toISOString() };
+  
+  // If all retries failed, try to recover by creating a new state
+  console.error('All attempts to read vote state failed, creating new state');
+  const recoveryState = {
+    votes: {},
+    voteCounts: {},
+    lastUpdated: new Date().toISOString()
+  };
+  
+  try {
+    await fs.writeFile(VOTES_FILE, JSON.stringify(recoveryState, null, 2), 'utf8');
+    return recoveryState;
+  } catch (error) {
+    console.error('Failed to create recovery state:', error);
+    throw lastError || error;
+  }
 }
 
-// Save vote state with retries
+// Save vote state with retries and atomic write
 async function saveVoteState(state: VoteState, retries = 3): Promise<void> {
+  const tempFile = `${VOTES_FILE}.tmp`;
+  let lastError;
+
   for (let i = 0; i < retries; i++) {
     try {
+      // Update timestamp
       state.lastUpdated = new Date().toISOString();
-      await fs.writeFile(VOTE_FILE, JSON.stringify(state, null, 2), {
-        encoding: 'utf8',
-        flag: 'w'
-      });
+      
+      // Write to temporary file first
+      await fs.writeFile(tempFile, JSON.stringify(state, null, 2), 'utf8');
+      
+      // Rename temp file to actual file (atomic operation)
+      await fs.rename(tempFile, VOTES_FILE);
+      
+      console.log('Successfully saved vote state');
       return;
     } catch (error) {
       console.error(`Error saving vote state (attempt ${i + 1}):`, error);
-      if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, i))); // Exponential backoff
+      lastError = error;
+      
+      // Clean up temp file if it exists
+      try {
+        if (existsSync(tempFile)) {
+          await fs.unlink(tempFile);
+        }
+      } catch (cleanupError) {
+        console.error('Error cleaning up temp file:', cleanupError);
+      }
+      
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, i))); // Exponential backoff
+      }
     }
   }
+  
+  throw lastError || new Error('Failed to save vote state');
 }
 
 // Initialize some default vote counts if they don't exist
-async function ensureProductVoteCounts(productId: string, state: VoteState): Promise<VoteCounts> {
+export async function ensureProductVoteCounts(productId: string): Promise<VoteCounts> {
+  const state = await getVoteState();
   if (!state.voteCounts[productId]) {
-    state.voteCounts[productId] = { upvotes: 5, downvotes: 2 };
+    state.voteCounts[productId] = { upvotes: 0, downvotes: 0 };
     await saveVoteState(state);
   }
   return state.voteCounts[productId];
 }
 
-// Validate vote request
+// Schema for vote request
 const voteSchema = z.object({
   productId: z.string(),
-  voteType: z.union([z.literal(1), z.literal(-1)], {
-    invalid_type_error: 'Vote type must be 1 or -1',
-  }),
-  clientId: z.string()
+  voteType: z.number().int().min(-1).max(1),
+  clientId: z.string(),
+  productName: z.string()
 });
 
-/**
- * API endpoint to vote for a product
- * Accepts: productId, voteType, clientId
- */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    console.log('Vote API: Received POST request');
     const body = await request.json();
-    const { productId, voteType, clientId } = voteSchema.parse(body);
+    console.log('Vote API: Request body:', JSON.stringify(body, null, 2));
 
-    // Load current state
-    const state = await getVoteState();
-    
-    // Get current vote counts
-    const counts = await ensureProductVoteCounts(productId, state);
-    
-    // Get current user's vote
-    const voteKey = `${productId}:${clientId}`;
-    const currentVote = state.votes[voteKey];
+    // Validate request body
+    const validatedData = voteSchema.parse(body);
+    console.log('Vote API: Validated data:', validatedData);
 
-    // Calculate new vote counts
-    const newCounts: VoteCounts = {
-      upvotes: counts.upvotes,
-      downvotes: counts.downvotes
-    };
-    
-    // Remove old vote if it exists
-    if (currentVote === 1) {
-      newCounts.upvotes--;
-    } else if (currentVote === -1) {
-      newCounts.downvotes--;
-    }
+    // Update vote
+    const result = await updateVote(
+      validatedData.productId,
+      validatedData.clientId,
+      validatedData.voteType
+    );
+    console.log('Vote API: Update result:', result);
 
-    // If voting the same way, remove the vote
-    if (currentVote === voteType) {
-      delete state.votes[voteKey];
-      console.log(`Removed vote for product ${productId} by client ${clientId}`);
-    } else {
-      // Add new vote
-      state.votes[voteKey] = voteType;
-      if (voteType === 1) {
-        newCounts.upvotes++;
-      } else {
-        newCounts.downvotes++;
-      }
-      console.log(`Recorded ${voteType === 1 ? 'upvote' : 'downvote'} for product ${productId} by client ${clientId}`);
-    }
-
-    // Update vote counts
-    state.voteCounts[productId] = newCounts;
-
-    // Save state
-    await saveVoteState(state);
-
-    // Log the current state for debugging
-    console.log('Vote state updated:', {
-      productId,
-      clientId,
-      voteType,
-      currentVote,
-      newCounts,
-      totalVotes: Object.keys(state.votes).length,
-      totalProducts: Object.keys(state.voteCounts).length,
-      lastUpdated: state.lastUpdated
-    });
+    // Calculate score
+    const score = result.voteCounts.upvotes - result.voteCounts.downvotes;
 
     return NextResponse.json({
       success: true,
       result: {
-        voteType: currentVote === voteType ? null : voteType,
-        upvotes: newCounts.upvotes,
-        downvotes: newCounts.downvotes,
-        score: newCounts.upvotes - newCounts.downvotes
-      },
+        ...result,
+        score
+      }
     });
   } catch (error) {
-    console.error('Vote error:', error);
+    console.error('Vote API error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to vote',
-      },
-      { status: 500 }
+      { success: false, error: 'Failed to process vote' },
+      { status: 400 }
     );
   }
 }
 
-/**
- * API to check if a user has voted for a product
- */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    console.log('Vote API: Received GET request');
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
-    const clientId = searchParams.get('clientId');
+    const clientId = searchParams.get('clientId') || 'anonymous';
 
-    if (!productId || !clientId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required parameters' },
-        { status: 400 }
-      );
+    console.log('Vote API: Params:', { productId, clientId });
+
+    if (!productId) {
+      throw new Error('Product ID is required');
     }
 
-    // Load current state
-    const state = await getVoteState();
-    
     // Get vote counts and user's vote
-    const counts = await ensureProductVoteCounts(productId, state);
-    const voteKey = `${productId}:${clientId}`;
-    const userVote = state.votes[voteKey];
+    const [voteCounts, userVote] = await Promise.all([
+      getProductVoteCounts(productId),
+      getUserVote(productId, clientId)
+    ]);
 
-    // Log the current state for debugging
-    console.log('Vote status check:', {
-      productId,
-      clientId,
-      userVote,
-      counts,
-      totalVotes: Object.keys(state.votes).length,
-      totalProducts: Object.keys(state.voteCounts).length,
-      lastUpdated: state.lastUpdated
-    });
+    console.log('Vote API: Results:', { voteCounts, userVote });
+
+    // Calculate score
+    const score = voteCounts.upvotes - voteCounts.downvotes;
 
     return NextResponse.json({
       success: true,
-      voteType: userVote || null,
-      upvotes: counts.upvotes,
-      downvotes: counts.downvotes,
-      score: counts.upvotes - counts.downvotes,
+      result: {
+        voteCounts,
+        userVote,
+        score
+      }
     });
   } catch (error) {
-    console.error('Vote status error:', error);
+    console.error('Vote API error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get vote status',
-      },
-      { status: 500 }
+      { success: false, error: 'Failed to get vote status' },
+      { status: 400 }
     );
   }
-} 
+}

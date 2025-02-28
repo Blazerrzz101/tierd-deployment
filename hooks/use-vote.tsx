@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { VoteType } from '@/types/product'
 import { Product } from '@/types/product'
 import { useQueryClient } from "@tanstack/react-query"
+import { useAuth } from '@/hooks/use-auth'
 
 export interface VoteProduct extends Partial<Product> {
   id: string;
@@ -49,6 +50,7 @@ export const useVote = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [clientId, setClientId] = useState<string | null>(null)
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   // Initialize or get clientId from localStorage
   useEffect(() => {
@@ -102,8 +104,10 @@ export const useVote = () => {
         },
         body: JSON.stringify({
           productId: product.id,
+          productName: product.name,
           voteType,
-          clientId: currentClientId
+          clientId: currentClientId,
+          userId: user?.id // Include user ID if logged in
         })
       });
 
@@ -122,6 +126,7 @@ export const useVote = () => {
       // Invalidate queries to refresh UI
       await queryClient.invalidateQueries({ queryKey: ['product'] });
       await queryClient.invalidateQueries({ queryKey: ['products'] });
+      await queryClient.invalidateQueries({ queryKey: ['activities'] });
 
       // Success message
       toast({
@@ -146,7 +151,7 @@ export const useVote = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [toast, clientId, queryClient])
+  }, [toast, clientId, queryClient, user]);
 
   return {
     vote,

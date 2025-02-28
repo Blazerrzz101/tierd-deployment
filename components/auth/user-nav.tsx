@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Settings,
   User as UserIcon,
+  Activity,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -58,6 +59,9 @@ export function UserNav() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/profile">Profile</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/activities">Activities</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/threads">My Threads</Link>

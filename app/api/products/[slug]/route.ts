@@ -1,115 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getVoteState } from '../../../lib/vote-utils';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Import the mockVotes Map from the vote API
-// This is a workaround for the mock implementation
-// In a real app, this would be handled by a database
-import { mockVotes, ensureProductVoteCounts } from "../../vote/route";
-
 // Mock product data for testing
 const mockProducts = [
   {
-    id: "550e8400-e29b-41d4-a716-446655440000",
-    name: "Sennheiser HD 560S",
-    description: "Reference-grade headphones for audiophiles",
-    category: "headphones",
-    price: 199.95,
-    url_slug: "sennheiser-hd-560s",
-    image_url: "/images/products/placeholder-headset.svg",
+    id: "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+    name: "ASUS ROG Swift PG279QM",
+    description: "27-inch gaming monitor with 240Hz refresh rate and G-SYNC",
+    category: "monitors",
+    price: 849.99,
+    url_slug: "asus-rog-swift-pg279qm",
+    image_url: "/images/products/placeholder-monitor.svg",
     specifications: {
-      "Type": "Open-back, over-ear",
-      "Frequency Response": "6 Hz - 38 kHz",
-      "Impedance": "120 Ohms",
-      "Sound Pressure Level": "110 dB",
-      "Weight": "240g"
+      "Screen Size": "27 inches",
+      "Resolution": "2560 x 1440",
+      "Refresh Rate": "240Hz",
+      "Response Time": "1ms",
+      "Panel Type": "IPS",
+      "HDR": "HDR400",
+      "G-SYNC": "Yes"
     },
     created_at: "2023-01-15T12:00:00Z",
     updated_at: "2023-06-20T15:30:00Z",
-    upvotes: 5,
-    downvotes: 2,
-    score: 3,
-    rating: 4.2,
-    review_count: 128,
-    reviews: [
-      {
-        id: "rev-001",
-        rating: 5,
-        title: "Excellent sound quality",
-        content: "These headphones have amazing clarity and detail. Highly recommended for critical listening.",
-        created_at: "2023-03-15T14:30:00Z",
-        user: {
-          id: "user-001",
-          display_name: "AudioEnthusiast",
-          avatar_url: null
-        }
-      }
-    ],
-    threads: [
-      {
-        id: "thread-001",
-        title: "HD 560S vs HD 600",
-        content: "How does the HD 560S compare to the HD 600 for classical music?",
-        created_at: "2023-04-10T09:15:00Z",
-        user: {
-          id: "user-002",
-          display_name: "ClassicalFan",
-          avatar_url: null
-        }
-      }
-    ]
-  },
-  {
-    id: "9dd2bfe2-6eef-40de-ae12-c35ff1975914",
-    name: "Logitech G Pro X",
-    description: "Professional gaming headset with Blue VO!CE microphone technology",
-    category: "headsets",
-    price: 129.99,
-    url_slug: "logitech-g-pro-x",
-    image_url: "/images/products/placeholder-headset.svg",
-    specifications: {
-      "Type": "Closed-back, over-ear",
-      "Frequency Response": "20 Hz - 20 kHz",
-      "Impedance": "35 Ohms",
-      "Microphone": "Detachable",
-      "Connection": "3.5mm / USB",
-      "Weight": "320g"
-    },
-    created_at: "2023-02-10T09:15:00Z",
-    updated_at: "2023-07-05T11:45:00Z",
-    upvotes: 8,
-    downvotes: 1,
-    score: 7,
-    rating: 4.5,
-    review_count: 256,
-    reviews: [
-      {
-        id: "rev-002",
-        rating: 4,
-        title: "Great for gaming",
-        content: "Excellent microphone quality and comfortable for long gaming sessions.",
-        created_at: "2023-05-20T18:45:00Z",
-        user: {
-          id: "user-003",
-          display_name: "ProGamer",
-          avatar_url: null
-        }
-      }
-    ],
-    threads: [
-      {
-        id: "thread-002",
-        title: "Microphone settings",
-        content: "What are the best Blue VO!CE settings for streaming?",
-        created_at: "2023-06-15T20:30:00Z",
-        user: {
-          id: "user-004",
-          display_name: "StreamerPro",
-          avatar_url: null
-        }
-      }
-    ]
+    rating: 4.8,
+    review_count: 156,
+    reviews: [],
+    threads: []
   },
   {
     id: "c8d9e0f1-2a3b-4c5d-6e7f-8g9h0i1j2k3l",
@@ -128,11 +47,30 @@ const mockProducts = [
     },
     created_at: "2023-03-05T14:30:00Z",
     updated_at: "2023-08-12T10:20:00Z",
-    upvotes: 12,
-    downvotes: 3,
-    score: 9,
     rating: 4.7,
     review_count: 189,
+    reviews: [],
+    threads: []
+  },
+  {
+    id: "9dd2bfe2-6eef-40de-ae12-c35ff1975914",
+    name: "Logitech G502 HERO",
+    description: "High-performance gaming mouse with HERO sensor",
+    category: "mice",
+    price: 79.99,
+    url_slug: "logitech-g502-hero",
+    image_url: "/images/products/placeholder-mouse.svg",
+    specifications: {
+      "Sensor": "HERO 25K",
+      "Switches": "Mechanical",
+      "Buttons": "11",
+      "Connection": "Wired",
+      "Weight": "121g (adjustable)"
+    },
+    created_at: "2023-02-10T09:15:00Z",
+    updated_at: "2023-07-05T11:45:00Z",
+    rating: 4.5,
+    review_count: 256,
     reviews: [],
     threads: []
   }
@@ -144,28 +82,33 @@ export async function GET(
 ) {
   try {
     const slug = params.slug;
+    const clientId = request.nextUrl.searchParams.get('clientId') || 'anonymous';
     console.log(`Fetching product with slug: ${slug}`);
     
     // Find the product with the matching slug
     const product = mockProducts.find(p => p.url_slug === slug);
     
     if (!product) {
+      console.error(`Product not found with slug: ${slug}`);
       return NextResponse.json(
         { error: "Product not found" },
         { status: 404 }
       );
     }
     
-    // Get the latest vote counts from the mockVotes Map
-    const voteCounts = ensureProductVoteCounts(product.id);
+    // Get vote state
+    const voteState = await getVoteState();
+    const voteCounts = voteState.voteCounts[product.id] || { upvotes: 0, downvotes: 0 };
     const score = voteCounts.upvotes - voteCounts.downvotes;
+    const userVote = voteState.votes[`${product.id}:${clientId}`] || null;
     
     // Create a new product object with the updated vote counts
     const updatedProduct = {
       ...product,
       upvotes: voteCounts.upvotes,
       downvotes: voteCounts.downvotes,
-      score: score
+      score: score,
+      userVote: userVote
     };
     
     return NextResponse.json(updatedProduct);
