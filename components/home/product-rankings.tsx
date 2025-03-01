@@ -14,30 +14,35 @@ export const categories = [
     name: 'All Products',
     description: 'All gaming peripherals',
     icon: '🎮',
+    color: 'bg-primary/10 hover:bg-primary/20 text-primary',
   },
   {
-    id: 'gaming-mice',
+    id: 'mice',
     name: 'Gaming Mice',
     description: 'High-performance gaming mice',
     icon: '🖱️',
+    color: 'bg-secondary/10 hover:bg-secondary/20 text-secondary',
   },
   {
-    id: 'gaming-keyboards',
+    id: 'keyboards',
     name: 'Keyboards',
     description: 'Mechanical and gaming keyboards',
     icon: '⌨️',
+    color: 'bg-accent/10 hover:bg-accent/20 text-accent',
   },
   {
-    id: 'gaming-headsets',
+    id: 'headsets',
     name: 'Headsets',
     description: 'Gaming headsets and audio',
     icon: '🎧',
+    color: 'bg-primary/10 hover:bg-primary/20 text-primary',
   },
   {
-    id: 'gaming-monitors',
+    id: 'monitors',
     name: 'Monitors',
     description: 'Gaming monitors and displays',
     icon: '🖥️',
+    color: 'bg-secondary/10 hover:bg-secondary/20 text-secondary',
   },
 ]
 
@@ -109,63 +114,85 @@ export function ProductRankings() {
     )
   }
 
+  // Find the current category object
+  const currentCategory = categories.find(cat => cat.id === selectedCategory) || categories[0];
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
+      {/* Category Title */}
+      <div className="mb-10">
+        <h3 className="text-2xl font-bold flex items-center gap-3">
+          <span className="text-3xl">{currentCategory.icon}</span>
+          {currentCategory.name}
+        </h3>
+        <p className="text-muted-foreground mt-2">{currentCategory.description}</p>
+      </div>
+      
       {/* Category Navigation */}
-      <ScrollArea className="w-full whitespace-nowrap">
+      <ScrollArea className="w-full whitespace-nowrap mb-8">
         <div className="flex space-x-4 pb-4">
-          {categories.map((category) => (
-            <Button
-              key={category.id}
-              variant="outline"
-              size="lg"
-              onClick={() => handleCategoryChange(category.id)}
-              className={cn(
-                "min-w-[120px] rounded-full border-2",
-                selectedCategory === category.id && 
-                "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-              )}
-            >
-              {category.name}
-            </Button>
-          ))}
+          {categories.map((category) => {
+            const isSelected = selectedCategory === category.id;
+            const categoryColor = category.color;
+            
+            return (
+              <Button
+                key={category.id}
+                variant="outline"
+                size="lg"
+                onClick={() => handleCategoryChange(category.id)}
+                className={cn(
+                  "min-w-[140px] rounded-lg border-2 transition-all duration-300 shadow-md",
+                  isSelected 
+                    ? `${categoryColor} border-2 shadow-lg` 
+                    : "border-border/50 hover:border-primary/30 bg-black/20"
+                )}
+              >
+                <span className="mr-2 text-xl">{category.icon}</span>
+                {category.name}
+              </Button>
+            );
+          })}
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
 
       {/* Product Rankings */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="mt-4 text-sm text-muted-foreground">Loading products...</p>
+          <div className="flex flex-col items-center justify-center py-16 bg-card-background/30 rounded-lg border border-white/5">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="mt-6 text-muted-foreground">Loading products...</p>
           </div>
         ) : displayedProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-lg font-medium">No products found</p>
-            <p className="text-sm text-muted-foreground">
-              Try selecting a different category
+          <div className="flex flex-col items-center justify-center py-16 text-center bg-card-background/30 rounded-lg border border-white/5">
+            <p className="text-xl font-medium mb-2">No products found</p>
+            <p className="text-muted-foreground max-w-md">
+              Try selecting a different category or check back later for new additions
             </p>
           </div>
         ) : (
-          displayedProducts.map((product, index) => (
-            <ProductRankingCard 
-              key={product.id} 
-              product={product}
-              rank={index + 1}
-            />
-          ))
+          <div className="space-y-4">
+            {displayedProducts.map((product, index) => (
+              <ProductRankingCard 
+                key={product.id} 
+                product={product}
+                rank={index + 1}
+              />
+            ))}
+          </div>
         )}
       </div>
 
       {/* Load More Button */}
       {!loading && hasMore && (
-        <div className="flex justify-center">
+        <div className="flex justify-center mt-12">
           <Button
             variant="outline"
             onClick={() => setDisplayCount(prev => prev + 5)}
+            className="premium-button bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary min-w-[200px]"
           >
-            Show More
+            Show More Products
           </Button>
         </div>
       )}

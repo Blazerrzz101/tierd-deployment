@@ -3,13 +3,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { Product } from "@/types/product"
 
-export function useProduct(slug: string) {
+export function useProduct(productId: string) {
   return useQuery<Product>({
-    queryKey: ['product', slug],
+    queryKey: ['product', productId],
     queryFn: async () => {
       try {
-        // Use our new API endpoint
-        const response = await fetch(`/api/products/${slug}`)
+        // Use our non-dynamic API endpoint with query parameter
+        const response = await fetch(`/api/products/product?id=${productId}`)
         
         if (!response.ok) {
           if (response.status === 404) {
@@ -18,8 +18,13 @@ export function useProduct(slug: string) {
           throw new Error(`Error fetching product: ${response.statusText}`)
         }
         
-        const product = await response.json()
-        return product
+        const data = await response.json()
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Error fetching product')
+        }
+        
+        return data.product
       } catch (error) {
         console.error('Error in useProduct hook:', error)
         throw error

@@ -60,13 +60,13 @@ export function ThreadCard({ thread }: ThreadCardProps) {
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-6 transition-colors hover:bg-white/10">
+    <div className="modern-card hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
       <div className="flex items-start justify-between">
-        <div className="space-y-4">
+        <div className="space-y-4 w-full">
           <div className="flex items-center justify-between">
             <Link
               href={`/threads/${thread.localId || thread.id}`}
-              className="text-xl font-semibold hover:underline"
+              className="text-xl font-semibold hover:gradient-text"
             >
               {thread.title}
             </Link>
@@ -95,7 +95,7 @@ export function ThreadCard({ thread }: ThreadCardProps) {
             )}
           </div>
           <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{thread.user.username}</span>
+            <span className="font-medium text-secondary">{thread.user.username}</span>
             <span>•</span>
             <span>{formatTimeAgo(thread.created_at)}</span>
           </div>
@@ -104,7 +104,7 @@ export function ThreadCard({ thread }: ThreadCardProps) {
           </p>
           {thread.taggedProducts && thread.taggedProducts.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-secondary">
                 <Tag className="h-4 w-4" />
                 <span>Tagged Products:</span>
               </div>
@@ -113,7 +113,7 @@ export function ThreadCard({ thread }: ThreadCardProps) {
                   <Link
                     key={product.id}
                     href={`/products/${product.url_slug || product.id}`}
-                    className="group flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-2 transition-colors hover:bg-white/10"
+                    className="group flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-2 transition-all hover:bg-white/10 hover:border-secondary/30 hover:shadow-sm"
                   >
                     <div className="relative h-12 w-12 overflow-hidden rounded-md">
                       <ProductImage
@@ -126,7 +126,7 @@ export function ThreadCard({ thread }: ThreadCardProps) {
                       />
                     </div>
                     <div>
-                      <div className="font-medium group-hover:underline">
+                      <div className="font-medium group-hover:text-secondary">
                         {product.name}
                       </div>
                       <div className="text-sm text-muted-foreground">
@@ -141,16 +141,16 @@ export function ThreadCard({ thread }: ThreadCardProps) {
         </div>
       </div>
       <div className="mt-6 flex items-center gap-4">
-        <Button variant="ghost" size="sm" className="gap-2">
+        <Button variant="ghost" size="sm" className="gap-2 hover:bg-primary/10 hover:text-primary">
           <MessageSquare className="h-4 w-4" />
           Discuss
         </Button>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="gap-1">
+          <Button variant="ghost" size="sm" className="gap-1 hover:bg-secondary/10 hover:text-secondary">
             <ThumbsUp className="h-4 w-4" />
             {thread.upvotes}
           </Button>
-          <Button variant="ghost" size="sm" className="gap-1">
+          <Button variant="ghost" size="sm" className="gap-1 hover:bg-accent/10 hover:text-accent">
             <ThumbsDown className="h-4 w-4" />
             {thread.downvotes}
           </Button>

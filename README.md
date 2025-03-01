@@ -213,132 +213,78 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Voting System
 
-The application includes a robust voting system that allows users to upvote or downvote products. The voting system has the following features:
+The application includes a standardized voting system that allows users to upvote or downvote products. The voting system supports:
 
-### Features
+- Anonymous voting with client ID tracking
+- Vote toggling (voting the same way twice removes the vote)
+- Vote changing (from upvote to downvote and vice versa)
+- Score calculation (upvotes minus downvotes)
+- Product ranking based on vote score
 
-- Anonymous voting using client IDs stored in localStorage
-- Upvote and downvote functionality
-- Toggle votes by clicking the same button again
-- Optimistic UI updates for better user experience
-- Proper error handling and fallbacks
-- Real-time vote count updates
+### Vote Storage
 
-### Implementation
+Votes are stored in a JSON file at `data/votes.json` with the following structure:
 
-The voting system is implemented using the following components:
-
-1. **VoteButtons Component**: A reusable component that displays upvote and downvote buttons with counts.
-   ```tsx
-   // Using with product ID only
-   <VoteButtons productId="550e8400-e29b-41d4-a716-446655440000" />
-   
-   // Using with product object
-   <VoteButtons product={product} />
-   
-   // Customizing appearance
-   <VoteButtons 
-     product={product} 
-     size="sm" 
-     variant="ghost" 
-     className="my-custom-class" 
-   />
-   ```
-
-2. **useVote Hook**: A custom hook that provides vote functionality and state management.
-   ```tsx
-   const { vote, checkUserVote, isLoading, clientId } = useVote();
-   
-   // Check if user has voted
-   const voteType = await checkUserVote(productId);
-   
-   // Cast a vote (1 for upvote, -1 for downvote)
-   const result = await vote(product, 1);
-   ```
-
-3. **API Routes**:
-   - `GET /api/vote`: Retrieves vote counts and user vote status
-     ```
-     /api/vote?productId=550e8400-e29b-41d4-a716-446655440000&clientId=anonymous
-     ```
-   - `POST /api/vote`: Casts or removes votes
-     ```json
-     {
-       "productId": "550e8400-e29b-41d4-a716-446655440000",
-       "voteType": 1,
-       "clientId": "anonymous"
-     }
-     ```
-
-### Database Structure
-
-Votes are stored in the `votes` table with the following structure:
-
-- `id`: Unique identifier for the vote
-- `product_id`: The product being voted on
-- `vote_type`: 1 for upvote, -1 for downvote
-- `metadata`: JSONB column containing client_id for anonymous users
-- `created_at`: Timestamp when the vote was created
-- `updated_at`: Timestamp when the vote was last updated
-
-Products table includes the following vote-related fields:
-- `upvotes`: Count of upvotes
-- `downvotes`: Count of downvotes
-- `score`: Calculated as upvotes - downvotes
-
-### Client ID Generation
-
-For anonymous users, a client ID is generated and stored in localStorage:
-
-```js
-// Generate a unique client ID
-const generateClientId = () => {
-  return `${Math.random().toString(36).substring(2)}_${Date.now()}`;
-};
-
-// Get or create client ID
-const getClientId = () => {
-  let clientId = localStorage.getItem('tierd_client_id');
-  if (!clientId) {
-    clientId = generateClientId();
-    localStorage.setItem('tierd_client_id', clientId);
-  }
-  return clientId;
-};
+```json
+{
+  "votes": {
+    "productId:clientId": voteType
+  },
+  "voteCounts": {
+    "productId": {
+      "upvotes": number,
+      "downvotes": number
+    }
+  },
+  "lastUpdated": "ISO date string"
+}
 ```
 
-### Maintenance
+### Voting API
 
-The voting system includes a maintenance script to fix inconsistent vote counts:
+The voting API is accessible via the standardized product endpoint:
+
+- `POST /api/products/product` - to submit a vote with body:
+  ```json
+  {
+    "productId": "product-id",
+    "voteType": 1 or -1,
+    "clientId": "unique-client-id"
+  }
+  ```
+
+- `GET /api/products/product?id={productId}&clientId={clientId}` - to fetch product details with vote status
+
+### Testing the Voting System
+
+The repository includes a PowerShell script `test-vote.ps1` that tests the voting functionality:
 
 ```bash
-# Check for inconsistencies (dry run)
-node scripts/fix-vote-counts.js --dry-run
-
-# Fix all products
-node scripts/fix-vote-counts.js
-
-# Fix a specific product
-node scripts/fix-vote-counts.js --product-id=550e8400-e29b-41d4-a716-446655440000
+# Run the test script
+powershell -ExecutionPolicy Bypass -File test-vote.ps1
 ```
 
-### Testing
+The script tests:
+1. Fetching product details
+2. Upvoting a product
+3. Toggling an upvote (removing it)
+4. Downvoting a product
+5. Changing from downvote to upvote
+6. Verifying the final product state
 
-The voting system can be tested using the test page at `/test-vote`, which provides a UI for testing various voting scenarios:
+### Fixing Vote Count Inconsistencies
 
-- Testing the VoteButtons component
-- Direct API calls for voting and checking votes
-- Testing with different client IDs
+If vote counts become inconsistent (which can happen if the server is interrupted during a vote update), you can use the `fix-votes.js` script to recalculate and fix the counts:
 
-### Troubleshooting
+```bash
+# Check what would be fixed without making changes
+node fix-votes.js --dry-run
 
-Common issues and solutions:
+# Fix the vote counts
+node fix-votes.js
+```
 
-1. **Vote counts not updating**: Run the fix-vote-counts script to recalculate counts based on actual votes.
-
-2. **Client ID issues**: Clear localStorage and refresh the page to generate a new client ID.
-
-3. **API errors**: Check the browser console for detailed error messages. Most common issues are related to missing or invalid parameters.
+The script recalculates vote counts based on the actual votes in the `votes` object and updates the `voteCounts` object accordingly.
 
 ## Acknowledgments
 

@@ -1,69 +1,106 @@
 "use client"
 
-import { useEffect, useRef } from 'react'
-import { motion, useAnimation, useInView } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 interface ParticlesProps {
-  className?: string
+  className?: string;
+  quantity?: number;
+  color?: 'primary' | 'secondary' | 'accent' | 'white';
+  size?: 'small' | 'medium' | 'large';
+  speed?: 'slow' | 'medium' | 'fast';
 }
 
-interface Particle {
-  x: number
-  y: number
-  size: number
-  alpha: number
-  speed: number
-}
-
-export function Particles({ className }: ParticlesProps) {
+export function Particles({ 
+  className, 
+  quantity = 50, 
+  color = 'primary',
+  size = 'medium',
+  speed = 'medium'
+}: ParticlesProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const isInView = useInView(containerRef)
-  const controls = useAnimation()
+  const [particles, setParticles] = useState<Array<{
+    id: number;
+    x: string;
+    y: string;
+    size: number;
+    duration: number;
+  }>>([])
+
+  // Calculate particle size based on prop
+  const getParticleSize = () => {
+    switch(size) {
+      case 'small': return { min: 1, max: 2 };
+      case 'large': return { min: 2, max: 4 };
+      default: return { min: 1.5, max: 3 }; // medium
+    }
+  }
+
+  // Calculate animation speed based on prop
+  const getAnimationSpeed = () => {
+    switch(speed) {
+      case 'slow': return { min: 8, max: 15 };
+      case 'fast': return { min: 5, max: 8 };
+      default: return { min: 6, max: 12 }; // medium
+    }
+  }
+
+  // Get color class based on prop
+  const getColorClass = () => {
+    switch(color) {
+      case 'secondary': return 'bg-secondary/30';
+      case 'accent': return 'bg-accent/30';
+      case 'white': return 'bg-white/20';
+      default: return 'bg-primary/30'; // primary
+    }
+  }
 
   useEffect(() => {
-    if (!isInView) return
+    const sizeRange = getParticleSize();
+    const speedRange = getAnimationSpeed();
+    
+    // Generate particles
+    const newParticles = Array.from({ length: quantity }, (_, index) => ({
+      id: index,
+      x: `${Math.random() * 100}%`,
+      y: `${Math.random() * 100}%`,
+      size: Math.random() * (sizeRange.max - sizeRange.min) + sizeRange.min,
+      duration: Math.random() * (speedRange.max - speedRange.min) + speedRange.min,
+    }));
+    
+    setParticles(newParticles);
+  }, [quantity, size, speed]);
 
-    const particles: Particle[] = Array.from({ length: 50 }, () => ({
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 3 + 1,
-      alpha: Math.random() * 0.5 + 0.2,
-      speed: Math.random() * 0.5 + 0.2
-    }))
-
-    particles.forEach((particle, i) => {
-      controls.start(`particle${i}`, {
-        opacity: [particle.alpha, 0],
-        translateY: [-20, -40],
-        transition: {
-          duration: particle.speed * 10,
-          repeat: Infinity,
-          ease: "linear",
-          delay: Math.random() * 5
-        }
-      })
-    })
-  }, [isInView, controls])
+  const colorClass = getColorClass();
 
   return (
     <div 
       ref={containerRef} 
       className={cn("absolute inset-0 overflow-hidden pointer-events-none", className)}
+      aria-hidden="true"
     >
-      {Array.from({ length: 50 }).map((_, i) => (
+      {particles.map(particle => (
         <motion.div
-          key={i}
-          custom={i}
-          animate={controls}
-          variants={{
-            [`particle${i}`]: {}
-          }}
-          className="absolute w-1 h-1 rounded-full bg-[#ff4b26]"
+          key={particle.id}
+          className={cn("absolute rounded-full", colorClass)}
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
+            left: particle.x,
+            top: particle.y,
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
             filter: 'blur(1px)'
+          }}
+          initial={{ opacity: 0.2, y: 0 }}
+          animate={{ 
+            opacity: 0,
+            y: -40
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            delay: Math.random() * 5,
+            ease: "linear"
           }}
         />
       ))}

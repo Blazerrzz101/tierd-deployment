@@ -73,21 +73,32 @@ export default function ThreadsPage() {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-12">
-      <div className="mb-8 flex flex-col items-center text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">Community Discussions</h1>
-          <p className="mt-2 text-lg text-muted-foreground">
-            Join conversations about your favorite gaming gear
-          </p>
+      <div className="mb-10 pb-8 border-b border-yellow-500/50">
+        <h1 className="text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-yellow-300 to-green-300 bg-clip-text text-transparent mb-4">Discussions</h1>
+        <p className="text-xl text-muted-foreground">
+          Connect with fellow enthusiasts and directly integrate with product reviews. Share your experiences and gain insights from the community.
+        </p>
+      </div>
+
+      <div className="mb-10">
+        <div className="rounded-xl p-6 border border-green-500/20 bg-black/40 backdrop-blur-sm hover:border-green-500/40 transition-all">
+          <h2 className="text-lg font-semibold mb-3 text-green-300">Start a new discussion</h2>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <p className="text-muted-foreground mb-2">
+                Tag products in your thread to help others find valuable discussions about their favorite gear.
+              </p>
+            </div>
+            <Button 
+              onClick={handleCreateClick}
+              size="lg"
+              className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white border-none"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              New Thread
+            </Button>
+          </div>
         </div>
-        <Button 
-          onClick={handleCreateClick}
-          className="mt-4 sm:mt-0"
-          size="lg"
-        >
-          <Plus className="mr-2 h-5 w-5" />
-          New Thread
-        </Button>
       </div>
 
       <Tabs defaultValue="all" className="mb-8">

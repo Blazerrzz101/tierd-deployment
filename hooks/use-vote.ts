@@ -12,16 +12,16 @@ interface VoteProduct {
 interface VoteResponse {
   success: boolean;
   error?: string;
-  result?: {
-    upvotes: number;
-    downvotes: number;
-    voteType: number | null;
-  };
+  upvotes?: number;
+  downvotes?: number;
+  voteType?: number | null;
+  score?: number;
 }
 
 export function useVote() {
   const [isLoading, setIsLoading] = useState(false)
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   // Generate a random client ID if one doesn't exist
   const getClientId = () => {
@@ -42,7 +42,8 @@ export function useVote() {
 
     setIsLoading(true)
     try {
-      const response = await fetch("/api/vote", {
+      // Use our non-dynamic API endpoint
+      const response = await fetch("/api/products/product", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -56,7 +57,7 @@ export function useVote() {
 
       const data = await response.json()
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         throw new Error(data.error || "Failed to vote")
       }
 
@@ -64,12 +65,30 @@ export function useVote() {
       await queryClient.invalidateQueries({ queryKey: ["products"] })
       await queryClient.invalidateQueries({ queryKey: ["product", product.id] })
 
+      // Add a toast notification to confirm vote
+      toast({
+        title: voteType === 1 ? "Upvoted" : "Downvoted",
+        description: `You ${voteType === 1 ? "upvoted" : "downvoted"} ${product.name}`,
+        variant: "default",
+      })
+
       return {
         success: true,
-        result: data.result,
+        upvotes: data.upvotes,
+        downvotes: data.downvotes,
+        voteType: data.voteType,
+        score: data.score
       }
     } catch (error) {
       console.error("Vote error:", error)
+      
+      // Show error toast
+      toast({
+        title: "Vote Failed",
+        description: error instanceof Error ? error.message : "Failed to vote",
+        variant: "destructive",
+      })
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to vote",
@@ -81,20 +100,27 @@ export function useVote() {
 
   const getVoteStatus = async (productId: string): Promise<VoteResponse> => {
     try {
-      const response = await fetch(`/api/vote?productId=${productId}&clientId=${getClientId()}`)
-      const data = await response.json()
-
+      // Use our non-dynamic API endpoint with query parameter
+      const response = await fetch(`/api/products/product?id=${productId}&clientId=${getClientId()}`)
+      
       if (!response.ok) {
+        throw new Error(`Failed to get vote status: ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      
+      if (!data.success) {
         throw new Error(data.error || "Failed to get vote status")
       }
-
+      
+      const product = data.product
+      
       return {
         success: true,
-        result: {
-          upvotes: data.upvotes,
-          downvotes: data.downvotes,
-          voteType: data.voteType,
-        },
+        upvotes: product.upvotes,
+        downvotes: product.downvotes,
+        voteType: product.userVote,
+        score: product.score
       }
     } catch (error) {
       console.error("Vote status error:", error)

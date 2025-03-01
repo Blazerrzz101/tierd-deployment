@@ -59,7 +59,14 @@ export async function getVoteState(): Promise<VoteState> {
     const productIds = [
       'j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6', // ASUS monitor
       'c8d9e0f1-2a3b-4c5d-6e7f-8g9h0i1j2k3l', // Razer mouse
-      '9dd2bfe2-6eef-40de-ae12-c35ff1975914'  // Logitech mouse
+      '9dd2bfe2-6eef-40de-ae12-c35ff1975914',  // Logitech mouse
+      'a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6', // Logitech G Pro X
+      'q1w2e3r4-t5y6-u7i8-o9p0-a1s2d3f4g5h6', // SteelSeries Apex Pro
+      'z1x2c3v4-b5n6-m7k8-j9h0-g1f2d3s4a5', // Ducky One 3
+      'p9o8i7u6-y5t4-r3e2-w1q0-z9x8c7v6b5', // Samsung Odyssey G7
+      'n4m3b2v1-c8x7z6-p5o4i3-u2y1t0-r9e8w7q6', // HyperX Cloud Alpha
+      'l5k4j3h2-g1f0d9-s8a7p6-o5i4u3-y2t1r0e9', // SteelSeries Arctis Pro
+      'w9q8e7r6-t5y4u3-i2o1p0-a9s8d7-f6g5h4j3' // Logitech G915
     ];
     
     let stateUpdated = false;

@@ -1,0 +1,19 @@
+
+============================================================
+VOTING SYSTEM TEST - 2025-03-02 08:47:27
+============================================================
+[INFO] Client ID: test-user-3477
+[INFO] Product ID: j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6
+[INFO] Base URL: http://localhost:3000
+
+----------------------------------------
+TEST 1: Fetching product details
+----------------------------------------
+
+----------------------------------------
+API REQUEST: GET http://localhost:3000/api/products/product?id=j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6&clientId=test-user-3477
+----------------------------------------
+[INFO] Description: Fetching product details
+[ERROR] Status Code: 500
+[ERROR] Error: The remote server returned an error: (500) Internal Server Error.
+[ERROR] Failed to retrieve product details

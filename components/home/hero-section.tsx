@@ -2,7 +2,7 @@
 
 import { motion, useScroll, useTransform } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Star } from "lucide-react"
+import { ArrowRight, Star, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { SearchBar } from "./search-bar"
@@ -29,8 +29,14 @@ export function HeroSection() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Animated Background - Only on home page */}
-      <div className="absolute inset-0 animated-gradient" />
+      {/* Subtle Grid Background */}
+      <div 
+        className="absolute inset-0 bg-[url('/grid.svg')] bg-fixed opacity-[0.02] pointer-events-none"
+        style={{
+          maskImage: 'radial-gradient(circle at center, black, transparent 80%)',
+          WebkitMaskImage: 'radial-gradient(circle at center, black, transparent 80%)'
+        }}
+      />
       
       {/* Search Bar - Persistent */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
@@ -39,9 +45,9 @@ export function HeroSection() {
         </div>
       </div>
       
-      {/* Animated Gradient Orbs */}
+      {/* Professional Gradient Orbs */}
       <motion.div
-        className="pointer-events-none absolute -left-1/4 top-0 h-[800px] w-[800px] rounded-full bg-blue-500/10 blur-[120px]"
+        className="pointer-events-none absolute -left-1/4 top-0 h-[800px] w-[800px] rounded-full bg-primary/5 blur-[120px]"
         animate={{
           x: [0, 100, 0],
           y: [0, 50, 0],
@@ -55,7 +61,7 @@ export function HeroSection() {
       />
       
       <motion.div
-        className="pointer-events-none absolute right-0 top-1/4 h-[600px] w-[600px] rounded-full bg-blue-600/10 blur-[100px]"
+        className="pointer-events-none absolute right-0 top-1/4 h-[600px] w-[600px] rounded-full bg-secondary/5 blur-[100px]"
         animate={{
           x: [0, -50, 0],
           y: [0, 100, 0],
@@ -67,13 +73,18 @@ export function HeroSection() {
           repeatType: "reverse",
         }}
       />
-
-      {/* Grid Pattern Overlay */}
-      <div 
-        className="pointer-events-none absolute inset-0 bg-[url('/grid.svg')] bg-fixed opacity-5"
-        style={{
-          maskImage: 'linear-gradient(to bottom, transparent, black, transparent)',
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent, black, transparent)'
+      
+      <motion.div
+        className="pointer-events-none absolute left-1/3 bottom-1/4 h-[400px] w-[400px] rounded-full bg-accent/5 blur-[80px]"
+        animate={{
+          x: [0, 30, 0],
+          y: [0, -30, 0],
+          scale: [1, 1.15, 1],
+        }}
+        transition={{
+          duration: 18,
+          repeat: Infinity,
+          repeatType: "reverse",
         }}
       />
 
@@ -91,40 +102,46 @@ export function HeroSection() {
           {/* Text Content */}
           <div className="flex flex-col justify-center">
             <motion.div variants={fadeInUp} className="space-y-8">
-              <div className="inline-flex items-center rounded-full border border-blue-500/20 bg-blue-500/5 px-4 py-1.5 shadow-lg shadow-blue-500/10">
-                <span className="text-sm font-medium text-blue-300">New: AI-Powered Rankings</span>
-                <span className="ml-2 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-xs text-blue-300">Beta</span>
+              {/* Professional Badge */}
+              <div className="inline-flex items-center rounded-lg border border-white/10 bg-black/30 px-4 py-2 shadow-xl backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+                  <span className="text-sm font-medium text-white">Enterprise-Grade Ranking Platform</span>
+                </div>
+                <span className="ml-2 rounded-full bg-primary/20 px-1.5 py-0.5 text-xs text-primary">Professional</span>
               </div>
               
+              {/* Main Title */}
               <motion.h1 
                 className="heading-1"
                 variants={fadeInUp}
               >
-                Find Your Perfect
-                <br />
+                <span className="block text-foreground/80">Discover Elite</span>
                 <motion.span 
                   className="gradient-text"
                   animate={{
                     backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
                   }}
                   transition={{
-                    duration: 5,
+                    duration: 8,
                     repeat: Infinity,
                     repeatType: "reverse",
                   }}
                   style={{ backgroundSize: "200% auto" }}
                 >
-                  Gaming Setup
+                  Gaming Hardware
                 </motion.span>
               </motion.h1>
 
+              {/* Description */}
               <motion.p 
                 variants={fadeInUp}
-                className="body-large max-w-xl"
+                className="body-large max-w-xl text-foreground/70"
               >
-                Discover and compare the best gaming gear, ranked by real streamers and pro gamers. Make informed decisions with authentic reviews and real-time rankings.
+                Tier'd delivers data-driven insights to identify top-performing gaming peripherals for discerning professionals and competitive players. Our proprietary ranking algorithm combines expert evaluations with real-world performance metrics.
               </motion.p>
 
+              {/* CTA Buttons */}
               <motion.div 
                 variants={fadeInUp}
                 className="flex items-center gap-6"
@@ -132,10 +149,10 @@ export function HeroSection() {
                 <Link href="/products">
                   <Button 
                     size="lg" 
-                    className="interactive group relative h-14 overflow-hidden bg-primary px-8 text-lg font-medium shadow-lg shadow-primary/20"
+                    className="interactive group relative h-14 overflow-hidden bg-primary px-8 text-lg font-medium shadow-lg"
                   >
                     <motion.span
-                      className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500"
+                      className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary to-primary/80"
                       animate={{
                         x: ["-100%", "100%"],
                       }}
@@ -147,103 +164,88 @@ export function HeroSection() {
                       style={{ opacity: 0.5 }}
                     />
                     <span className="relative flex items-center">
-                      Explore Products
+                      Browse Elite Products
                       <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                     </span>
                   </Button>
                 </Link>
                 <Link href="/about" className="interactive flex items-center text-lg font-medium text-muted-foreground transition-all hover:text-foreground">
-                  Learn More
+                  Platform Overview
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </motion.div>
 
+              {/* Trust Indicators */}
               <motion.div 
                 variants={fadeInUp}
-                className="mt-4"
+                className="mt-8 border-t border-white/5 pt-8"
               >
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3].map((i) => (
-                      <div 
-                        key={i} 
-                        className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-blue-500/20 via-blue-600/20 to-blue-700/20 p-0.5"
-                      >
-                        <div className="h-full w-full rounded-full bg-muted" />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                    <span className="font-medium text-foreground">4.9/5</span> from over 10k reviews
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center gap-6">
-                  {["Twitch", "YouTube", "TikTok"].map((platform) => (
-                    <motion.div
-                      key={platform}
-                      variants={fadeInUp}
-                      whileHover={{ scale: 1.05 }}
-                      className="interactive text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {platform}
-                    </motion.div>
-                  ))}
+                <p className="text-sm font-medium text-foreground/60 mb-4">Trusted by professional players and industry leaders</p>
+                
+                <div className="flex flex-wrap items-center gap-8">
+                  {/* Trust logos - using placeholder divs for now */}
+                  <div className="h-8 w-24 rounded bg-white/5 backdrop-blur-sm"></div>
+                  <div className="h-8 w-20 rounded bg-white/5 backdrop-blur-sm"></div>
+                  <div className="h-8 w-28 rounded bg-white/5 backdrop-blur-sm"></div>
+                  <div className="h-8 w-16 rounded bg-white/5 backdrop-blur-sm"></div>
                 </div>
               </motion.div>
             </motion.div>
           </div>
-
-          {/* Featured Product Preview */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.5, ease: [0.23, 1, 0.32, 1] }}
-            className="relative flex items-center justify-center lg:justify-end"
-          >
-            <motion.div 
-              className="glass group relative aspect-square w-full max-w-xl overflow-hidden rounded-3xl p-8"
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-blue-600/10" />
-              <div className="absolute inset-0 bg-grid-white/5 bg-[size:3rem_3rem] [mask-image:radial-gradient(white,transparent_85%)]" />
-              
-              <motion.div 
-                className="relative flex h-full flex-col items-center justify-center"
-                initial="initial"
-                animate="animate"
-                variants={stagger}
-              >
-                <motion.div 
-                  className="ranking-badge"
-                  variants={fadeInUp}
-                  whileHover={{ scale: 1.1 }}
-                >
-                  #1
-                </motion.div>
-                <motion.div
-                  variants={fadeInUp}
-                  whileHover={{ scale: 1.05 }}
-                  className="relative h-80 w-80"
-                >
-                  <Image
-                    src="/images/products/placeholder.svg"
-                    alt="Featured Gaming Product"
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                </motion.div>
-                <motion.div 
-                  className="mt-6 text-center"
-                  variants={fadeInUp}
-                >
-                  <h3 className="text-xl font-semibold">Most Popular Gaming Mouse</h3>
-                  <p className="mt-2 text-muted-foreground">Voted by 10,000+ streamers</p>
-                </motion.div>
-              </motion.div>
-            </motion.div>
+          
+          {/* Image/Visual Area */}
+          <motion.div variants={fadeInUp} className="relative flex items-center justify-center">
+            <div className="relative w-full max-w-lg mx-auto">
+              {/* Card Stack */}
+              <div className="absolute -inset-0.5 rounded-3xl bg-gradient-to-r from-primary to-secondary opacity-10 blur-xl"></div>
+              <div className="relative bg-card-background border border-white/10 rounded-3xl p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold">Top Rated Hardware</h3>
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-primary"></div>
+                    <div className="h-2 w-2 rounded-full bg-secondary"></div>
+                    <div className="h-2 w-2 rounded-full bg-accent"></div>
+                  </div>
+                </div>
+                
+                {/* Product Preview Cards */}
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 * i, duration: 0.5 }}
+                      className="flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      <div className="flex-shrink-0 h-12 w-12 rounded-lg bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20"></div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium truncate">Premium Gaming {i === 1 ? 'Mouse' : i === 2 ? 'Keyboard' : 'Headset'}</h4>
+                        <div className="flex items-center mt-1">
+                          <div className="flex items-center">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star key={star} className={`h-3 w-3 ${star <= 4 ? 'text-secondary fill-secondary' : 'text-gray-500'}`} />
+                            ))}
+                          </div>
+                          <span className="text-xs text-muted-foreground ml-1">4.8</span>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 text-xs font-semibold text-secondary">$149.99</div>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                <div className="mt-6 pt-4 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Real-time data analysis</span>
+                    <Button variant="outline" size="sm" className="text-xs h-8 rounded-lg border-white/10 bg-white/5">
+                      View All
+                      <ChevronRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       </motion.div>

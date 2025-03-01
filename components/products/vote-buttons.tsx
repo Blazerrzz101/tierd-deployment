@@ -24,7 +24,7 @@ export function VoteButtons({
   const [upvotes, setUpvotes] = useState(initialUpvotes)
   const [downvotes, setDownvotes] = useState(initialDownvotes)
   const [voteType, setVoteType] = useState<number | null>(initialVoteType)
-  const [isVoting, setIsVoting] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { vote } = useVote()
   const { toast } = useToast()
 
@@ -36,75 +36,73 @@ export function VoteButtons({
   }, [initialUpvotes, initialDownvotes, initialVoteType])
 
   const handleVote = async (newVoteType: 1 | -1) => {
-    if (!product?.id || isVoting) return
-
-    setIsVoting(true)
+    setIsLoading(true);
     
-    // Store original values for potential rollback
-    const oldVoteType = voteType
-    const oldUpvotes = upvotes
-    const oldDownvotes = downvotes
-
     try {
-      // Calculate optimistic update
-      let updatedUpvotes = upvotes
-      let updatedDownvotes = downvotes
-
-      // If voting the same way, we're removing the vote
-      if (oldVoteType === newVoteType) {
-        if (newVoteType === 1) updatedUpvotes--
-        if (newVoteType === -1) updatedDownvotes--
-        setVoteType(null)
-      } else {
-        // Remove old vote if it exists
-        if (oldVoteType === 1) updatedUpvotes--
-        if (oldVoteType === -1) updatedDownvotes--
+      // Optimistic update
+      const isCurrentVote = newVoteType === voteType;
+      const updatedUpvotes = isCurrentVote && newVoteType === 1 
+        ? upvotes - 1 
+        : newVoteType === 1 && voteType !== 1
+          ? upvotes + 1 
+          : upvotes;
         
-        // Add new vote
-        if (newVoteType === 1) updatedUpvotes++
-        if (newVoteType === -1) updatedDownvotes++
-        setVoteType(newVoteType)
-      }
-
-      // Apply optimistic update for vote counts
-      setUpvotes(updatedUpvotes)
-      setDownvotes(updatedDownvotes)
-
-      // Send vote to server
-      const response = await vote(product, newVoteType)
-
-      if (!response?.success) {
-        throw new Error(response?.error || "Failed to vote")
-      }
-
-      // Update with server values if they exist
-      if (response.result) {
-        setUpvotes(response.result.upvotes)
-        setDownvotes(response.result.downvotes)
-        setVoteType(response.result.voteType)
-
-        // Show success message
+      const updatedDownvotes = isCurrentVote && newVoteType === -1 
+        ? downvotes - 1 
+        : newVoteType === -1 && voteType !== -1
+          ? downvotes + 1 
+          : downvotes;
+      
+      // Update local state immediately
+      setUpvotes(updatedUpvotes);
+      setDownvotes(updatedDownvotes);
+      setVoteType(isCurrentVote ? null : newVoteType);
+      
+      // Call API
+      const response = await vote(product, newVoteType);
+      
+      if (response?.success) {
+        // Update with actual values from server
+        if (typeof response.upvotes === 'number') {
+          setUpvotes(response.upvotes);
+        }
+        
+        if (typeof response.downvotes === 'number') {
+          setDownvotes(response.downvotes);
+        }
+        
+        setVoteType(response.voteType ?? (isCurrentVote ? null : newVoteType));
+      } else {
+        // Revert on error
+        setUpvotes(initialUpvotes);
+        setDownvotes(initialDownvotes);
+        setVoteType(initialVoteType);
+        
         toast({
-          title: response.result.voteType === null ? "Vote Removed" : "Vote Recorded",
-          description: `Successfully ${response.result.voteType === null ? "removed vote from" : (response.result.voteType === 1 ? "upvoted" : "downvoted")} ${product.name}`,
-        })
+          title: "Error",
+          description: response?.error || "Failed to vote",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      // Revert to original values on failure
-      setUpvotes(oldUpvotes)
-      setDownvotes(oldDownvotes)
-      setVoteType(oldVoteType)
+      console.error("Vote error:", error);
+      // Revert on error
+      setUpvotes(initialUpvotes);
+      setDownvotes(initialDownvotes);
+      setVoteType(initialVoteType);
       
-      console.error("Vote error:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to vote. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to vote",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsVoting(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  // Calculate score
+  const score = upvotes - downvotes;
 
   return (
     <TooltipProvider>
@@ -116,7 +114,7 @@ export function VoteButtons({
               size="icon"
               className={`h-8 w-8 ${voteType === 1 ? "text-green-500" : ""}`}
               onClick={() => handleVote(1)}
-              disabled={isVoting}
+              disabled={isLoading}
               aria-label={voteType === 1 ? "Remove upvote" : "Upvote"}
             >
               <ArrowBigUp className="h-6 w-6" />
@@ -126,7 +124,7 @@ export function VoteButtons({
             <p>{voteType === 1 ? "Remove upvote" : "Upvote"}</p>
           </TooltipContent>
         </Tooltip>
-        <span className="text-sm font-medium">{upvotes - downvotes}</span>
+        <span className="text-sm font-medium">{score}</span>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -134,7 +132,7 @@ export function VoteButtons({
               size="icon"
               className={`h-8 w-8 ${voteType === -1 ? "text-red-500" : ""}`}
               onClick={() => handleVote(-1)}
-              disabled={isVoting}
+              disabled={isLoading}
               aria-label={voteType === -1 ? "Remove downvote" : "Downvote"}
             >
               <ArrowBigDown className="h-6 w-6" />
