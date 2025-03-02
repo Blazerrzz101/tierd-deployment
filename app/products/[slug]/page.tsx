@@ -14,7 +14,7 @@ interface ProductPageProps {
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
-  const { data: product, isLoading, error } = useProduct(params.slug)
+  const { data: product, isLoading, error } = useProduct(params.slug, true)
 
   if (error) {
     console.error('Product page error:', error)

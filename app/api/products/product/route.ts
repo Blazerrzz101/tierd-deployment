@@ -35,24 +35,30 @@ export async function GET(request: NextRequest) {
     console.log("GET /api/products/product");
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const slug = searchParams.get("slug");
     const clientId = searchParams.get("clientId") || 'anonymous';
 
-    if (!id) {
-      console.log("Product ID is required");
-      return NextResponse.json({ success: false, error: "Product ID is required" }, { status: 400 });
+    if (!id && !slug) {
+      console.log("Either product ID or slug is required");
+      return NextResponse.json({ success: false, error: "Either product ID or slug is required" }, { status: 400 });
     }
 
-    // Find the product with the matching ID
-    const product = mockProducts.find(p => p.id === id);
+    // Find the product by ID or slug
+    let product;
+    if (id) {
+      product = mockProducts.find(p => p.id === id);
+    } else if (slug) {
+      product = mockProducts.find(p => p.url_slug === slug);
+    }
 
     if (!product) {
-      console.log(`Product not found: ${id}`);
+      console.log(`Product not found: ${id || slug}`);
       return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
     }
 
     // Get vote data from mock store
-    const voteCounts = mockVotes[id] || { upvotes: 0, downvotes: 0 };
-    const voteKey = `${clientId}:${id}`;
+    const voteCounts = mockVotes[product.id] || { upvotes: 0, downvotes: 0 };
+    const voteKey = `${clientId}:${product.id}`;
     const userVote = mockUserVotes[voteKey] || null;
     const score = voteCounts.upvotes - voteCounts.downvotes;
 
@@ -65,7 +71,7 @@ export async function GET(request: NextRequest) {
       score
     };
 
-    console.log(`Returning product details for: ${id}, client: ${clientId}`);
+    console.log(`Returning product details for: ${id || slug}, client: ${clientId}`);
     return NextResponse.json({ success: true, product: productWithVotes });
   } catch (error) {
     console.error("Error in GET /api/products/product:", error);
