@@ -5,7 +5,8 @@ import { useToast } from '@/components/ui/use-toast'
 import { VoteType } from '@/types/product'
 import { Product } from '@/types/product'
 import { useQueryClient } from "@tanstack/react-query"
-import { useAuth } from '@/hooks/use-auth'
+import { useEnhancedAuth } from '@/components/auth/auth-provider'
+import { getClientId } from '@/utils/client-id'
 
 export interface VoteProduct extends Partial<Product> {
   id: string;
@@ -21,67 +22,123 @@ interface VoteResult {
   voteType: VoteType | null;
   success: boolean;
   message?: string;
+  error?: string;
 }
 
-// Generate a unique client ID for anonymous voting
-const generateClientId = () => {
-  return `${Math.random().toString(36).substring(2)}_${Date.now()}`;
-};
-
-// Get the client ID from localStorage or create a new one
-const getClientId = () => {
-  if (typeof window === 'undefined') return null;
-  
-  try {
-    let clientId = localStorage.getItem('tierd_client_id');
-    if (!clientId) {
-      clientId = generateClientId();
-      localStorage.setItem('tierd_client_id', clientId);
-    }
-    return clientId;
-  } catch (error) {
-    console.error('Error accessing localStorage:', error);
-    return generateClientId(); // Fallback to a temporary ID
-  }
-};
+interface VoteStatusResult {
+  upvotes: number;
+  downvotes: number;
+  voteType: VoteType | null;
+  success: boolean;
+  error?: string;
+  productId?: string;
+  score?: number;
+  hasVoted?: boolean;
+}
 
 export const useVote = () => {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  const [clientId, setClientId] = useState<string | null>(null)
+  const [clientId, setClientId] = useState<string>("")
+  const [remainingVotes, setRemainingVotes] = useState<number | null>(null)
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user } = useEnhancedAuth()
 
   // Initialize or get clientId from localStorage
   useEffect(() => {
     setClientId(getClientId())
   }, [])
 
-  const checkUserVote = useCallback(async (productId: string): Promise<VoteType | null> => {
+  // Fetch remaining votes for anonymous users
+  useEffect(() => {
+    async function fetchRemainingVotes() {
+      if (!clientId || !user?.isAnonymous) return;
+      
+      try {
+        const response = await fetch(`/api/vote/remaining-votes?clientId=${clientId}`);
+        const data = await response.json();
+        
+        if (data.success && typeof data.remainingVotes === 'number') {
+          setRemainingVotes(data.remainingVotes);
+        }
+      } catch (error) {
+        console.error('Error fetching remaining votes:', error);
+      }
+    }
+    
+    fetchRemainingVotes();
+  }, [clientId, user?.isAnonymous]);
+
+  // Get the client ID (for use in components)
+  const getClientIdFn = useCallback(() => {
+    return clientId || getClientId();
+  }, [clientId]);
+
+  const getVoteStatus = useCallback(async (productId: string): Promise<VoteStatusResult> => {
     try {
-      if (!productId) return null;
+      if (!productId) {
+        return {
+          success: false,
+          error: 'Product ID is required',
+          upvotes: 0,
+          downvotes: 0,
+          voteType: null
+        };
+      }
       
       // Ensure clientId is available
       const currentClientId = clientId || getClientId();
       
-      if (!currentClientId) return null;
-      
-      const response = await fetch(`/api/vote?productId=${productId}&clientId=${currentClientId}`);
-      const data = await response.json();
-
-      if (!data.success) {
-        console.error('Error checking vote:', data.error);
-        return null;
+      if (!currentClientId) {
+        return {
+          success: false,
+          error: 'Client ID is unavailable',
+          upvotes: 0,
+          downvotes: 0,
+          voteType: null
+        };
       }
       
-      return data.voteType;
+      const response = await fetch(`/api/vote?productId=${productId}&clientId=${currentClientId}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response from vote API:', errorText);
+        return {
+          success: false,
+          error: `API error: ${response.status}`,
+          upvotes: 0,
+          downvotes: 0,
+          voteType: null
+        };
+      }
+      
+      const data = await response.json();
+
+      // Ensure all expected properties have default values if missing
+      return {
+        success: data.success !== false,
+        productId: data.productId || productId,
+        upvotes: typeof data.upvotes === 'number' ? data.upvotes : 0,
+        downvotes: typeof data.downvotes === 'number' ? data.downvotes : 0,
+        voteType: data.voteType !== undefined ? data.voteType : null,
+        score: typeof data.score === 'number' ? data.score : 0,
+        hasVoted: !!data.hasVoted,
+        error: data.error
+      };
     } catch (error) {
-      console.error('Error in checkUserVote:', error);
-      return null;
+      console.error('Error in getVoteStatus:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        upvotes: 0,
+        downvotes: 0,
+        voteType: null
+      };
     }
   }, [clientId]);
 
-  const vote = useCallback(async (product: VoteProduct, voteType: VoteType): Promise<VoteResult | null> => {
+  const vote = useCallback(async (product: VoteProduct, voteType: VoteType): Promise<VoteResult> => {
     try {
       setIsLoading(true)
       
@@ -94,7 +151,13 @@ export const useVote = () => {
           description: "Unable to identify user for voting",
           variant: "destructive"
         })
-        return null
+        return {
+          success: false,
+          error: "Unable to identify user for voting",
+          upvotes: product.upvotes || 0,
+          downvotes: product.downvotes || 0,
+          voteType: null
+        }
       }
 
       const response = await fetch('/api/vote', {
@@ -111,7 +174,39 @@ export const useVote = () => {
         })
       });
 
+      // Handle non-200 responses
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response from vote API:', errorText);
+        toast({
+          title: "Error",
+          description: `API error: ${response.status}`,
+          variant: "destructive"
+        })
+        return {
+          success: false,
+          error: `API error: ${response.status}`,
+          upvotes: product.upvotes || 0,
+          downvotes: product.downvotes || 0,
+          voteType: null
+        }
+      }
+
       const data = await response.json();
+
+      // Update remaining votes for anonymous users
+      if (user?.isAnonymous) {
+        try {
+          const votesResponse = await fetch(`/api/vote/remaining-votes?clientId=${currentClientId}`);
+          const votesData = await votesResponse.json();
+          
+          if (votesData.success && typeof votesData.remainingVotes === 'number') {
+            setRemainingVotes(votesData.remainingVotes);
+          }
+        } catch (error) {
+          console.error('Error updating remaining votes:', error);
+        }
+      }
 
       if (!data.success) {
         console.error('Vote error:', data.error)
@@ -120,7 +215,13 @@ export const useVote = () => {
           description: data.error || "Failed to vote. Please try again.",
           variant: "destructive"
         })
-        return null
+        return {
+          success: false,
+          error: data.error || "Failed to vote",
+          upvotes: product.upvotes || 0,
+          downvotes: product.downvotes || 0,
+          voteType: product.userVote || null
+        }
       }
 
       // Invalidate queries to refresh UI
@@ -130,24 +231,31 @@ export const useVote = () => {
 
       // Success message
       toast({
-        title: data.result.voteType === null ? "Vote Removed" : (voteType === 1 ? "Upvoted" : "Downvoted"),
-        description: "Your vote has been recorded"
+        title: data.voteType === null ? "Vote Removed" : (voteType === 1 ? "Upvoted" : "Downvoted"),
+        description: data.message || "Your vote has been recorded"
       });
 
       return {
-        upvotes: data.result.upvotes,
-        downvotes: data.result.downvotes,
-        voteType: data.result.voteType,
-        success: true
+        upvotes: typeof data.upvotes === 'number' ? data.upvotes : (product.upvotes || 0),
+        downvotes: typeof data.downvotes === 'number' ? data.downvotes : (product.downvotes || 0),
+        voteType: data.voteType !== undefined ? data.voteType : null,
+        success: true,
+        message: data.message
       }
     } catch (error) {
       console.error('Vote error:', error)
       toast({
         title: "Error",
-        description: "Failed to vote. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to vote. Please try again.",
         variant: "destructive"
       })
-      return null
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        upvotes: product.upvotes || 0,
+        downvotes: product.downvotes || 0,
+        voteType: product.userVote || null
+      }
     } finally {
       setIsLoading(false)
     }
@@ -155,8 +263,10 @@ export const useVote = () => {
 
   return {
     vote,
-    checkUserVote,
+    getVoteStatus,
     isLoading,
-    clientId
+    clientId,
+    getClientId: getClientIdFn,
+    remainingVotes
   }
 } 
