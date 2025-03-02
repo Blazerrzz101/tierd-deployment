@@ -142,6 +142,22 @@ export const useVote = () => {
     try {
       setIsLoading(true)
       
+      // Validate product
+      if (!product?.id) {
+        toast({
+          title: "Error",
+          description: "Invalid product information",
+          variant: "destructive"
+        });
+        return {
+          success: false,
+          error: "Invalid product information",
+          upvotes: 0,
+          downvotes: 0,
+          voteType: null
+        };
+      }
+      
       // Ensure clientId is available
       const currentClientId = clientId || getClientId();
       
@@ -157,6 +173,43 @@ export const useVote = () => {
           upvotes: product.upvotes || 0,
           downvotes: product.downvotes || 0,
           voteType: null
+        }
+      }
+
+      // For anonymous users, check remaining votes
+      if (user?.isAnonymous) {
+        // Get fresh count of remaining votes
+        try {
+          const votesResponse = await fetch(`/api/vote/remaining-votes?clientId=${currentClientId}`);
+          const votesData = await votesResponse.json();
+          
+          if (votesData.success && typeof votesData.remainingVotes === 'number') {
+            setRemainingVotes(votesData.remainingVotes);
+            
+            // If no votes remaining, show message and redirect
+            if (votesData.remainingVotes <= 0) {
+              toast({
+                title: "Vote limit reached",
+                description: "You've used all 5 of your votes. Sign in to vote more!",
+                variant: "destructive"
+              });
+              
+              // Redirect to sign in page
+              if (typeof window !== 'undefined') {
+                window.location.href = '/auth/sign-in?redirect=back&reason=vote_limit';
+              }
+              
+              return {
+                success: false,
+                error: "Vote limit reached",
+                upvotes: product.upvotes || 0,
+                downvotes: product.downvotes || 0,
+                voteType: product.userVote || null
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error checking remaining votes:', error);
         }
       }
 
@@ -210,11 +263,27 @@ export const useVote = () => {
 
       if (!data.success) {
         console.error('Vote error:', data.error)
-        toast({
-          title: "Error",
-          description: data.error || "Failed to vote. Please try again.",
-          variant: "destructive"
-        })
+        
+        // Handle vote limit errors specially
+        if (response.status === 429) {
+          toast({
+            title: "Vote limit reached",
+            description: "You've used all 5 of your votes. Sign in to vote more!",
+            variant: "destructive"
+          });
+          
+          // Optional: Redirect to sign in page
+          if (typeof window !== 'undefined') {
+            window.location.href = '/auth/sign-in?redirect=back&reason=vote_limit';
+          }
+        } else {
+          toast({
+            title: "Error",
+            description: data.error || "Failed to vote. Please try again.",
+            variant: "destructive"
+          });
+        }
+        
         return {
           success: false,
           error: data.error || "Failed to vote",
@@ -259,7 +328,7 @@ export const useVote = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [toast, clientId, queryClient, user]);
+  }, [toast, clientId, queryClient, user, remainingVotes]);
 
   return {
     vote,

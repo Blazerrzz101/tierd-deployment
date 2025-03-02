@@ -12,7 +12,12 @@
     "6256cpva8yt_1740526035162:a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6": 1,
     "6256cpva8yt_1740526035162:w9q8e7r6-t5y4u3-i2o1p0-a9s8d7-f6g5h4j3": 1,
     "6256cpva8yt_1740526035162:c8d9e0f1-2a3b-4c5d-6e7f-8g9h0i1j2k3l": 1,
-    "6256cpva8yt_1740526035162:p9o8i7u6-y5t4-r3e2-w1q0-z9x8c7v6b5": 1
+    "6256cpva8yt_1740526035162:p9o8i7u6-y5t4-r3e2-w1q0-z9x8c7v6b5": 1,
+    "test-client-limit:test-product-1": 1,
+    "test-client-limit:test-product-2": 1,
+    "test-client-limit:test-product-3": 1,
+    "test-client-limit:test-product-4": 1,
+    "test-client-limit:test-product-5": 1
   },
   "voteCounts": {
     "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6": {
@@ -58,9 +63,29 @@
     "product-1": {
       "upvotes": 1,
       "downvotes": 1
+    },
+    "test-product-1": {
+      "upvotes": 1,
+      "downvotes": 0
+    },
+    "test-product-2": {
+      "upvotes": 1,
+      "downvotes": 0
+    },
+    "test-product-3": {
+      "upvotes": 1,
+      "downvotes": 0
+    },
+    "test-product-4": {
+      "upvotes": 1,
+      "downvotes": 0
+    },
+    "test-product-5": {
+      "upvotes": 1,
+      "downvotes": 0
     }
   },
-  "lastUpdated": "2025-03-02T09:14:56.358Z",
+  "lastUpdated": "2025-03-02T09:41:39.510Z",
   "userVotes": [
     {
       "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
@@ -181,6 +206,48 @@
       "clientId": "6256cpva8yt_1740526035162",
       "voteType": 1,
       "timestamp": "2025-03-02T09:14:56.358Z"
+    },
+    {
+      "productId": "test-product-1",
+      "clientId": "test-client-123",
+      "voteType": 1,
+      "timestamp": "2025-03-02T09:40:43.846Z"
+    },
+    {
+      "productId": "test-product-1",
+      "clientId": "test-client-123",
+      "voteType": 0,
+      "timestamp": "2025-03-02T09:40:58.111Z"
+    },
+    {
+      "productId": "test-product-1",
+      "clientId": "test-client-limit",
+      "voteType": 1,
+      "timestamp": "2025-03-02T09:41:35.366Z"
+    },
+    {
+      "productId": "test-product-2",
+      "clientId": "test-client-limit",
+      "voteType": 1,
+      "timestamp": "2025-03-02T09:41:36.413Z"
+    },
+    {
+      "productId": "test-product-3",
+      "clientId": "test-client-limit",
+      "voteType": 1,
+      "timestamp": "2025-03-02T09:41:37.446Z"
+    },
+    {
+      "productId": "test-product-4",
+      "clientId": "test-client-limit",
+      "voteType": 1,
+      "timestamp": "2025-03-02T09:41:38.486Z"
+    },
+    {
+      "productId": "test-product-5",
+      "clientId": "test-client-limit",
+      "voteType": 1,
+      "timestamp": "2025-03-02T09:41:39.510Z"
     }
   ]
 }

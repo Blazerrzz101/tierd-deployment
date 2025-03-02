@@ -157,31 +157,9 @@ function calculateScore(upvotes: number, downvotes: number): number {
   return upvotes - downvotes;
 }
 
-// Helper function to check if user has reached rate limit
-function hasReachedRateLimit(
-  state: VoteState,
-  clientId: string,
-  userId?: string
-): boolean {
-  // Skip rate limiting for authenticated users
-  if (userId) return false;
-
-  // Get one hour ago timestamp
-  const oneHourAgo = new Date();
-  oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-
-  // Filter votes made by this client in the last hour
-  const recentVotes = state.userVotes.filter(
-    vote => 
-      vote.clientId === clientId && 
-      new Date(vote.timestamp) > oneHourAgo
-  );
-
-  return recentVotes.length >= 5;
-}
-
 // Helper function to add vote to history (for rate limiting)
 function recordVote(state: VoteState, productId: string, clientId: string, voteType: number): void {
+  // Add to vote history for tracking
   state.userVotes.push({
     productId,
     clientId,
@@ -266,9 +244,10 @@ export async function POST(request: NextRequest) {
     const state = await getVoteState();
 
     // Check rate limiting for anonymous users
-    if (hasReachedRateLimit(state, clientId, userId)) {
+    const { hasRemainingVotes } = require('./remaining-votes/route');
+    if (!userId && !(await hasRemainingVotes(clientId))) {
       return createErrorResponse(
-        'Rate limit exceeded (5 votes per hour). Please sign in to vote more.',
+        'You have reached your maximum votes (5 total). Please sign in to vote more.',
         429
       );
     }

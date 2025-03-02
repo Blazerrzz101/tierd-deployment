@@ -57,18 +57,24 @@ export function CreateThreadDialog({ open, onOpenChange }: CreateThreadDialogPro
   })
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        children: "You must be signed in to create a thread.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
-
     try {
+      setIsLoading(true)
+      
+      // Ensure the user is authenticated
+      if (!user || (user as any).isAnonymous) {
+        toast({
+          title: "Authentication required",
+          description: "You need to sign in to create a thread.",
+          variant: "destructive"
+        })
+        onOpenChange(false) // Close the dialog
+        router.push('/auth/sign-in?redirect=back&reason=create_thread')
+        return
+      }
+      
+      // Generate a unique ID for the thread
+      const threadId = `thread_${Math.random().toString(36).substring(2, 15)}`
+      
       const now = new Date().toISOString()
       const thread = threadStore.addThread({
         title: values.title,
@@ -91,7 +97,7 @@ export function CreateThreadDialog({ open, onOpenChange }: CreateThreadDialogPro
 
       toast({
         title: "Thread created",
-        children: "Your thread has been created successfully.",
+        description: "Your thread has been created successfully."
       })
 
       form.reset()
@@ -102,7 +108,7 @@ export function CreateThreadDialog({ open, onOpenChange }: CreateThreadDialogPro
       console.error("Error creating thread:", error)
       toast({
         title: "Error",
-        children: "Failed to create thread. Please try again.",
+        description: "Failed to create thread. Please try again.",
         variant: "destructive",
       })
     } finally {
