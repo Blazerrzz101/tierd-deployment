@@ -6,7 +6,6 @@
     "test-client-vnff5ah3:9dd2bfe2-6eef-40de-ae12-c35ff1975914": -1,
     "test-client-manual-1:product-1": -1,
     "test-client-1:product-1": 1,
-    "6256cpva8yt_1740526035162:j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6": 1,
     "6256cpva8yt_1740526035162:z1x2c3v4-b5n6-m7k8-j9h0-g1f2d3s4a5": 1,
     "6256cpva8yt_1740526035162:n4m3b2v1-c8x7z6-p5o4i3-u2y1t0-r9e8w7q6": 1,
     "6256cpva8yt_1740526035162:a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6": 1,
@@ -17,7 +16,8 @@
     "test-client-limit:test-product-2": 1,
     "test-client-limit:test-product-3": 1,
     "test-client-limit:test-product-4": 1,
-    "test-client-limit:test-product-5": 1
+    "test-client-limit:test-product-5": 1,
+    "6256cpva8yt_1740526035162:j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6": 1
   },
   "voteCounts": {
     "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6": {
@@ -85,7 +85,7 @@
       "downvotes": 0
     }
   },
-  "lastUpdated": "2025-03-02T09:41:39.510Z",
+  "lastUpdated": "2025-03-03T09:23:05.041Z",
   "userVotes": [
     {
       "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
@@ -248,6 +248,36 @@
       "clientId": "test-client-limit",
       "voteType": 1,
       "timestamp": "2025-03-02T09:41:39.510Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "6256cpva8yt_1740526035162",
+      "voteType": 0,
+      "timestamp": "2025-03-03T09:22:58.920Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "6256cpva8yt_1740526035162",
+      "voteType": 1,
+      "timestamp": "2025-03-03T09:23:00.046Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "6256cpva8yt_1740526035162",
+      "voteType": 0,
+      "timestamp": "2025-03-03T09:23:02.456Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "6256cpva8yt_1740526035162",
+      "voteType": -1,
+      "timestamp": "2025-03-03T09:23:03.734Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "6256cpva8yt_1740526035162",
+      "voteType": 1,
+      "timestamp": "2025-03-03T09:23:05.041Z"
     }
   ]
 }

@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Icons } from "@/components/icons"
-import { supabase } from "@/lib/supabase/client"
+import { useEnhancedAuth } from "@/components/auth/auth-provider"
 
 export default function SignInPage() {
   const router = useRouter()
+  const { signIn, isLoading: authLoading } = useEnhancedAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -21,21 +22,17 @@ export default function SignInPage() {
     setIsLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      const success = await signIn(email, password)
 
-      if (error) {
-        throw error
+      if (success) {
+        toast.success("Welcome back!", {
+          description: "You have successfully signed in."
+        })
+        router.push("/")
+        router.refresh()
+      } else {
+        throw new Error("Sign in failed")
       }
-
-      toast.success("Welcome back!", {
-        description: "You have successfully signed in."
-      })
-
-      router.push("/")
-      router.refresh()
     } catch (error) {
       toast.error("Error", {
         description: "Invalid email or password. Please try again."
@@ -46,22 +43,10 @@ export default function SignInPage() {
   }
 
   const handleOAuthSignIn = async (provider: 'github' | 'google') => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }
-      })
-
-      if (error) {
-        throw error
-      }
-    } catch (error) {
-      toast.error("Error", {
-        description: `Could not authenticate with ${provider}. Please try again.`
-      })
-    }
+    // For now, we'll just show a toast notification since OAuth is not fully implemented in the mock auth
+    toast.info("OAuth Sign In", {
+      description: `OAuth with ${provider} is not available in the demo. Please use email/password.`
+    })
   }
 
   return (

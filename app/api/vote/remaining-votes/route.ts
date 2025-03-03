@@ -11,8 +11,9 @@ export const runtime = 'nodejs';
 const DATA_DIR = path.join(process.cwd(), 'data');
 const VOTES_FILE = path.join(DATA_DIR, 'votes.json');
 
-// Maximum allowed votes for anonymous users
-const MAX_ANONYMOUS_VOTES = 5;
+// Constants
+const MAX_VOTES_PER_USER = 5;
+const TIME_WINDOW_HOURS = 24; // Consider votes in the last 24 hours
 
 // Vote state type definition
 interface VoteState {
@@ -71,7 +72,7 @@ const createErrorResponse = (message: string, status: number = 400) => {
       success: false, 
       error: message,
       remainingVotes: 0,
-      maxVotes: MAX_ANONYMOUS_VOTES,
+      maxVotes: MAX_VOTES_PER_USER,
       votesUsed: 0
     },
     { status }
@@ -83,7 +84,7 @@ const createSuccessResponse = (data: any) => {
   const response = {
     success: true,
     remainingVotes: typeof data.remainingVotes === 'number' ? data.remainingVotes : 0,
-    maxVotes: typeof data.maxVotes === 'number' ? data.maxVotes : MAX_ANONYMOUS_VOTES,
+    maxVotes: typeof data.maxVotes === 'number' ? data.maxVotes : MAX_VOTES_PER_USER,
     votesUsed: typeof data.votesUsed === 'number' ? data.votesUsed : 0,
     ...data,
   };
@@ -91,62 +92,101 @@ const createSuccessResponse = (data: any) => {
   return NextResponse.json(response);
 };
 
+// Helper to check if a user has remaining votes
+export async function hasRemainingVotes(clientId: string, userId?: string): Promise<boolean> {
+  // If user is authenticated (has a userId), they have unlimited votes
+  if (userId) {
+    return true;
+  }
+
+  try {
+    if (!existsSync(VOTES_FILE)) {
+      // If votes file doesn't exist, user has all votes available
+      return true;
+    }
+
+    const data = await fs.readFile(VOTES_FILE, 'utf8');
+    const state = JSON.parse(data);
+
+    // Make sure userVotes exists
+    if (!state.userVotes) {
+      return true;
+    }
+
+    // Get the timestamp for 24 hours ago
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - TIME_WINDOW_HOURS);
+
+    // Count recent votes by this client
+    const recentVotes = state.userVotes.filter((vote: any) => {
+      return (
+        vote.clientId === clientId &&
+        new Date(vote.timestamp) > cutoffTime
+      );
+    });
+
+    // Check if user has used all their votes
+    return recentVotes.length < MAX_VOTES_PER_USER;
+  } catch (error) {
+    console.error('Error checking remaining votes:', error);
+    // In case of error, allow voting (fail open)
+    return true;
+  }
+}
+
+// API handler to get remaining votes
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get('clientId');
-
+    const userId = searchParams.get('userId');
+    
     if (!clientId) {
       return createErrorResponse("Client ID is required");
     }
 
-    // Get the vote state to count active votes
-    const state = await getVoteState();
-    
-    // Count active votes for this client
-    const clientVotes = Object.keys(state.votes)
-      .filter(key => key.startsWith(clientId + ':'))
-      .length;
-    
-    const remainingVotes = Math.max(0, MAX_ANONYMOUS_VOTES - clientVotes);
-    
-    console.log(`User ${clientId} has ${clientVotes} votes used, ${remainingVotes} remaining out of ${MAX_ANONYMOUS_VOTES}`);
-    
-    return createSuccessResponse({
-      remainingVotes,
-      maxVotes: MAX_ANONYMOUS_VOTES,
-      votesUsed: clientVotes,
+    // If user is authenticated, they have unlimited votes
+    if (userId) {
+      return createSuccessResponse({ 
+        remainingVotes: 999, // Use a high number to represent unlimited
+        message: 'Authenticated users have unlimited votes'
+      });
+    }
+
+    // Otherwise, calculate remaining votes for anonymous users
+    if (!existsSync(VOTES_FILE)) {
+      return createSuccessResponse({ remainingVotes: MAX_VOTES_PER_USER });
+    }
+
+    const data = await fs.readFile(VOTES_FILE, 'utf8');
+    const state = JSON.parse(data);
+
+    // Make sure userVotes exists
+    if (!state.userVotes) {
+      return createSuccessResponse({ remainingVotes: MAX_VOTES_PER_USER });
+    }
+
+    // Get the timestamp for 24 hours ago
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - TIME_WINDOW_HOURS);
+
+    // Count recent votes by this client
+    const recentVotes = state.userVotes.filter((vote: any) => {
+      return (
+        vote.clientId === clientId &&
+        new Date(vote.timestamp) > cutoffTime
+      );
     });
+
+    // Calculate remaining votes
+    const remainingVotes = Math.max(0, MAX_VOTES_PER_USER - recentVotes.length);
+
+    return createSuccessResponse({ remainingVotes });
   } catch (error) {
-    console.error("Error checking remaining votes:", error);
+    console.error('Error getting remaining votes:', error);
     return createErrorResponse(
-      error instanceof Error ? error.message : "Failed to check remaining votes",
+      error instanceof Error ? error.message : "Failed to get remaining votes",
       500
     );
-  }
-}
-
-// Helper function to check if a client has remaining votes
-export async function hasRemainingVotes(clientId: string): Promise<boolean> {
-  try {
-    if (!clientId) {
-      console.error("Cannot check remaining votes: Client ID is required");
-      return false;
-    }
-    
-    const state = await getVoteState();
-    
-    // Count active votes for this client
-    const clientVotes = Object.keys(state.votes)
-      .filter(key => key.startsWith(clientId + ':'))
-      .length;
-    
-    const hasRemaining = clientVotes < MAX_ANONYMOUS_VOTES;
-    console.log(`Client ${clientId} has ${clientVotes} votes, has remaining: ${hasRemaining}`);
-    
-    return hasRemaining;
-  } catch (error) {
-    console.error("Error in hasRemainingVotes:", error);
-    return false; // Fail safely by assuming no remaining votes
   }
 } 

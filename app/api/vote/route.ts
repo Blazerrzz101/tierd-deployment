@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { productId, clientId, voteType } = body;
-    let userId = body.userId || null; // Get userId if provided
+    const userId = body.userId || null; // Get userId if provided
 
     // Validate input parameters
     if (!productId) {
@@ -243,12 +243,12 @@ export async function POST(request: NextRequest) {
     // Get current vote state
     const state = await getVoteState();
 
-    // Check rate limiting for anonymous users
-    const { hasRemainingVotes } = require('./remaining-votes/route');
-    if (!userId && !(await hasRemainingVotes(clientId))) {
+    // Check rate limiting for anonymous users (skip for authenticated users)
+    const { hasRemainingVotes } = await import('./remaining-votes/route');
+    if (!(await hasRemainingVotes(clientId, userId))) {
       return createErrorResponse(
         'You have reached your maximum votes (5 total). Please sign in to vote more.',
-        429
+        429 // Too Many Requests
       );
     }
 
