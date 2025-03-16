@@ -1,0 +1,61 @@
+```css
+/* Vote Button States */
+.vote-button {
+  @apply relative overflow-hidden transition-all duration-300;
+}
+
+.vote-button::after {
+  @apply absolute inset-0 rounded-full opacity-0 transition-opacity;
+  content: '';
+}
+
+.vote-button:hover::after {
+  @apply opacity-100;
+}
+
+/* Upvote Animation */
+@keyframes upvote-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.vote-button-up.active {
+  animation: upvote-pulse 2s infinite;
+}
+
+/* Downvote Animation */
+@keyframes downvote-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.vote-button-down.active {
+  animation: downvote-pulse 2s infinite;
+}
+
+/* Status Bar Gradients */
+.status-bar-low {
+  @apply bg-gradient-to-r from-red-500/80 to-red-500;
+}
+
+.status-bar-medium {
+  @apply bg-gradient-to-r from-yellow-500/80 to-yellow-500;
+}
+
+.status-bar-high {
+  @apply bg-gradient-to-r from-green-500/80 to-green-500;
+}
+
+/* Vote Count Animation */
+@keyframes vote-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.vote-count-change {
+  animation: vote-pop 0.3s ease-out;
+}
+```

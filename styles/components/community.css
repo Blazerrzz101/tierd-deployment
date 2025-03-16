@@ -1,0 +1,42 @@
+/* Thread Card Styles */
+.thread-card {
+  @apply space-y-4 rounded-lg border bg-card p-6 transition-all hover:shadow-lg;
+}
+
+.thread-header {
+  @apply flex items-center justify-between;
+}
+
+.thread-title {
+  @apply text-lg font-semibold hover:text-primary;
+}
+
+.thread-meta {
+  @apply flex items-center gap-4 text-sm text-muted-foreground;
+}
+
+.thread-content {
+  @apply text-muted-foreground;
+}
+
+/* Poll Styles */
+.poll-option {
+  @apply relative overflow-hidden rounded-lg border p-4;
+}
+
+.poll-progress {
+  @apply absolute inset-0 bg-primary/10;
+}
+
+.poll-text {
+  @apply relative z-10;
+}
+
+/* Community Stats */
+.community-stats {
+  @apply grid grid-cols-2 gap-4 sm:grid-cols-4;
+}
+
+.stat-card {
+  @apply rounded-lg border bg-card p-4 text-center;
+}

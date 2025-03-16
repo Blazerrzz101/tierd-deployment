@@ -1,0 +1,42 @@
+/* Review Card Styles */
+.review-card {
+  @apply space-y-4 rounded-lg border bg-card p-6;
+}
+
+.review-header {
+  @apply flex items-center gap-4;
+}
+
+.review-author {
+  @apply font-semibold;
+}
+
+.review-date {
+  @apply text-sm text-muted-foreground;
+}
+
+.review-content {
+  @apply text-muted-foreground;
+}
+
+.review-actions {
+  @apply flex items-center gap-4;
+}
+
+/* Star Rating */
+.star-rating {
+  @apply flex text-primary;
+}
+
+.star-empty {
+  @apply text-muted;
+}
+
+/* Review Form */
+.review-form {
+  @apply space-y-6;
+}
+
+.rating-input {
+  @apply flex items-center gap-2;
+}

@@ -1,0 +1,19 @@
+
+============================================================
+VOTING SYSTEM TEST - 2025-03-02 08:50:49
+============================================================
+[INFO] Client ID: test-user-9468
+[INFO] Product ID: j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6
+[INFO] Base URL: http://localhost:3001
+
+----------------------------------------
+TEST 1: Fetching product details
+----------------------------------------
+
+----------------------------------------
+API REQUEST: GET http://localhost:3001/api/products/product?id=j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6&clientId=test-user-9468
+----------------------------------------
+[INFO] Description: Fetching product details
+[ERROR] Status Code: 
+[ERROR] Error: Unable to connect to the remote server
+[ERROR] Failed to retrieve product details

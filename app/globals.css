@@ -1,0 +1,521 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base colors - professional black and white base */
+    --background: 220 13% 3%; /* Slightly blue-tinted black for softer appearance */
+    --foreground: 210 40% 98%; /* Off-white with slight blue tint */
+    
+    /* Card colors - subtle depth */
+    --card: 220 13% 7%; /* Slightly lighter black with blue tint */
+    --card-background: 220 13% 7%; /* Slightly lighter black with blue tint */
+    --card-foreground: 210 40% 98%; /* Off-white with slight blue tint */
+    
+    /* Primary: Professional Blue-Green */
+    --primary: 174 75% 39%; /* More balanced teal color */
+    --primary-foreground: 0 0% 98%;
+    
+    /* Secondary: Refined Gold */
+    --secondary: 38 92% 50%; /* Slightly less yellow, more gold */
+    --secondary-foreground: 210 20% 12%; /* Darker background for contrast */
+    
+    /* Accent: Blue */
+    --accent: 224 76% 48%; /* Professional blue accent */
+    --accent-foreground: 0 0% 98%;
+    
+    /* Muted tones */
+    --muted: 220 13% 15%; /* Matches the base color theme */
+    --muted-foreground: 220 10% 75%;
+    
+    /* Border & inputs */
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    
+    /* Ring highlight */
+    --ring: 174 75% 39%;
+    
+    /* Radius */
+    --radius: 0.5rem;
+
+    /* Chart colors */
+    --chart-1: 38 92% 50%; /* Gold */
+    --chart-2: 174 75% 39%; /* Teal */
+    --chart-3: 224 76% 48%; /* Blue */
+    --chart-4: 262 83% 58%; /* Purple */
+    --chart-5: 320 70% 50%; /* Magenta */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Professional Card Styles */
+.card {
+  @apply rounded-lg border border-white/5 bg-card shadow-lg shadow-black/30;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(2px);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+}
+
+.card:hover {
+  @apply border-white/10 shadow-xl transform transition-all duration-300;
+  transform: translateY(-2px);
+}
+
+.modern-card {
+  @apply rounded-lg border border-white/5 bg-card-background p-5 shadow-lg shadow-black/30;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+  transform: translateZ(0);
+}
+
+.modern-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    rgba(var(--primary), 0.5), 
+    rgba(var(--secondary), 0.5), 
+    rgba(var(--accent), 0.5));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.modern-card:hover::after {
+  opacity: 1;
+}
+
+.modern-card:hover {
+  @apply shadow-xl;
+  transform: translateY(-3px) translateZ(0);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Glass Effect */
+.glass {
+  @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg shadow-xl;
+  position: relative;
+  transform: translateZ(0);
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at top left, 
+    rgba(255, 255, 255, 0.12), 
+    transparent 60%
+  );
+  border-radius: inherit;
+  z-index: -1;
+  mask-image: linear-gradient(black, black);
+  -webkit-mask-image: linear-gradient(black, black);
+}
+
+/* Frosted Glass - alternative glass style */
+.frosted {
+  @apply relative overflow-hidden rounded-xl bg-background/30 shadow-lg;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.frosted::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  z-index: -1;
+}
+
+/* Gradient Text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary/90 to-primary-foreground;
+  background-size: 200% auto;
+  animation: shine 8s ease-in-out infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Animated Background */
+.animated-gradient {
+  background: linear-gradient(
+    60deg,
+    rgba(var(--primary), 0.07),
+    rgba(var(--secondary), 0.07),
+    rgba(var(--accent), 0.07)
+  );
+  background-size: 300% 300%;
+  animation: gradient-animation 15s ease infinite;
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+/* Interactive Elements */
+.interactive {
+  @apply transition-all duration-200;
+  position: relative;
+}
+
+.interactive::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(var(--primary), 1), rgba(var(--secondary), 1));
+  transition: width 0.3s ease;
+}
+
+.interactive:hover {
+  @apply translate-y-[-2px] shadow-md;
+}
+
+.interactive:hover::after {
+  width: 100%;
+}
+
+.interactive:active {
+  @apply translate-y-[0] shadow-sm;
+}
+
+/* Professional Search Bar */
+.search-bar {
+  @apply flex h-10 rounded-full border border-white/10 bg-black/60 px-4 py-2 text-sm shadow-lg;
+  position: relative;
+  overflow: hidden;
+}
+
+.search-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+.search-bar input {
+  @apply flex w-full bg-transparent outline-none placeholder:text-muted-foreground;
+}
+
+/* Category Tabs */
+.category-tab {
+  @apply rounded-full px-4 py-1.5 text-sm font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all duration-200;
+  position: relative;
+  overflow: hidden;
+}
+
+.category-tab.active {
+  @apply bg-primary/15 text-primary;
+}
+
+.category-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(var(--primary), 1);
+}
+
+.category-tab-icon {
+  @apply mr-2 h-4 w-4;
+}
+
+/* Ranking Badges */
+.ranking-badge {
+  @apply relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shadow-md;
+  position: relative;
+  overflow: hidden;
+}
+
+.ranking-badge::before {
+  @apply absolute inset-0 rounded-full bg-primary/10 content-[""];
+}
+
+.ranking-badge:hover::before {
+  @apply bg-primary/20;
+}
+
+.ranking-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  padding: 1px;
+  background: linear-gradient(to bottom right, rgba(255,255,255,0.2), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-muted hover:bg-muted/80;
+}
+
+/* Loading States */
+.loading-shimmer {
+  @apply relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent;
+}
+
+/* Professional Typography */
+.heading-1 {
+  @apply text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl;
+  letter-spacing: -0.02em;
+}
+
+.heading-2 {
+  @apply text-3xl font-bold tracking-tight sm:text-4xl;
+  letter-spacing: -0.01em;
+}
+
+.heading-3 {
+  @apply text-2xl font-bold tracking-tight;
+  letter-spacing: -0.01em;
+}
+
+.body-large {
+  @apply text-lg leading-7;
+}
+
+.body-base {
+  @apply text-base leading-7;
+}
+
+.body-small {
+  @apply text-sm leading-6;
+}
+
+/* Mobile Navigation */
+.mobile-menu {
+  @apply fixed inset-0 z-50 bg-background/95 backdrop-blur-lg;
+}
+
+.mobile-menu-item {
+  @apply flex items-center gap-2 py-3 border-b border-white/5;
+}
+
+.mobile-menu-icon {
+  @apply h-5 w-5;
+}
+
+/* Enhanced Button Styles */
+.premium-button {
+  @apply relative overflow-hidden rounded-lg bg-primary px-5 py-2.5 text-primary-foreground shadow-lg transition-all duration-300;
+}
+
+.premium-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: all 0.6s;
+}
+
+.premium-button:hover::before {
+  left: 100%;
+}
+
+/* Professional Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+@media (max-width: 640px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Typography enhancements */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-semibold tracking-tight;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  @apply text-4xl lg:text-5xl;
+  line-height: 1.1;
+}
+
+h2 {
+  @apply text-3xl lg:text-4xl;
+  line-height: 1.2;
+}
+
+h3 {
+  @apply text-2xl lg:text-3xl;
+  line-height: 1.3;
+}
+
+p {
+  @apply text-muted-foreground leading-relaxed;
+}
+
+/* Premium Button Styles */
+.btn-premium {
+  @apply relative overflow-hidden rounded-md px-5 py-2.5 bg-primary text-primary-foreground shadow-md transition-all duration-300;
+  position: relative;
+}
+
+.btn-premium:hover {
+  @apply shadow-lg translate-y-[-2px] bg-primary/90;
+}
+
+.btn-premium:active {
+  @apply translate-y-[0px] shadow-sm duration-75;
+}
+
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: 0.5s;
+}
+
+.btn-premium:hover::before {
+  left: 100%;
+}
+
+/* Subtle hover effect for all buttons */
+button:not(.btn-premium):hover {
+  @apply translate-y-[-1px] transition-transform duration-200;
+}
+
+button:not(.btn-premium):active {
+  @apply translate-y-[0px] transition-transform duration-75;
+}
+
+/* Global performance optimizations */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* For Safari GPU acceleration */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Improve animation performance */
+.animate-gpu {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Staggered children animation */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+.stagger-children > *:nth-child(n+7) { animation-delay: 0.7s; }

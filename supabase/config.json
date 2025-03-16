@@ -1,0 +1,22 @@
+{
+  "project_id": "qmyvtvvdnoktrwzrdflp",
+  "db_url": "postgresql://postgres:postgres@localhost:54322/postgres",
+  "api": {
+    "port": 54321,
+    "schemas": ["public", "graphql_public", "reddit_integration"],
+    "extra_search_path": ["public", "extensions", "reddit_integration"],
+    "max_rows": 1000
+  },
+  "auth": {
+    "enabled": true,
+    "site_url": "http://localhost:3000",
+    "additional_redirect_urls": ["http://localhost:3000"],
+    "jwt_expiry": 3600,
+    "enable_signup": true
+  },
+  "db": {
+    "port": 54322,
+    "shadow_port": 54320,
+    "major_version": 15
+  }
+} 

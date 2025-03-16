@@ -1,0 +1,45 @@
+/* Rankings List Styles */
+.rankings-container {
+  @apply space-y-6;
+}
+
+.ranking-card {
+  @apply relative flex items-center gap-6 rounded-lg border bg-card p-6 transition-all hover:shadow-lg;
+}
+
+.rank-number {
+  @apply text-6xl font-bold;
+}
+
+.rank-number-1 {
+  @apply text-[#ffd700];
+}
+
+.rank-number-2 {
+  @apply text-[#c0c0c0];
+}
+
+.rank-number-3 {
+  @apply text-[#cd7f32];
+}
+
+.ranking-filters {
+  @apply flex flex-wrap gap-2;
+}
+
+.ranking-sort {
+  @apply flex items-center gap-2;
+}
+
+/* Category Navigation */
+.category-nav {
+  @apply flex space-x-4 overflow-x-auto pb-4;
+}
+
+.category-button {
+  @apply min-w-[120px] rounded-full transition-colors;
+}
+
+.category-button.active {
+  @apply bg-primary text-primary-foreground;
+}

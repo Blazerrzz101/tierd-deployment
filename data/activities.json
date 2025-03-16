@@ -1,0 +1,64 @@
+{
+  "activities": [
+    {
+      "id": "f233c9f2-9708-4ffa-a34c-04e94246edec",
+      "type": "vote",
+      "action": "upvote",
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "productName": "ASUS ROG Swift PG279QM",
+      "timestamp": "2025-02-26T05:52:08.323Z",
+      "userId": "7f44f70b-79d3-401c-8220-b1387e01c698",
+      "details": "Added vote"
+    },
+    {
+      "id": "589ddac7-d93c-4c04-90cb-ef3901e3b2d1",
+      "type": "vote",
+      "action": "downvote",
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "productName": "ASUS ROG Swift PG279QM",
+      "timestamp": "2025-02-26T05:38:07.499Z",
+      "userId": "7f44f70b-79d3-401c-8220-b1387e01c698",
+      "details": "Removed vote"
+    },
+    {
+      "id": "303ce845-5e85-4bc3-80fa-c0434087804c",
+      "type": "vote",
+      "action": "upvote",
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "productName": "ASUS ROG Swift PG279QM",
+      "timestamp": "2025-02-26T05:29:09.635Z",
+      "userId": "7f44f70b-79d3-401c-8220-b1387e01c698",
+      "details": "Added vote"
+    },
+    {
+      "id": "0e483241-f29f-439f-9f92-c1617b7eda05",
+      "type": "vote",
+      "action": "upvote",
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "productName": "ASUS ROG Swift PG279QM",
+      "timestamp": "2025-02-26T03:30:19.644Z",
+      "userId": "7f44f70b-79d3-401c-8220-b1387e01c698",
+      "details": "Removed vote"
+    },
+    {
+      "id": "0697a0a8-9e2c-4f01-8cf5-a0ae43c07c6c",
+      "type": "vote",
+      "action": "upvote",
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "productName": "ASUS ROG Swift PG279QM",
+      "timestamp": "2025-02-26T03:05:32.371Z",
+      "userId": "7f44f70b-79d3-401c-8220-b1387e01c698",
+      "details": "Added vote"
+    },
+    {
+      "id": "605c56d7-7366-44ce-847b-32d9a6490b61",
+      "type": "vote",
+      "action": "upvote",
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "productName": "ASUS ROG Swift PG279QM",
+      "timestamp": "2025-02-26T03:04:48.122Z",
+      "userId": "7f44f70b-79d3-401c-8220-b1387e01c698",
+      "details": "Removed vote"
+    }
+  ]
+}

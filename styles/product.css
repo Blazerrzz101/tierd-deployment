@@ -1,0 +1,8 @@
+.vote-button {
+  @apply flex h-12 w-12 items-center justify-center rounded-full border transition-all;
+  @apply hover:border-primary hover:bg-primary/10;
+}
+
+.vote-button.active {
+  @apply border-primary bg-primary/10 text-primary;
+}

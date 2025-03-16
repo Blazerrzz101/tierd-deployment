@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "buildCommand": "next build",
+  "installCommand": "npm install --force",
+  "outputDirectory": ".next",
+  "devCommand": "next dev",
+  "cleanUrls": true,
+  "framework": "nextjs",
+  "nodeVersion": "16.x",
+  "skipInstrumentation": true,
+  "bypassCustomBuildDir": true,
+  "ignoreCommand": ""
+}

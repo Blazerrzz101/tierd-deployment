@@ -1,0 +1,36 @@
+/* Text Gradients */
+.text-gradient {
+  @apply bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent;
+}
+
+/* Hover Effects */
+.hover-glow {
+  @apply transition-all hover:shadow-lg hover:shadow-primary/20;
+}
+
+.hover-scale {
+  @apply transition-transform hover:scale-105;
+}
+
+/* Focus Styles */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+}
+
+/* Status Indicators */
+.status-online {
+  @apply relative before:absolute before:left-0 before:top-1/2 before:h-2 before:w-2 before:-translate-y-1/2 before:rounded-full before:bg-green-500;
+}
+
+.status-offline {
+  @apply relative before:absolute before:left-0 before:top-1/2 before:h-2 before:w-2 before:-translate-y-1/2 before:rounded-full before:bg-red-500;
+}
+
+/* Truncate */
+.truncate-2-lines {
+  @apply line-clamp-2;
+}
+
+.truncate-3-lines {
+  @apply line-clamp-3;
+}

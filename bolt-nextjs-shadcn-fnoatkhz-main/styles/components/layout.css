@@ -1,0 +1,71 @@
+/* Container */
+.container-custom {
+  @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+/* Section Spacing */
+.section-spacing {
+  @apply py-12 md:py-16 lg:py-20;
+}
+
+/* Grid System */
+.grid-system {
+  @apply grid gap-6 sm:gap-8;
+}
+
+/* Card Layouts */
+.card-grid {
+  @apply grid auto-rows-fr gap-6;
+}
+
+/* Sidebar Layouts */
+.with-sidebar {
+  @apply grid gap-8 lg:grid-cols-[1fr,300px];
+}
+
+/* Responsive Padding */
+.responsive-padding {
+  @apply px-4 sm:px-6 lg:px-8;
+}
+
+/* Flex Layouts */
+.flex-center {
+  @apply flex items-center justify-center;
+}
+
+.flex-between {
+  @apply flex items-center justify-between;
+}
+
+/* Stack Layouts */
+.stack {
+  @apply space-y-4;
+}
+
+.stack-lg {
+  @apply space-y-8;
+}
+
+/* Dividers */
+.divider {
+  @apply border-t border-border/50;
+}
+
+/* Aspect Ratios */
+.aspect-card {
+  @apply aspect-[4/3] w-full;
+}
+
+.aspect-square {
+  @apply aspect-square w-full;
+}
+
+/* Hover Effects */
+.hover-card {
+  @apply transition-all duration-200 hover:shadow-lg hover:shadow-primary/5;
+}
+
+/* Focus States */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+}
