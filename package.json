@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "NODE_OPTIONS=\"--max-old-space-size=4096\" next build",
+    "vercel-build": "node nuclear-build.js",
     "start": "node server.js",
     "lint": "next lint",
     "migrate": "ts-node scripts/run-migrations.ts",
@@ -15,7 +15,8 @@
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "clean-build": "rm -rf .next && NODE_OPTIONS=\"--max-old-space-size=4096\" next build",
     "failsafe-build": "npm install --legacy-peer-deps --force && NODE_OPTIONS=\"--max-old-space-size=4096\" next build",
-    "ultra-build": "rm -rf node_modules .next && npm install --force --legacy-peer-deps && NODE_OPTIONS=\"--max-old-space-size=4096\" next build"
+    "ultra-build": "rm -rf node_modules .next && npm install --force --legacy-peer-deps && NODE_OPTIONS=\"--max-old-space-size=4096\" next build",
+    "nuclear-build": "node nuclear-build.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
