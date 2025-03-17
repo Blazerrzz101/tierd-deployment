@@ -9,9 +9,9 @@ const nextConfig = {
   // Basic settings
   reactStrictMode: true,
   poweredByHeader: false,
-  swcMinify: false, // Disable SWC minification to prevent optimization issues
+  swcMinify: false,
   
-  // Disable type checking during build - this is critical
+  // Disable type checking and linting during build (critical)
   typescript: {
     ignoreBuildErrors: true,
   },
