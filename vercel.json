@@ -2,9 +2,7 @@
     "version": 2,
     "buildCommand": "npm run vercel-build",
     "framework": "nextjs",
-    "outputDirectory": ".next",
     "rewrites": [
-      { "source": "/api/health", "destination": "/api/health" },
       { "source": "/(.*)", "destination": "/$1" }
     ]
   }

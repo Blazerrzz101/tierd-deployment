@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "node force-rebuild.js && NEXT_SKIP_TYPE_CHECK=true next build",
+    "vercel-build": "node app-router-fix.js && next build",
     "start": "node server.js",
     "lint": "next lint",
     "migrate": "ts-node scripts/run-migrations.ts",
