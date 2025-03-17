@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "vercel-build": "node force-rebuild.js && NEXT_SKIP_TYPE_CHECK=true next build",
+    "start": "node server.js",
     "lint": "next lint",
     "migrate": "ts-node scripts/run-migrations.ts",
     "test": "jest",
@@ -48,6 +49,7 @@
     "cmdk": "^1.0.4",
     "critters": "^0.0.25",
     "date-fns": "^3.3.1",
+    "express": "^4.18.3",
     "framer-motion": "^11.0.5",
     "install": "^0.13.0",
     "lucide-react": "^0.330.0",

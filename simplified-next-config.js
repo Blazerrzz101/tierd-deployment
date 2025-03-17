@@ -11,12 +11,6 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: false,
   
-  // Explicitly use App Router only
-  experimental: {
-    appDir: true,
-    serverComponentsExternalPackages: ['next', 'react', 'react-dom'],
-  },
-  
   // Disable type checking and linting during build
   typescript: {
     ignoreBuildErrors: true
@@ -28,16 +22,8 @@ const nextConfig = {
   // Simple image configuration
   images: {
     unoptimized: true,
-    domains: ['*'],
-  },
-  
-  // Ensure we're only using app directory routing
-  useFileSystemPublicRoutes: true,
-  
-  // Override to ensure compatibility
-  webpack(config) {
-    return config;
+    domains: ['*']
   }
 };
 
-module.exports = nextConfig;
+module.exports = nextConfig; 

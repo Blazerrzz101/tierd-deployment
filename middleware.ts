@@ -84,6 +84,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
+    // Handle health checks
+    if (request.nextUrl.pathname === '/api/health') {
+      console.log('Health check route detected in middleware')
+      return NextResponse.next()
+    }
+
+    // Check if we're dealing with an API route
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      // Send API requests through to the App Router
+      return NextResponse.next()
+    }
+
     // For all other routes, allow access regardless of authentication status
     return res
 
@@ -97,17 +109,19 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-// Specify which routes use this middleware
+// Configure which routes use this middleware
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public (public files)
-     * - api (API routes)
+     * Match all request paths except:
+     * 1. /api/auth/ (auth callbacks)
+     * 2. /favicon.ico, etc. (static files)
+     * 3. /_next/ (Next.js internals)
+     * 4. /_static/ (static file serving)
+     * 5. /_vercel/ (Vercel internals)
+     * 6. /images/, /fonts/, /public/ (public assets)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
+    '/((?!_next|_static|_vercel|images|fonts|public|favicon.ico).*)',
+    '/api/:path*',
   ],
 } 
