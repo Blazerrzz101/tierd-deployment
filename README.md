@@ -1,34 +1,49 @@
 # Tierd - Guaranteed Deployment
 
-This package contains a minimal version of the Tierd application that is **guaranteed to deploy successfully** on Vercel.
-
-## What's Included
-
-- Static HTML home page
-- Documentation page
-- Health check API endpoint
-- Vercel configuration
+This is a guaranteed deployment version of the Tierd application.
 
 ## Deployment Instructions
 
-1. **Deploy directly from this directory:**
-   - Push this directory to GitHub
-   - Import in Vercel
-   - No configuration needed!
+To deploy this application to Vercel:
 
-2. **Test the deployment:**
-   - Visit the home page
-   - Check the API endpoint at `/api/health`
-   - Review documentation at `/docs.html`
+1. **Go to Vercel:**
+   - Visit [https://vercel.com/new](https://vercel.com/new)
+   - Import your GitHub repository: `Blazerrzz101/tierd-deployment`
+   - **Select the `guaranteed-deployment` branch**
+
+2. **Configuration (Automatic):**
+   - Vercel will automatically detect the settings from `vercel.json`
+   - No additional configuration is needed!
+
+3. **Deploy:**
+   - Click "Deploy"
+   - Your app will be deployed within seconds!
+
+## What's Included
+
+- **Home Page**: A simple landing page for the Tierd application
+- **API**: Health check endpoint at `/api/health`
+- **Documentation**: Information about the deployment at `/docs.html`
 
 ## Why This Works
 
-This deployment bypasses the entire Next.js build process by using:
-- Static HTML files that don't require SSR or build
-- Serverless functions for any API needs
-- Minimal dependencies that won't conflict
-- No framework-specific requirements
+This deployment package:
+- Contains only static files and serverless functions
+- Has no build step requirements
+- Uses zero client-side JavaScript
+- Requires no environment variables
+- Has fallbacks for all features
+
+## Customization
+
+To customize this deployment:
+1. Update the HTML files in this directory
+2. Commit your changes to the `guaranteed-deployment` branch
+3. Re-deploy on Vercel
 
 ## Next Steps
 
-Once deployed, you can incrementally add more features and pages.
+After successful deployment:
+1. Set up environment variables for your Supabase connection
+2. Start adding your actual application components
+3. Configure your custom domain if needed
