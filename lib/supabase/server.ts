@@ -7,13 +7,17 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL')
 }
 
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing env.SUPABASE_SERVICE_ROLE_KEY')
-}
+// Modified to not require SUPABASE_SERVICE_ROLE_KEY
+// if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+//   throw new Error('Missing env.SUPABASE_SERVICE_ROLE_KEY')
+// }
 
 // Create a Supabase client specifically for server components and API routes
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+// Add log to debug
+console.log('Creating Supabase server client with URL:', supabaseUrl);
 
 export const supabaseServer = createClient(
   supabaseUrl,
