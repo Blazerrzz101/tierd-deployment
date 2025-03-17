@@ -9,16 +9,17 @@ const nextConfig = {
   // Basic settings
   reactStrictMode: true,
   poweredByHeader: false,
+  swcMinify: false, // Disable SWC minification to prevent optimization issues
   
-  // Disable type checking and linting during build - ensure these are true
+  // Disable type checking during build - this is critical
   typescript: {
-    ignoreBuildErrors: true, // This is critical to skip TypeScript errors
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: true, // This is critical to skip ESLint errors
+    ignoreDuringBuilds: true,
   },
   
-  // Simple image configuration
+  // Image configuration
   images: {
     unoptimized: true,
     domains: ['*'],

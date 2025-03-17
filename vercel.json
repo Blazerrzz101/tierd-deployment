@@ -3,6 +3,7 @@
   "framework": "nextjs",
   "buildCommand": "npm run vercel-build",
   "env": {
-    "NEXT_SKIP_TYPE_CHECK": "true"
+    "NEXT_SKIP_TYPE_CHECK": "true",
+    "NEXT_TELEMETRY_DISABLED": "1"
   }
 }
