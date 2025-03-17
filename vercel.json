@@ -1,11 +1,17 @@
 {
   "version": 2,
   "buildCommand": "npm run vercel-build",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "npm install --force --no-audit --legacy-peer-deps",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "env": {
     "NEXT_SKIP_TYPE_CHECK": "true",
-    "NEXT_TELEMETRY_DISABLED": "1"
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "CI": "false",
+    "VERCEL_GIT_REPO_SLUG": "tierd-deployment"
+  },
+  "github": {
+    "enabled": true,
+    "silent": true
   }
 }

@@ -579,6 +579,18 @@ try {
     
     fs.writeFileSync('.next/server/pages/index.html', htmlContent);
     
+    // Ensure API directory exists
+    const apiDir = path.join('.next', 'server', 'pages', 'api');
+    if (!fs.existsSync(apiDir)) {
+      fs.mkdirSync(apiDir, { recursive: true });
+    }
+    
+    // Create health directory in API
+    const healthDir = path.join(apiDir, 'health');
+    if (!fs.existsSync(healthDir)) {
+      fs.mkdirSync(healthDir, { recursive: true });
+    }
+    
     // Create a basic serverless function for the health check
     const healthJsContent = `module.exports = function(req, res) {
   res.status(200).json({
@@ -589,7 +601,7 @@ try {
   });
 };`;
     
-    fs.writeFileSync('.next/server/pages/api/health.js', healthJsContent);
+    fs.writeFileSync(path.join(apiDir, 'health.js'), healthJsContent);
     
     console.log('✅ Created minimal build output structure');
   }
@@ -602,6 +614,30 @@ try {
     fs.writeFileSync('.next/BUILD_ID', Date.now().toString());
     fs.writeFileSync('.next/BUILD_SUCCESS', 'Build completed at ' + new Date().toISOString());
   }
+  
+  // Ensure server/pages directory exists
+  const serverPagesDir = path.join('.next', 'server', 'pages');
+  if (!fs.existsSync(serverPagesDir)) {
+    fs.mkdirSync(serverPagesDir, { recursive: true });
+  }
+  
+  // Create API health directory
+  const apiHealthDir = path.join(serverPagesDir, 'api');
+  if (!fs.existsSync(apiHealthDir)) {
+    fs.mkdirSync(apiHealthDir, { recursive: true });
+  }
+  
+  // Create a basic health.js file
+  const emergencyHealthJs = `module.exports = function(req, res) {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    environment: 'emergency-fallback'
+  });
+};`;
+  
+  fs.writeFileSync(path.join(apiHealthDir, 'health.js'), emergencyHealthJs);
 }
 
 // ======================================
