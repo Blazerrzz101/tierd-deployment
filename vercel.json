@@ -6,8 +6,6 @@
   "framework": null,
   "outputDirectory": ".",
   "public": true,
-  "cleanUrls": true,
-  "trailingSlash": false,
   "functions": {
     "api/*.js": {
       "memory": 128
@@ -19,11 +17,14 @@
       "dest": "/api/health.js"
     },
     {
+      "src": "/docs",
+      "dest": "/docs.html"
+    },
+    {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "status": 404,
       "dest": "/index.html"
     }
   ]
