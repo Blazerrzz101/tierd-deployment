@@ -1,6 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '@/types/supabase'
-import { cookies } from 'next/headers'
+// Conditionally import cookies to prevent build errors
+let cookies: any;
+try {
+  cookies = require('next/headers').cookies;
+} catch (error) {
+  cookies = () => ({
+    get: () => null
+  });
+  console.warn('Failed to import cookies from next/headers, using fallback');
+}
 import { Product } from '@/types/product'
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {

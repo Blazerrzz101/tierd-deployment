@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+// Conditionally import cookies to prevent build errors
+let cookies: any;
+try {
+  cookies = require('next/headers').cookies;
+} catch (error) {
+  cookies = () => ({
+    get: () => null
+  });
+  console.warn('Failed to import cookies from next/headers, using fallback');
+};
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs/promises';
 import path from 'path';

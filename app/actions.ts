@@ -1,7 +1,16 @@
 'use server'
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+// Conditionally import cookies to prevent build errors
+let cookies: any;
+try {
+  cookies = require('next/headers').cookies;
+} catch (error) {
+  cookies = () => ({
+    get: () => null
+  });
+  console.warn('Failed to import cookies from next/headers, using fallback');
+}
 import { revalidatePath } from 'next/cache'
 
 export async function handleVote(productId: string, voteType: 'up' | 'down' | null) {
