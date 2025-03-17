@@ -13,7 +13,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
-    "clean-build": "rm -rf .next && next build"
+    "clean-build": "rm -rf .next && next build",
+    "failsafe-build": "npm install --legacy-peer-deps --force && NODE_OPTIONS=\"--max-old-space-size=4096\" next build"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

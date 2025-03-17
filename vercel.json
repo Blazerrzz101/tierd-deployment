@@ -2,7 +2,6 @@
   "version": 2,
   "framework": "nextjs",
   "buildCommand": "npm run vercel-build",
-  "nodeVersion": "18.x",
   "env": {
     "NEXT_SKIP_TYPE_CHECK": "true"
   }
