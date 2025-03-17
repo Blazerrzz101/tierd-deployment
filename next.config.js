@@ -9,12 +9,7 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   
-  // App Router configuration
-  experimental: {
-    appDir: true,
-  },
-  
-  // Disable type checking during build
+  // Disable type checking and linting during build
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -22,11 +17,14 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Simplified image config
+  // Simple image configuration
   images: {
     unoptimized: true,
     domains: ['*'],
   },
+  
+  // Output standalone build
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
