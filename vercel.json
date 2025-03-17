@@ -1,8 +1,5 @@
 {
-    "version": 2,
-    "buildCommand": "npm run vercel-build",
-    "framework": "nextjs",
-    "rewrites": [
-      { "source": "/(.*)", "destination": "/$1" }
-    ]
-  }
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "npm run vercel-build"
+}

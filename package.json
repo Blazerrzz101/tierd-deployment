@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "node app-router-fix.js && next build",
+    "vercel-build": "node app-router-fix.js && npm run build",
     "start": "node server.js",
     "lint": "next lint",
     "migrate": "ts-node scripts/run-migrations.ts",
@@ -95,5 +95,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3",
     "vitest": "^3.0.5"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
