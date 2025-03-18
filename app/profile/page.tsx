@@ -27,6 +27,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Image from "next/image"
 import { User2 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { MainLayout } from "@/components/home/main-layout"
 
 interface Activity {
   id: string
@@ -58,6 +60,44 @@ export default function ProfilePage() {
   
   // Mock state for realtime updates demo
   const [realtimeEnabled, setRealtimeEnabled] = useState(true)
+
+  const supabase = createClientComponentClient()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        setLoading(true)
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          // User is authenticated, get their profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', session.user.id)
+            .single()
+          
+          // Redirect to user's profile page if they have a username
+          if (profile?.username) {
+            router.push(`/profile/${profile.username}`)
+          } else {
+            // If no username but authenticated, redirect to settings to complete profile
+            router.push('/settings')
+          }
+        } else {
+          // Not logged in, but we'll let them stay on this page
+          // with a prompt to sign in
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error)
+        setLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router, supabase])
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -280,32 +320,38 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="container mx-auto py-10 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading profile...</p>
+      <MainLayout>
+        <div className="flex justify-center items-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
         </div>
-      </div>
+      </MainLayout>
     )
   }
 
   if (!user) {
     return (
-      <div className="container mx-auto py-10">
-        <Card>
-          <CardContent className="py-10">
-            <div className="text-center space-y-4">
-              <h1 className="text-2xl font-bold">Please sign in</h1>
-              <p className="text-muted-foreground">You need to be signed in to view your profile</p>
-              <Button onClick={() => router.push('/auth/sign-in')}>
+      <MainLayout>
+        <div className="max-w-md mx-auto py-12">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+              <CardDescription>
+                Sign in to view and manage your profile
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4 text-sm text-gray-500">
+                You need to be signed in to view your profile. Please sign in or create an account.
+              </p>
+              <Button onClick={() => router.push('/auth/sign-in')} className="w-full">
                 Sign In
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
     )
   }
 

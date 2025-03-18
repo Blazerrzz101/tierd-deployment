@@ -1,28 +1,164 @@
 "use client";
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { type SupabaseClient } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Create a Supabase client with explicit configuration for direct API access
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true, // Enable session persistence
-    autoRefreshToken: true, // Automatically refresh tokens
-    detectSessionInUrl: true // Detect session in URL on auth redirect
-  },
-  global: {
-    fetch: (...args) => {
-      // Log RPC calls for debugging (remove in production)
-      if (args[0] && typeof args[0] === 'string' && args[0].includes('/rpc/')) {
-        console.log('Making RPC call to:', args[0]);
-      }
-      return fetch(...args);
+// Server-side client (for use in non-component code)
+export const supabase = createSupabaseClient<Database>(
+  supabaseUrl,
+  supabaseKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
     }
   }
-})
+);
+
+// Helper to get a singleton client for client components
+let supabaseClientSingleton: SupabaseClient | null = null;
+
+export const getSupabaseClientComponent = () => {
+  if (!supabaseClientSingleton) {
+    supabaseClientSingleton = createClientComponentClient();
+  }
+  return supabaseClientSingleton;
+};
+
+// Hook to manage Supabase auth state
+export function useSupabaseAuth() {
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClientComponentClient();
+
+  // This effect sets up a subscription to auth changes
+  useEffect(() => {
+    // First, get the current session
+    const initializeAuth = async () => {
+      try {
+        setLoading(true);
+        
+        // Get current session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          setUser(session.user);
+          
+          // Get user profile from profiles table
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          setProfile(userProfile || null);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Initialize auth state
+    initializeAuth();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      
+      if (session?.user) {
+        setUser(session.user);
+        
+        // When signed in, make sure profile exists
+        if (event === 'SIGNED_IN') {
+          try {
+            // Get user profile
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (existingProfile) {
+              // Profile exists - update last_seen
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ last_seen: new Date().toISOString() })
+                .eq('id', session.user.id);
+                
+              if (updateError) console.error('Error updating last_seen:', updateError);
+              
+              setProfile(existingProfile);
+            } else {
+              // Profile doesn't exist - create one
+              const username = session.user.email?.split('@')[0] || `user-${Math.random().toString(36).slice(2, 7)}`;
+              
+              const { data: newProfile, error: insertError } = await supabase
+                .from('profiles')
+                .insert([
+                  { 
+                    id: session.user.id,
+                    username,
+                    email: session.user.email,
+                    is_online: true,
+                    last_seen: new Date().toISOString()
+                  }
+                ])
+                .select()
+                .single();
+              
+              if (insertError) {
+                console.error('Error creating profile:', insertError);
+              } else {
+                setProfile(newProfile);
+                toast.success('Profile created! You can edit your details in Settings.');
+              }
+            }
+          } catch (error) {
+            console.error('Error managing profile:', error);
+          }
+        }
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    });
+
+    // Cleanup
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  return { user, profile, loading, supabase };
+}
+
+// Helper for signing out
+export async function signOutUser() {
+  const supabase = getSupabaseClientComponent();
+  
+  try {
+    await supabase.from('profiles')
+      .update({ is_online: false, last_seen: new Date().toISOString() })
+      .eq('id', (await supabase.auth.getUser()).data.user?.id || '');
+  } catch (error) {
+    console.error('Error updating profile before sign out:', error);
+  }
+  
+  return supabase.auth.signOut();
+}
 
 // Get or create the Supabase client instance
 export function getSupabaseClient() {
