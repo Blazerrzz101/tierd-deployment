@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const webpack = require('webpack');
+
 const nextConfig = {
   // Environment variables
   env: {
@@ -26,6 +28,34 @@ const nextConfig = {
   
   // Output standalone build
   output: 'standalone',
+
+  // Add webpack configuration to make React available globally
+  webpack: (config, { isServer }) => {
+    // Add polyfills and globals
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+
+    // Ensure React is available globally
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        React: 'react',
+      })
+    );
+
+    // Disable SWC minification which can cause issues
+    config.optimization.minimizer = [];
+
+    return config;
+  },
+
+  // Disable the edge runtime (use Node.js runtime)
+  experimental: {
+    serverComponentsExternalPackages: ['sharp'],
+  },
 };
 
 module.exports = nextConfig;
