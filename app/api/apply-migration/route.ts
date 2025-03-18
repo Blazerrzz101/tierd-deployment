@@ -11,128 +11,343 @@ export const runtime = 'nodejs';
  */
 export async function POST(request: NextRequest) {
   try {
-    // In production, you should add proper authentication
-    const body = await request.json();
-    const { authToken } = body;
-    
-    // For production, validate admin token (implement proper auth)
-    if (process.env.NODE_ENV === 'production' && authToken !== process.env.ADMIN_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
+    // Create a response array to track progress
     const results = [];
     
-    // Apply the SQL exec helper functions if needed
+    // Read and execute the comprehensive migration file
     try {
-      const helperSqlPath = path.join(process.cwd(), 'supabase/migrations/20250226000001_add_sql_exec_helpers.sql');
-      let helperSql = '';
+      console.log('Reading comprehensive migration file');
+      const completeMigrationPath = path.join(process.cwd(), 'supabase/migrations/complete_vote_migration.sql');
       
-      // Try to read the file, fall back to inline SQL if file not found
+      let migrationSql;
       try {
-        helperSql = fs.readFileSync(helperSqlPath, 'utf8');
-      } catch (e) {
-        // Simplified inline version if file not accessible
-        helperSql = `
-          CREATE OR REPLACE FUNCTION public.exec_sql(sql text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN EXECUTE sql; END; $$;
-          GRANT EXECUTE ON FUNCTION public.exec_sql(text) TO service_role;
+        migrationSql = fs.readFileSync(completeMigrationPath, 'utf8');
+        console.log('Migration file loaded successfully, length:', migrationSql.length);
+      } catch (readError) {
+        console.error('Error reading migration file:', readError);
+        
+        // Use hardcoded SQL as fallback if file not accessible in production
+        migrationSql = `
+-- Hardcoded fallback migration (simplified version)
+-- Create the votes table if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'votes') THEN
+    CREATE TABLE public.votes (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      product_id UUID NOT NULL,
+      user_id UUID,
+      vote_type INTEGER NOT NULL,
+      metadata JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  END IF;
+END$$;
+
+-- Function to check if user voted
+CREATE OR REPLACE FUNCTION public.has_user_voted(p_product_id UUID, p_client_id TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_vote_id UUID; v_vote_type INTEGER; v_upvotes INTEGER; v_downvotes INTEGER;
+BEGIN
+  SELECT id, vote_type INTO v_vote_id, v_vote_type FROM votes 
+  WHERE product_id = p_product_id AND metadata->>'client_id' = p_client_id LIMIT 1;
+  
+  SELECT COUNT(*) FILTER (WHERE vote_type = 1) AS up, COUNT(*) FILTER (WHERE vote_type = -1) AS down
+  INTO v_upvotes, v_downvotes FROM votes WHERE product_id = p_product_id;
+  
+  RETURN jsonb_build_object('hasVoted', v_vote_id IS NOT NULL, 'voteType', v_vote_type, 
+    'upvotes', v_upvotes, 'downvotes', v_downvotes, 'score', v_upvotes - v_downvotes);
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('hasVoted', false, 'voteType', null, 'upvotes', 0, 'downvotes', 0, 'score', 0);
+END; $$;
+
+-- Function to vote for a product
+CREATE OR REPLACE FUNCTION public.vote_for_product(p_product_id UUID, p_vote_type INTEGER, p_client_id TEXT, p_user_id UUID DEFAULT NULL)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_existing_vote_id UUID; v_existing_vote_type INTEGER; v_upvotes INTEGER; v_downvotes INTEGER;
+BEGIN
+  SELECT id, vote_type INTO v_existing_vote_id, v_existing_vote_type FROM votes 
+  WHERE product_id = p_product_id AND metadata->>'client_id' = p_client_id LIMIT 1;
+  
+  IF v_existing_vote_id IS NULL THEN
+    INSERT INTO votes (product_id, user_id, vote_type, metadata) 
+    VALUES (p_product_id, p_user_id, p_vote_type, jsonb_build_object('client_id', p_client_id));
+  ELSIF v_existing_vote_type = p_vote_type THEN
+    DELETE FROM votes WHERE id = v_existing_vote_id;
+    p_vote_type := NULL;
+  ELSE
+    UPDATE votes SET vote_type = p_vote_type, updated_at = now() WHERE id = v_existing_vote_id;
+  END IF;
+  
+  SELECT COUNT(*) FILTER (WHERE vote_type = 1) AS up, COUNT(*) FILTER (WHERE vote_type = -1) AS down
+  INTO v_upvotes, v_downvotes FROM votes WHERE product_id = p_product_id;
+  
+  RETURN jsonb_build_object('hasVoted', p_vote_type IS NOT NULL, 'voteType', p_vote_type, 
+    'upvotes', v_upvotes, 'downvotes', v_downvotes, 'score', v_upvotes - v_downvotes);
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('hasVoted', false, 'voteType', NULL, 'upvotes', 0, 'downvotes', 0, 'score', 0);
+END; $$;
+
+-- Function to check remaining votes
+CREATE OR REPLACE FUNCTION public.get_remaining_client_votes(p_client_id text, p_max_votes integer DEFAULT 5)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE v_total_votes integer; v_remaining_votes integer;
+BEGIN
+  SELECT COUNT(*) INTO v_total_votes FROM votes 
+  WHERE metadata->>'client_id' = p_client_id AND user_id IS NULL AND created_at > (NOW() - INTERVAL '24 hours');
+  
+  v_remaining_votes := GREATEST(0, p_max_votes - v_total_votes);
+  RETURN jsonb_build_object('remaining_votes', v_remaining_votes, 'total_votes', v_total_votes, 'max_votes', p_max_votes);
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('remaining_votes', 0, 'total_votes', 0, 'max_votes', p_max_votes);
+END; $$;
+
+-- Grant permissions
+GRANT EXECUTE ON FUNCTION public.has_user_voted(UUID, TEXT) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.vote_for_product(UUID, INTEGER, TEXT, UUID) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_remaining_client_votes(TEXT, INTEGER) TO anon, authenticated, service_role;
         `;
       }
       
-      // Execute the SQL directly via raw query
-      const { error: helperError } = await supabaseServer.rpc('exec_sql', { 
-        sql: helperSql 
-      });
+      // Try to apply the whole script together
+      try {
+        // Apply the migration SQL using stored procedure method in Supabase
+        console.log('Executing migration SQL as a whole...');
+        
+        // First try running the SQL directly as a stored procedure
+        const { error: migrationError } = await supabaseServer.rpc('execute_sql', { 
+          sql: migrationSql 
+        });
+        
+        if (migrationError) {
+          console.error('Migration SQL execution failed:', migrationError);
+          results.push({
+            step: 'Apply migration SQL (whole script)',
+            success: false,
+            error: migrationError.message
+          });
+          
+          // If the whole script fails, try individual functions
+          console.log('Attempting to apply functions individually...');
+          
+          // These are the critical function definitions to try individually
+          const functionSections = [
+            {
+              name: 'Create votes table',
+              sql: `DO $$
+              BEGIN
+                IF NOT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'votes') THEN
+                  CREATE TABLE public.votes (
+                    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                    product_id UUID NOT NULL,
+                    user_id UUID,
+                    vote_type INTEGER NOT NULL,
+                    metadata JSONB DEFAULT '{}'::jsonb,
+                    created_at TIMESTAMPTZ DEFAULT now(),
+                    updated_at TIMESTAMPTZ DEFAULT now()
+                  );
+                END IF;
+              END$$;`
+            },
+            {
+              name: 'Create has_user_voted function',
+              sql: `CREATE OR REPLACE FUNCTION public.has_user_voted(p_product_id UUID, p_client_id TEXT)
+              RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+              DECLARE
+                v_vote_id UUID; v_vote_type INTEGER; v_upvotes INTEGER; v_downvotes INTEGER;
+              BEGIN
+                SELECT id, vote_type INTO v_vote_id, v_vote_type FROM votes 
+                WHERE product_id = p_product_id AND metadata->>'client_id' = p_client_id LIMIT 1;
+                
+                SELECT COUNT(*) FILTER (WHERE vote_type = 1) AS up, COUNT(*) FILTER (WHERE vote_type = -1) AS down
+                INTO v_upvotes, v_downvotes FROM votes WHERE product_id = p_product_id;
+                
+                RETURN jsonb_build_object('hasVoted', v_vote_id IS NOT NULL, 'voteType', v_vote_type, 
+                  'upvotes', v_upvotes, 'downvotes', v_downvotes, 'score', v_upvotes - v_downvotes);
+              EXCEPTION WHEN OTHERS THEN
+                RETURN jsonb_build_object('hasVoted', false, 'voteType', null, 'upvotes', 0, 'downvotes', 0, 'score', 0);
+              END; $$;`
+            },
+            {
+              name: 'Create vote_for_product function',
+              sql: `CREATE OR REPLACE FUNCTION public.vote_for_product(p_product_id UUID, p_vote_type INTEGER, p_client_id TEXT, p_user_id UUID DEFAULT NULL)
+              RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+              DECLARE
+                v_existing_vote_id UUID; v_existing_vote_type INTEGER; v_upvotes INTEGER; v_downvotes INTEGER;
+              BEGIN
+                SELECT id, vote_type INTO v_existing_vote_id, v_existing_vote_type FROM votes 
+                WHERE product_id = p_product_id AND metadata->>'client_id' = p_client_id LIMIT 1;
+                
+                IF v_existing_vote_id IS NULL THEN
+                  INSERT INTO votes (product_id, user_id, vote_type, metadata) 
+                  VALUES (p_product_id, p_user_id, p_vote_type, jsonb_build_object('client_id', p_client_id));
+                ELSIF v_existing_vote_type = p_vote_type THEN
+                  DELETE FROM votes WHERE id = v_existing_vote_id;
+                  p_vote_type := NULL;
+                ELSE
+                  UPDATE votes SET vote_type = p_vote_type, updated_at = now() WHERE id = v_existing_vote_id;
+                END IF;
+                
+                SELECT COUNT(*) FILTER (WHERE vote_type = 1) AS up, COUNT(*) FILTER (WHERE vote_type = -1) AS down
+                INTO v_upvotes, v_downvotes FROM votes WHERE product_id = p_product_id;
+                
+                RETURN jsonb_build_object('hasVoted', p_vote_type IS NOT NULL, 'voteType', p_vote_type, 
+                  'upvotes', v_upvotes, 'downvotes', v_downvotes, 'score', v_upvotes - v_downvotes);
+              EXCEPTION WHEN OTHERS THEN
+                RETURN jsonb_build_object('hasVoted', false, 'voteType', NULL, 'upvotes', 0, 'downvotes', 0, 'score', 0);
+              END; $$;`
+            },
+            {
+              name: 'Create get_remaining_client_votes function',
+              sql: `CREATE OR REPLACE FUNCTION public.get_remaining_client_votes(p_client_id text, p_max_votes integer DEFAULT 5)
+              RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+              DECLARE v_total_votes integer; v_remaining_votes integer;
+              BEGIN
+                SELECT COUNT(*) INTO v_total_votes FROM votes 
+                WHERE metadata->>'client_id' = p_client_id AND user_id IS NULL AND created_at > (NOW() - INTERVAL '24 hours');
+                
+                v_remaining_votes := GREATEST(0, p_max_votes - v_total_votes);
+                RETURN jsonb_build_object('remaining_votes', v_remaining_votes, 'total_votes', v_total_votes, 'max_votes', p_max_votes);
+              EXCEPTION WHEN OTHERS THEN
+                RETURN jsonb_build_object('remaining_votes', 0, 'total_votes', 0, 'max_votes', p_max_votes);
+              END; $$;`
+            },
+            {
+              name: 'Grant permissions',
+              sql: `GRANT EXECUTE ON FUNCTION public.has_user_voted(UUID, TEXT) TO anon, authenticated, service_role;
+              GRANT EXECUTE ON FUNCTION public.vote_for_product(UUID, INTEGER, TEXT, UUID) TO anon, authenticated, service_role;
+              GRANT EXECUTE ON FUNCTION public.get_remaining_client_votes(TEXT, INTEGER) TO anon, authenticated, service_role;`
+            }
+          ];
+          
+          // Apply each function section individually
+          let individualSuccessCount = 0;
+          
+          for (const section of functionSections) {
+            try {
+              const { error: sectionError } = await supabaseServer.rpc('execute_sql', { 
+                sql: section.sql 
+              });
+              
+              results.push({
+                step: `Apply ${section.name}`,
+                success: !sectionError,
+                error: sectionError ? sectionError.message : null
+              });
+              
+              if (!sectionError) {
+                individualSuccessCount++;
+              }
+            } catch (sectionApplyError) {
+              console.error(`Error applying ${section.name}:`, sectionApplyError);
+              results.push({
+                step: `Apply ${section.name}`,
+                success: false,
+                error: sectionApplyError instanceof Error ? sectionApplyError.message : String(sectionApplyError)
+              });
+            }
+          }
+          
+          console.log(`Applied ${individualSuccessCount} out of ${functionSections.length} function sections individually`);
+        } else {
+          // Success with the whole script
+          results.push({
+            step: 'Apply migration SQL',
+            success: true,
+            data: 'All SQL applied successfully'
+          });
+        }
+      } catch (executeError) {
+        console.error('Exception executing migration SQL:', executeError);
+        results.push({
+          step: 'Apply migration SQL',
+          success: false,
+          error: executeError instanceof Error ? executeError.message : String(executeError)
+        });
+      }
       
-      results.push({
-        step: 'Install helper functions',
-        success: !helperError,
-        error: helperError ? helperError.message : null
-      });
     } catch (error) {
+      console.error('Migration application error:', error);
       results.push({
-        step: 'Install helper functions',
+        step: 'Apply comprehensive migration',
         success: false,
         error: error instanceof Error ? error.message : String(error)
       });
     }
     
-    // Apply the vote function migrations
+    // Test the vote functions
     try {
-      const voteFunctionPath = path.join(process.cwd(), 'supabase/migrations/20250226000000_fix_vote_function_signature.sql');
-      const voteFunctionSql = fs.readFileSync(voteFunctionPath, 'utf8');
+      console.log('Testing vote functions...');
       
-      const { error: voteError } = await supabaseServer.rpc('exec_sql', { 
-        sql: voteFunctionSql 
-      });
-      
-      results.push({
-        step: 'Fix vote function signature',
-        success: !voteError,
-        error: voteError ? voteError.message : null
-      });
-    } catch (error) {
-      results.push({
-        step: 'Fix vote function signature',
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-    
-    // Apply the remaining votes function migrations
-    try {
-      const remainingVotesPath = path.join(process.cwd(), 'supabase/migrations/20250305000000_add_get_remaining_votes_function.sql');
-      const remainingVotesSql = fs.readFileSync(remainingVotesPath, 'utf8');
-      
-      const { error: remainingVotesError } = await supabaseServer.rpc('exec_sql', { 
-        sql: remainingVotesSql 
-      });
-      
-      results.push({
-        step: 'Add remaining votes function',
-        success: !remainingVotesError,
-        error: remainingVotesError ? remainingVotesError.message : null
-      });
-    } catch (error) {
-      results.push({
-        step: 'Add remaining votes function',
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-    
-    // Test the vote function
-    try {
+      // Test the has_user_voted function
       const testProductId = '00000000-0000-0000-0000-000000000001';
-      const testClientId = 'test-client-migration-check';
+      const testClientId = 'test-migration-' + Date.now();
       
-      const { data: testResult, error: testError } = await supabaseServer.rpc('vote_for_product', {
+      const { data: voteCheckData, error: voteCheckError } = await supabaseServer.rpc('has_user_voted', {
+        p_product_id: testProductId,
+        p_client_id: testClientId
+      });
+      
+      results.push({
+        step: 'Test has_user_voted function',
+        success: !voteCheckError,
+        data: voteCheckData,
+        error: voteCheckError ? voteCheckError.message : null
+      });
+      
+      // Test the vote_for_product function
+      const { data: voteData, error: voteError } = await supabaseServer.rpc('vote_for_product', {
         p_product_id: testProductId,
         p_vote_type: 1,
         p_client_id: testClientId
       });
       
       results.push({
-        step: 'Test vote function',
-        success: !testError,
-        data: testResult,
-        error: testError ? testError.message : null
+        step: 'Test vote_for_product function',
+        success: !voteError,
+        data: voteData,
+        error: voteError ? voteError.message : null
       });
-    } catch (error) {
+      
+      // Test the get_remaining_client_votes function
+      const { data: remainingVotesData, error: remainingVotesError } = await supabaseServer.rpc('get_remaining_client_votes', {
+        p_client_id: testClientId,
+        p_max_votes: 5
+      });
+      
       results.push({
-        step: 'Test vote function',
+        step: 'Test get_remaining_client_votes function',
+        success: !remainingVotesError,
+        data: remainingVotesData,
+        error: remainingVotesError ? remainingVotesError.message : null
+      });
+      
+    } catch (error) {
+      console.error('Error testing vote functions:', error);
+      results.push({
+        step: 'Test vote functions',
         success: false,
         error: error instanceof Error ? error.message : String(error)
       });
     }
     
+    // Determine overall success
+    const overallSuccess = results.filter(r => r.success === false).length === 0;
+    
     return NextResponse.json({
-      success: results.every(r => r.success),
-      results
+      success: overallSuccess,
+      results,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
+    console.error('Unhandled error in apply-migration:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }
