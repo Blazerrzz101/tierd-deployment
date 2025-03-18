@@ -14,6 +14,157 @@ export async function POST(request: NextRequest) {
     // Create a response array to track progress
     const results = [];
     
+    // Apply key migration that was missing - the vote_for_product function with
+    // parameters in the order expected by the client code
+    try {
+      console.log('Adding vote_for_product with correct parameter order...');
+      
+      // This is the critical fix - create a function with parameters in the correct order
+      const fixedVoteFunction = `
+        CREATE OR REPLACE FUNCTION public.vote_for_product(
+          p_client_id TEXT,
+          p_product_id UUID,
+          p_user_id UUID,
+          p_vote_type INTEGER
+        )
+        RETURNS JSONB
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        SET search_path = public
+        AS $$
+        DECLARE
+          v_existing_vote_id UUID;
+          v_existing_vote_type INTEGER;
+          v_upvotes INTEGER;
+          v_downvotes INTEGER;
+        BEGIN
+          -- Check if this client has already voted
+          SELECT id, vote_type INTO v_existing_vote_id, v_existing_vote_type
+          FROM votes
+          WHERE 
+            product_id = p_product_id
+            AND metadata->>'client_id' = p_client_id
+          LIMIT 1;
+          
+          -- Handle the vote
+          IF v_existing_vote_id IS NULL THEN
+            -- New vote
+            INSERT INTO votes (
+              product_id, 
+              user_id, 
+              vote_type, 
+              metadata
+            ) VALUES (
+              p_product_id, 
+              p_user_id, 
+              p_vote_type, 
+              jsonb_build_object(
+                'client_id', p_client_id,
+                'ip', NULL,
+                'user_agent', NULL
+              )
+            );
+          ELSIF v_existing_vote_type = p_vote_type THEN
+            -- Remove vote if clicking the same button
+            DELETE FROM votes WHERE id = v_existing_vote_id;
+            -- Set to null to indicate vote was removed
+            p_vote_type := NULL;
+          ELSE
+            -- Change vote
+            UPDATE votes 
+            SET 
+              vote_type = p_vote_type,
+              updated_at = now() 
+            WHERE id = v_existing_vote_id;
+          END IF;
+          
+          -- Count all votes for this product
+          SELECT 
+            COUNT(*) FILTER (WHERE vote_type = 1) AS upvotes,
+            COUNT(*) FILTER (WHERE vote_type = -1) AS downvotes
+          INTO v_upvotes, v_downvotes
+          FROM votes
+          WHERE product_id = p_product_id;
+          
+          -- Return the result
+          RETURN jsonb_build_object(
+            'hasVoted', p_vote_type IS NOT NULL,
+            'voteType', p_vote_type,
+            'upvotes', v_upvotes,
+            'downvotes', v_downvotes,
+            'score', v_upvotes - v_downvotes
+          );
+        EXCEPTION
+          WHEN OTHERS THEN
+            RETURN jsonb_build_object(
+              'hasVoted', false,
+              'voteType', NULL,
+              'upvotes', 0,
+              'downvotes', 0,
+              'score', 0,
+              'error', SQLERRM
+            );
+        END;
+        $$;
+        
+        GRANT EXECUTE ON FUNCTION public.vote_for_product(TEXT, UUID, UUID, INTEGER) TO anon, authenticated, service_role;
+      `;
+      
+      // Apply the function
+      const { error: functionError } = await supabaseServer.rpc('execute_sql', { 
+        sql: fixedVoteFunction 
+      });
+      
+      if (functionError) {
+        console.error('Error creating vote function with correct parameter order:', functionError);
+        
+        // Try to create the votes table first if it doesn't exist
+        const createTableSql = `
+          CREATE TABLE IF NOT EXISTS public.votes (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            product_id UUID NOT NULL,
+            user_id UUID,
+            vote_type INTEGER NOT NULL,
+            metadata JSONB DEFAULT '{}'::jsonb,
+            created_at TIMESTAMPTZ DEFAULT now(),
+            updated_at TIMESTAMPTZ DEFAULT now()
+          );
+          
+          ALTER TABLE public.votes ENABLE ROW LEVEL SECURITY;
+          DROP POLICY IF EXISTS "Allow read access for all users" ON public.votes;
+          CREATE POLICY "Allow read access for all users" ON public.votes FOR SELECT USING (true);
+          DROP POLICY IF EXISTS "Allow insert/update for authenticated users" ON public.votes;
+          CREATE POLICY "Allow insert/update for authenticated users" ON public.votes FOR ALL USING (true) WITH CHECK (true);
+          GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.votes TO anon, authenticated, service_role;
+        `;
+        
+        await supabaseServer.rpc('execute_sql', { sql: createTableSql });
+        
+        // Try again after creating the table
+        const { error: retryError } = await supabaseServer.rpc('execute_sql', { 
+          sql: fixedVoteFunction 
+        });
+        
+        results.push({
+          step: 'Create vote_for_product with correct parameter order',
+          success: !retryError,
+          error: retryError ? retryError.message : null
+        });
+      } else {
+        results.push({
+          step: 'Create vote_for_product with correct parameter order',
+          success: true
+        });
+      }
+    } catch (functionError) {
+      console.error('Exception creating vote function:', functionError);
+      results.push({
+        step: 'Create vote_for_product with correct parameter order',
+        success: false,
+        error: functionError instanceof Error ? functionError.message : String(functionError)
+      });
+    }
+    
     // Read and execute the comprehensive migration file
     try {
       console.log('Reading comprehensive migration file');
@@ -63,7 +214,7 @@ EXCEPTION WHEN OTHERS THEN
   RETURN jsonb_build_object('hasVoted', false, 'voteType', null, 'upvotes', 0, 'downvotes', 0, 'score', 0);
 END; $$;
 
--- Function to vote for a product
+-- Also add function with original parameter order
 CREATE OR REPLACE FUNCTION public.vote_for_product(p_product_id UUID, p_vote_type INTEGER, p_client_id TEXT, p_user_id UUID DEFAULT NULL)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
@@ -172,35 +323,6 @@ GRANT EXECUTE ON FUNCTION public.get_remaining_client_votes(TEXT, INTEGER) TO an
               END; $$;`
             },
             {
-              name: 'Create vote_for_product function',
-              sql: `CREATE OR REPLACE FUNCTION public.vote_for_product(p_product_id UUID, p_vote_type INTEGER, p_client_id TEXT, p_user_id UUID DEFAULT NULL)
-              RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
-              DECLARE
-                v_existing_vote_id UUID; v_existing_vote_type INTEGER; v_upvotes INTEGER; v_downvotes INTEGER;
-              BEGIN
-                SELECT id, vote_type INTO v_existing_vote_id, v_existing_vote_type FROM votes 
-                WHERE product_id = p_product_id AND metadata->>'client_id' = p_client_id LIMIT 1;
-                
-                IF v_existing_vote_id IS NULL THEN
-                  INSERT INTO votes (product_id, user_id, vote_type, metadata) 
-                  VALUES (p_product_id, p_user_id, p_vote_type, jsonb_build_object('client_id', p_client_id));
-                ELSIF v_existing_vote_type = p_vote_type THEN
-                  DELETE FROM votes WHERE id = v_existing_vote_id;
-                  p_vote_type := NULL;
-                ELSE
-                  UPDATE votes SET vote_type = p_vote_type, updated_at = now() WHERE id = v_existing_vote_id;
-                END IF;
-                
-                SELECT COUNT(*) FILTER (WHERE vote_type = 1) AS up, COUNT(*) FILTER (WHERE vote_type = -1) AS down
-                INTO v_upvotes, v_downvotes FROM votes WHERE product_id = p_product_id;
-                
-                RETURN jsonb_build_object('hasVoted', p_vote_type IS NOT NULL, 'voteType', p_vote_type, 
-                  'upvotes', v_upvotes, 'downvotes', v_downvotes, 'score', v_upvotes - v_downvotes);
-              EXCEPTION WHEN OTHERS THEN
-                RETURN jsonb_build_object('hasVoted', false, 'voteType', NULL, 'upvotes', 0, 'downvotes', 0, 'score', 0);
-              END; $$;`
-            },
-            {
               name: 'Create get_remaining_client_votes function',
               sql: `CREATE OR REPLACE FUNCTION public.get_remaining_client_votes(p_client_id text, p_max_votes integer DEFAULT 5)
               RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -218,8 +340,10 @@ GRANT EXECUTE ON FUNCTION public.get_remaining_client_votes(TEXT, INTEGER) TO an
             {
               name: 'Grant permissions',
               sql: `GRANT EXECUTE ON FUNCTION public.has_user_voted(UUID, TEXT) TO anon, authenticated, service_role;
+              GRANT EXECUTE ON FUNCTION public.vote_for_product(TEXT, UUID, UUID, INTEGER) TO anon, authenticated, service_role;
               GRANT EXECUTE ON FUNCTION public.vote_for_product(UUID, INTEGER, TEXT, UUID) TO anon, authenticated, service_role;
-              GRANT EXECUTE ON FUNCTION public.get_remaining_client_votes(TEXT, INTEGER) TO anon, authenticated, service_role;`
+              GRANT EXECUTE ON FUNCTION public.get_remaining_client_votes(TEXT, INTEGER) TO anon, authenticated, service_role;
+              GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.votes TO anon, authenticated, service_role;`
             }
           ];
           
@@ -298,15 +422,16 @@ GRANT EXECUTE ON FUNCTION public.get_remaining_client_votes(TEXT, INTEGER) TO an
         error: voteCheckError ? voteCheckError.message : null
       });
       
-      // Test the vote_for_product function
+      // Test the vote_for_product function (with new parameter order)
       const { data: voteData, error: voteError } = await supabaseServer.rpc('vote_for_product', {
+        p_client_id: testClientId,
         p_product_id: testProductId,
-        p_vote_type: 1,
-        p_client_id: testClientId
+        p_user_id: null,
+        p_vote_type: 1
       });
       
       results.push({
-        step: 'Test vote_for_product function',
+        step: 'Test vote_for_product function (new parameter order)',
         success: !voteError,
         data: voteData,
         error: voteError ? voteError.message : null
