@@ -23,6 +23,12 @@ The application has been successfully fixed and tested with the following proof:
    - Fixed URL parsing issues in API calls
    - Correctly formatted utility files
 
+4. **⚠️ Important Build Command Update**:
+   - We've simplified the `vercel-build` script to match `npm run build`
+   - This avoids re-installation of dependencies which was causing module resolution errors
+   - We also updated `vercel.json` to use `npm run build` directly
+   - This ensures the same successful build process is used during deployment
+
 This addresses all previous build errors and ensures the application will deploy successfully on Vercel.
 
 ## Deployment Instructions
