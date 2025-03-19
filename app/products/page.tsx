@@ -13,7 +13,7 @@ type ProductRanking = Database['public']['Views']['product_rankings']['Row']
 export default function ProductsPage() {
   const { products, loading, error, fetchProducts, vote } = useProducts()
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'rank' | 'rating' | 'price'>('rank')
 
   // Get unique categories
@@ -24,7 +24,7 @@ export default function ProductsPage() {
     .filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = !selectedCategory || product.category === selectedCategory
+      const matchesCategory = selectedCategory === 'all' || !selectedCategory || product.category === selectedCategory
       return matchesSearch && matchesCategory
     })
     .sort((a, b) => {
@@ -68,7 +68,7 @@ export default function ProductsPage() {
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All categories</SelectItem>
+                <SelectItem value="all">All categories</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
@@ -104,7 +104,7 @@ export default function ProductsPage() {
       </div>
 
       <ProductGrid
-        products={filteredProducts}
+        products={filteredProducts as any[]}
         onVote={vote}
         isLoading={loading}
       />

@@ -9,6 +9,7 @@ import { useVote } from '@/hooks/use-vote'
 import type { Database } from '@/types/supabase'
 import { ProductImage } from "@/components/ui/product-image"
 import { Product } from '@/types/product'
+import { createProductUrl } from '@/utils/product-utils'
 
 type ProductRanking = Database['public']['Views']['product_rankings']['Row'] | Product
 
@@ -22,6 +23,9 @@ export function ProductRankingCard({ product: rawProduct, rank }: ProductRanking
   
   // Normalize the product to ensure it has all required fields
   const product = normalizeProduct(rawProduct)
+
+  // Get the product URL using the utility function
+  const productUrl = createProductUrl(product)
 
   // Get the appropriate styling based on rank
   const getRankStyles = () => {
@@ -95,7 +99,7 @@ export function ProductRankingCard({ product: rawProduct, rank }: ProductRanking
       {/* Product Info */}
       <div className="flex flex-1 flex-col gap-2">
         <Link 
-          href={`/products/${product.url_slug}`}
+          href={productUrl}
           className="text-lg font-medium hover:text-primary transition-colors flex items-center gap-1"
         >
           {product.name}

@@ -1,10 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 
 // Ensure Vote API is dynamic
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+// Path to local votes store (fallback when database has issues)
+const VOTES_FILE_PATH = path.join(process.cwd(), 'data', 'votes.json');
+
+// Function to read votes from local file
+const readVotesFile = () => {
+  try {
+    if (!fs.existsSync(VOTES_FILE_PATH)) {
+      // Create the directory if it doesn't exist
+      if (!fs.existsSync(path.dirname(VOTES_FILE_PATH))) {
+        fs.mkdirSync(path.dirname(VOTES_FILE_PATH), { recursive: true });
+      }
+      
+      // Initialize with empty data
+      const initialData = {
+        votes: {},
+        voteCounts: {},
+        lastUpdated: new Date().toISOString(),
+        userVotes: []
+      };
+      
+      fs.writeFileSync(VOTES_FILE_PATH, JSON.stringify(initialData, null, 2));
+      return initialData;
+    }
+    
+    const data = fs.readFileSync(VOTES_FILE_PATH, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading votes file:', error);
+    return {
+      votes: {},
+      voteCounts: {},
+      lastUpdated: new Date().toISOString(),
+      userVotes: []
+    };
+  }
+};
+
+// Function to write votes to local file
+const writeVotesFile = (data: any) => {
+  try {
+    // Create the directory if it doesn't exist
+    if (!fs.existsSync(path.dirname(VOTES_FILE_PATH))) {
+      fs.mkdirSync(path.dirname(VOTES_FILE_PATH), { recursive: true });
+    }
+    
+    fs.writeFileSync(VOTES_FILE_PATH, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error writing votes file:', error);
+    return false;
+  }
+};
+
+// Helper functions for votes
+const getVoteKey = (productId: string, clientId: string) => `${clientId}:${productId}`;
+const getVoteKeyReversed = (productId: string, clientId: string) => `${productId}:${clientId}`;
 
 // Prepare consistent error and success response formats
 const createErrorResponse = (message: string, status: number = 400) => {
@@ -56,21 +115,79 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Client ID is required');
     }
 
-    // Get the current vote status from Supabase
-    const { data, error } = await supabaseServer.rpc('has_user_voted', {
-      p_product_id: productId,
-      p_client_id: clientId
-    });
+    console.log(`[GET] Checking vote status: product=${productId}, client=${clientId}`);
 
-    if (error) {
-      console.error('Error checking vote status:', error);
-      return createErrorResponse(`Error checking vote status: ${error.message}`, 500);
+    // Try the Supabase RPC first
+    try {
+      console.log('Using two-parameter version of has_user_voted');
+      const { data, error } = await supabaseServer.rpc('has_user_voted', {
+        p_product_id: productId,
+        p_client_id: clientId
+      });
+
+      if (!error) {
+        console.log('Vote status check successful:', data);
+        return createSuccessResponse({
+          productId,
+          hasVoted: data?.has_voted || false,
+          voteType: data?.vote_type || null,
+          ...data
+        });
+      }
+      
+      console.error('Error with Supabase RPC:', error);
+      
+      // Fall back to local file system
+      console.log('Falling back to local file system...');
+      const voteStore = readVotesFile();
+      
+      // Check if this client has voted for this product
+      const voteKey = getVoteKey(productId, clientId);
+      const voteKeyAlt = getVoteKeyReversed(productId, clientId);
+      
+      const voteType = voteStore.votes[voteKey] || voteStore.votes[voteKeyAlt] || null;
+      const productCounts = voteStore.voteCounts[productId] || { upvotes: 0, downvotes: 0 };
+      
+      console.log('Local vote check result:', { voteType, productCounts });
+      
+      return createSuccessResponse({
+        productId,
+        hasVoted: voteType !== null,
+        voteType: voteType,
+        upvotes: productCounts.upvotes,
+        downvotes: productCounts.downvotes,
+        score: (productCounts.upvotes || 0) - (productCounts.downvotes || 0)
+      });
+    } catch (queryError) {
+      console.error('Error checking vote status:', queryError);
+      
+      // Fall back to local file system on any error
+      try {
+        const voteStore = readVotesFile();
+        const voteKey = getVoteKey(productId, clientId);
+        const voteKeyAlt = getVoteKeyReversed(productId, clientId);
+        
+        const voteType = voteStore.votes[voteKey] || voteStore.votes[voteKeyAlt] || null;
+        const productCounts = voteStore.voteCounts[productId] || { upvotes: 0, downvotes: 0 };
+        
+        return createSuccessResponse({
+          productId,
+          hasVoted: voteType !== null,
+          voteType: voteType,
+          upvotes: productCounts.upvotes,
+          downvotes: productCounts.downvotes,
+          score: (productCounts.upvotes || 0) - (productCounts.downvotes || 0)
+        });
+      } catch (fileError) {
+        // Return a default response if all methods fail
+        return createSuccessResponse({
+          productId,
+          hasVoted: false,
+          voteType: null,
+          error: 'Failed to check vote status'
+        });
+      }
     }
-
-    return createSuccessResponse({
-      productId,
-      ...data
-    });
   } catch (error) {
     console.error('Error processing vote GET request:', error);
     return createErrorResponse(`Server error: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
@@ -99,28 +216,156 @@ export async function POST(request: NextRequest) {
 
     console.log(`Processing vote: product=${productId}, client=${clientId}, voteType=${voteType}, userId=${userId}`);
 
-    // Call the Supabase RPC function to handle voting
-    const { data, error } = await supabaseServer.rpc('vote_for_product', {
-      p_product_id: productId,
-      p_vote_type: voteType,
-      p_user_id: userId,
-      p_client_id: clientId
-    });
-
-    if (error) {
-      console.error('Error submitting vote:', error);
-      return createErrorResponse(`Error submitting vote: ${error.message}`, 500);
+    // Try the Supabase RPC first
+    try {
+      console.log('Trying vote with Supabase RPC...');
+      const { data, error } = await supabaseServer.rpc('vote_for_product', {
+        p_product_id: productId,
+        p_vote_type: voteType,
+        p_client_id: clientId
+      });
+      
+      if (!error) {
+        console.log('Vote submitted successfully via Supabase:', data);
+        // Update local vote store as well to keep in sync
+        updateLocalVotes(productId, clientId, voteType);
+        
+        return createSuccessResponse({
+          productId,
+          ...data
+        });
+      }
+      
+      console.error('Error with Supabase RPC:', error);
+      
+      // Fall back to local file system voting
+      console.log('Falling back to local file system voting...');
+      const result = updateLocalVotes(productId, clientId, voteType);
+      
+      return createSuccessResponse({
+        productId,
+        ...result
+      });
+    } catch (votingError) {
+      console.error('Error during vote operation:', votingError);
+      
+      // Fall back to local file system voting
+      try {
+        console.log('Falling back to local file system voting after error...');
+        const result = updateLocalVotes(productId, clientId, voteType);
+        
+        return createSuccessResponse({
+          productId,
+          ...result
+        });
+      } catch (fileError) {
+        return createErrorResponse(`Vote operation failed: ${fileError instanceof Error ? fileError.message : 'Unknown error'}`, 500);
+      }
     }
-
-    console.log('Vote result:', data);
-    
-    // Return the response from the RPC function
-    return createSuccessResponse({
-      productId,
-      ...data
-    });
   } catch (error) {
     console.error('Error processing vote POST request:', error);
     return createErrorResponse(`Server error: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
   }
+}
+
+// Function to update local votes
+function updateLocalVotes(productId: string, clientId: string, voteType: number) {
+  // Read current votes
+  const voteStore = readVotesFile();
+  const voteKey = getVoteKey(productId, clientId);
+  const existingVote = voteStore.votes[voteKey];
+  
+  let result = {
+    success: true,
+    message: '',
+    voteType: null as null | number
+  };
+  
+  // Initialize product vote counts if needed
+  if (!voteStore.voteCounts[productId]) {
+    voteStore.voteCounts[productId] = { upvotes: 0, downvotes: 0 };
+  }
+  
+  // Handle the vote
+  if (existingVote === undefined) {
+    // New vote
+    voteStore.votes[voteKey] = voteType;
+    
+    // Update counters
+    if (voteType === 1) {
+      voteStore.voteCounts[productId].upvotes++;
+    } else if (voteType === -1) {
+      voteStore.voteCounts[productId].downvotes++;
+    }
+    
+    result.message = voteType === 1 ? 'Upvoted successfully' : 'Downvoted successfully';
+    result.voteType = voteType;
+    
+    // Add to user votes history
+    voteStore.userVotes.push({
+      productId,
+      clientId,
+      voteType,
+      timestamp: new Date().toISOString()
+    });
+  } else if (existingVote === voteType) {
+    // Remove vote (toggle)
+    voteStore.votes[voteKey] = null;
+    delete voteStore.votes[voteKey];
+    
+    // Update counters
+    if (voteType === 1) {
+      voteStore.voteCounts[productId].upvotes = Math.max(0, voteStore.voteCounts[productId].upvotes - 1);
+    } else if (voteType === -1) {
+      voteStore.voteCounts[productId].downvotes = Math.max(0, voteStore.voteCounts[productId].downvotes - 1);
+    }
+    
+    result.message = 'Vote removed';
+    result.voteType = null;
+    
+    // Add to user votes history
+    voteStore.userVotes.push({
+      productId,
+      clientId,
+      voteType: 0, // 0 means removing vote
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    // Change vote
+    voteStore.votes[voteKey] = voteType;
+    
+    // Update counters
+    if (existingVote === 1 && voteType === -1) {
+      voteStore.voteCounts[productId].upvotes = Math.max(0, voteStore.voteCounts[productId].upvotes - 1);
+      voteStore.voteCounts[productId].downvotes++;
+    } else if (existingVote === -1 && voteType === 1) {
+      voteStore.voteCounts[productId].downvotes = Math.max(0, voteStore.voteCounts[productId].downvotes - 1);
+      voteStore.voteCounts[productId].upvotes++;
+    }
+    
+    result.message = voteType === 1 ? 'Upvoted successfully' : 'Downvoted successfully';
+    result.voteType = voteType;
+    
+    // Add to user votes history
+    voteStore.userVotes.push({
+      productId,
+      clientId,
+      voteType,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Update last updated timestamp
+  voteStore.lastUpdated = new Date().toISOString();
+  
+  // Save the updated votes
+  writeVotesFile(voteStore);
+  
+  // Return the result with vote counts
+  return {
+    ...result,
+    upvotes: voteStore.voteCounts[productId].upvotes,
+    downvotes: voteStore.voteCounts[productId].downvotes,
+    score: voteStore.voteCounts[productId].upvotes - voteStore.voteCounts[productId].downvotes
+  };
 } 

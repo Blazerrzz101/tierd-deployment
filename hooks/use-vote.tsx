@@ -5,7 +5,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { VoteType } from '@/types/product'
 import { Product } from '@/types/product'
 import { useQueryClient } from "@tanstack/react-query"
-import { useEnhancedAuth } from '@/components/auth/auth-provider'
+import { useEnhancedAuth } from "@/hooks/enhanced-auth"
 import { getClientId } from '@/utils/client-id'
 
 export interface VoteProduct extends Partial<Product> {

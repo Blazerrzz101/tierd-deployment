@@ -9,8 +9,8 @@ import { VoteNotifications } from "@/components/notifications/vote-notifications
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { SupabaseErrorBoundary } from "@/components/supabase-error-boundary"
 import { Header } from "@/components/layout/header"
-// import { AuthProvider } from "@/hooks/use-auth" // Comment out the old auth provider
-import { EnhancedAuthProvider } from "@/components/auth/auth-provider" // Import our new auth provider
+// Import the AuthProvider from enhanced-auth hook, not the components/auth/auth-provider
+import { AuthProvider } from "@/hooks/enhanced-auth"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 // Create a client
@@ -37,7 +37,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         >
           <TooltipProvider>
             <RealtimeProvider>
-              <EnhancedAuthProvider>
+              <AuthProvider>
                 <div className="relative flex min-h-screen flex-col">
                   <main className="relative flex-1">
                     <BetaBanner />
@@ -49,7 +49,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   </main>
                   <VoteNotifications />
                 </div>
-              </EnhancedAuthProvider>
+              </AuthProvider>
             </RealtimeProvider>
           </TooltipProvider>
           <Toaster />

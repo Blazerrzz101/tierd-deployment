@@ -1,0 +1,286 @@
+# Scratchpad
+
+## URL Standardization (2024-04)
+
+[X] Fixed URL generation across the application
+- Identified and fixed direct URL string interpolation that caused "undefined" slugs
+- Updated profile page to use createProductUrl function
+- Fixed activities page to properly use product slugs
+- Modified search bar to use safe URL generation
+- Ensured all product links go through ProductLink or createProductUrl
+
+## URL Component Updates (2024-05)
+
+[X] Updated home page components to use consistent URL generation
+- Modified `top-ranked-spotlight.tsx` to use `createProductUrl`
+- Updated `product-rankings.tsx` to use `createProductUrl` for all product links
+- Fixed `search-bar.tsx` to properly generate URLs using `createProductUrl`
+
+## Auth Import Fixes (2024-04)
+
+[X] Fixed runtime error in vote-buttons component
+- Updated imports to use the correct path for useEnhancedAuth
+- Changed from `@/components/auth/auth-provider` to `@/hooks/enhanced-auth`
+- Fixed other components still using the old auth provider
+- Updated test-vote page to use the correct interface properties
+
+## Authentication and Product URL Fixes (2024-04) - COMPLETED
+
+[X] Fixed authentication issues with Profile page
+- Removed duplicate auth providers causing conflicts
+- Standardized on a single consistent auth hook in hooks/enhanced-auth.tsx
+- Fixed incorrect imports across auth-related components
+- Resolved loading state conflicts in profile page
+
+[X] Fixed product detail pages with undefined slugs
+- Enhanced the ProductLink component for robust URL handling
+- Added utility functions to generate valid slugs from product names
+- Updated the product data source with valid slugs
+- Added URL slug validation and auto-generation in the products API
+- Fixed the Samsung Odyssey G7 product data
+
+[X] Fixed auth provider conflicts
+- Removed duplicate AuthProvider in app layout
+- Standardized on the hooks/enhanced-auth.tsx implementation
+- Deprecated the old components/auth/auth-provider.tsx
+- Updated all imports to reference the correct auth hook
+
+[X] Documentation
+- Updated UI_IMPROVEMENTS.md with latest fixes
+- Added detailed instructions for testing the fixes
+
+## Alternative Profile Page Implementation (2024-05) - COMPLETED
+
+[X] Created a completely new profile page implementation to resolve authentication issues
+- Created new /my-profile route with a more robust implementation
+- Added redirect from the old /profile page to the new implementation
+- Added detailed auth state debugging and proper loading state handling
+- Enhanced user experience with better UI feedback during authentication
+- Updated all profile links in user-nav and main-nav to point to the new page
+
+[X] Enhanced product URL handling
+- Added slugify package for consistent URL slug generation
+- Created comprehensive utility functions in utils/product-utils.ts:
+  - createProductUrl: Safely creates URLs that never contain "undefined"
+  - getValidProductSlug: Ensures slugs are always valid, with multiple fallbacks
+  - isValidProductSlug: Validates slug format
+  - slugifyString: Consistently formats strings into valid slugs
+- Added a mock product database for testing URL generation
+
+[X] Documentation updates
+- Updated UI_IMPROVEMENTS.md with comprehensive details on all fixes
+- Added testing instructions for the new profile page
+- Added documentation on the enhanced product URL handling
+
+## Vote Function Parameter Order Fix (2024-04) - COMPLETED
+
+[X] Identified parameter order mismatch between API call and SQL function
+- API was calling the vote function using incorrect parameter order (`p_client_id`, `p_product_id`, `p_user_id`, `p_vote_type`)
+- SQL function expected (`p_product_id`, `p_vote_type`, `p_user_id`, `p_client_id`)
+
+[X] Fixed API code to match SQL function definition 
+- Updated `app/api/vote/route.ts` to use the correct parameter order
+- Added fallback code that tries alternate parameter orders for backward compatibility
+
+[X] Added SQL script to run directly in Supabase dashboard
+- Created `fix-vote-functions-directly.sql` to allow direct database updates
+- Function properly supports both client_id and user_id authentication
+ 
+[X] Created deployment options:
+- Node.js script (`fix-vote-system.js`) to attempt the migration through different methods
+- Direct SQL script to run in Supabase SQL editor
+
+[X] Successfully deployed vote function fixes to Supabase database
+
+## Authentication Display Issues (2024-04) - COMPLETED
+
+[X] Identified issues with authentication state display
+- Sign-in/Sign-up buttons still showing after successful authentication
+- No profile image showing for authenticated users
+
+[X] Fix authentication state management issues:
+- [X] Fixed duplicate `useAuth` hook implementations in `hooks/use-auth.ts`
+- [X] Updated header and user-nav components to use the correct auth hook
+- [X] Created consistent client ID utility for auth persistence
+
+[X] Fix build process errors:
+- [X] Created a dedicated auth module in `hooks/enhanced-auth.tsx`
+- [X] Updated import references across multiple files
+- [X] Ensured proper hook export to prevent "is not a function" errors
+
+## User Action Flow and Error Points
+
+### User Authentication Flow:
+1. Anonymous User Visits Site → ClientID Generated → Stored in LocalStorage
+2. User Signs Up/Signs In → Auth API Call → JWT Token Generated
+3. Auth Provider Updates State → Header Components Re-render
+4. FIXED: Header now properly reflecting auth state changes
+
+### Voting Flow:
+1. User Views Product → Vote Buttons Displayed
+2. User Clicks Vote → Vote API Call → Parameters Sent to Supabase
+3. FIXED: Parameter order mismatch between API call and SQL function
+4. Supabase Function Processes Vote → Updates Database
+5. Response Returned → UI Updates
+
+### Profile Access Flow:
+1. User Clicks Profile → Auth Check → Redirect if Not Authenticated
+2. Load User Data from Supabase → Display Profile
+3. FIXED: User data being correctly fetched/displayed
+
+## Action Plan:
+
+1. Fix Auth Hook Duplication:
+   - [X] Refactor `hooks/use-auth.ts` to remove duplicate implementations
+   - [X] Ensure consistent auth state management
+
+2. Fix Authentication Display:
+   - [X] Update Header component to correctly use auth state
+   - [X] Fix avatar display in UserNav
+
+3. Deploy Vote Function Fix:
+   - [X] Run SQL script on Supabase to update function definitions
+   - [X] Verify vote functionality works in production
+
+4. Testing:
+   - [X] Test complete user flow from signup to voting
+   - [X] Verify auth state persistence across page refreshes 
+
+# Lessons
+
+## User Specified Lessons
+- You have a python venv in ./venv. Use it.
+- Include info useful for debugging in the program output.
+- Read the file before you try to edit it.
+- Due to Cursor's limit, when you use `git` and `gh` and need to submit a multiline commit message, first write the message in a file, and then use `git commit -F <filename>` or similar command to commit. And then remove the file. Include "[Cursor] " in the commit message and PR title.
+
+## Cursor learned
+- For search results, ensure proper handling of different character encodings (UTF-8) for international queries
+- Add debug information to stderr while keeping the main output clean in stdout for better pipeline integration
+- When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
+- Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
+- When encountering "X is not a function" errors during build, check not only function implementations but also export patterns
+- Prefer dedicated component/hook files over multi-purpose files to avoid circular dependencies
+
+## Voting System And Auth State Fixes
+- When integrating with Supabase RPC functions, always verify parameter order carefully
+- Include fallback logic when calling external APIs to handle potential parameter order issues
+- Make SQL function definitions flexible to handle slightly different parameter orders
+- Avoid duplicate hook implementations by using consistent export naming
+- Use comprehensive test pages to validate complex interactions like auth + voting
+- Include documentation about fixes in VOTING_SYSTEM_FIX.md for future developers
+- When encountering build errors with "is not a function", consider moving the implementation to a dedicated file
+- Use the `export const functionName = () => {}` pattern instead of `export function functionName() {}` for React hooks to ensure consistent compilation
+
+## Authentication System Fixes
+- Avoid having multiple authentication providers in the same application
+- Ensure consistent auth hook naming and implementation to prevent state inconsistencies
+- When using localStorage for auth state, ensure proper clearing on sign-out
+- Use a consistent method for determining loading states across components 
+- Always check for undefined or null user states before accessing user properties
+- In Next.js applications, be careful with duplicate providers in app layout
+- Prefer a single source of truth for auth state to avoid conflicts
+- Use descriptive variable names for loading states to avoid naming conflicts
+- After refactoring, make sure to update ALL import paths to prevent "is not a function" runtime errors
+- When deprecating components, add comments to guide developers to the new implementation 
+
+## URL Generation and Navigation Fixes
+- Never directly construct URLs using string interpolation (e.g., `/products/${productId}`)
+- Always use dedicated utility functions for URL generation to prevent inconsistencies
+- When creating URLs from user-generated content, always sanitize and validate inputs
+- Implement fallback mechanisms for missing/invalid slugs to prevent broken links
+- Use types and interfaces to ensure proper parameter passing in URL-related functions
+- Add debug logging for URL generation to quickly identify issues
+- When implementing redirects, use a short delay to ensure auth state is settled
+- Track timing information to identify authentication and loading state issues 
+- Use Next.js middleware as a safety net to catch any malformed URLs that might slip through
+- Always validate slugs before using them in URL construction
+- Add comprehensive testing for URL generation and navigation
+
+# Instructions During your interaction with the user, if you find anything reusable in this project (e.g. version of a library, model name), especially about a fix to a mistake you made or a correction you received, you should take note in the `Lessons` section in the `.cursorrules` file so you will not make the same mistake again. You should also use the `.cursorrules` file as a Scratchpad to organize your thoughts. Especially when you receive a new task, you should first review the content of the Scratchpad, clear old different task if necessary, first explain the task, and plan the steps you need to take to complete the task. You can use todo markers to indicate the progress, e.g. [X] Task 1 [ ] Task 2 Also update the progress of the task in the Scratchpad when you finish a subtask. Especially when you finished a milestone, it will help to improve your depth of task accomplishment to use the Scratchpad to reflect and plan. The goal is to help you maintain a big picture as well as the progress of the task. Always refer to the Scratchpad when you plan the next step.
+
+# Tools
+
+## Screenshot Verification
+The screenshot verification workflow allows you to capture screenshots of web pages and verify their appearance using LLMs. The following tools are available:
+1. Screenshot Capture:
+```bash venv/bin/python tools/screenshot_utils.py URL [--output OUTPUT] [--width WIDTH] [--height HEIGHT] ```
+2. LLM Verification with Images:
+```bash venv/bin/python tools/llm_api.py --prompt "Your verification question" --provider {openai|anthropic} --image path/to/screenshot.png ```
+Example workflow:
+```python from screenshot_utils import take_screenshot_sync from llm_api import query_llm # Take a screenshot screenshot_path = take_screenshot_sync('https://example.com', 'screenshot.png') # Verify with LLM response = query_llm( "What is the background color and title of this webpage?", provider="openai", # or "anthropic" image_path=screenshot_path ) print(response) ```
+
+## LLM
+You always have an LLM at your side to help you with the task. For simple tasks, you could invoke the LLM by running the following command:
+``` venv/bin/python ./tools/llm_api.py --prompt "What is the capital of France?" --provider "anthropic" ```
+The LLM API supports multiple providers:
+- OpenAI (default, model: gpt-4o)
+- Azure OpenAI (model: configured via AZURE_OPENAI_MODEL_DEPLOYMENT in .env file, defaults to gpt-4o-ms)
+- DeepSeek (model: deepseek-chat)
+- Anthropic (model: claude-3-sonnet-20240229)
+- Gemini (model: gemini-pro)
+- Local LLM (model: Qwen/Qwen2.5-32B-Instruct-AWQ)
+But usually it's a better idea to check the content of the file and use the APIs in the `tools/llm_api.py` file to invoke the LLM if needed.
+
+## Web browser
+You could use the `tools/web_scraper.py` file to scrape the web.
+``` venv/bin/python ./tools/web_scraper.py --max-concurrent 3 URL1 URL2 URL3 ```
+This will output the content of the web pages.
+
+## Search engine
+You could use the `tools/search_engine.py` file to search the web.
+``` venv/bin/python ./tools/search_engine.py "your search keywords" ```
+This will output the search results in the following format:
+``` URL: https://example.com Title: This is the title of the search result Snippet: This is a snippet of the search result ```
+If needed, you can further use the `web_scraper.py` file to scrape the web page content.
+
+# Lessons
+
+## User Specified Lessons
+- You have a python venv in ./venv. Use it.
+- Include info useful for debugging in the program output.
+- Read the file before you try to edit it.
+- Due to Cursor's limit, when you use `git` and `gh` and need to submit a multiline commit message, first write the message in a file, and then use `git commit -F <filename>` or similar command to commit. And then remove the file. Include "[Cursor] " in the commit message and PR title.
+
+## Cursor learned
+- For search results, ensure proper handling of different character encodings (UTF-8) for international queries
+- Add debug information to stderr while keeping the main output clean in stdout for better pipeline integration
+- When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
+- Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
+- When encountering "X is not a function" errors during build, check not only function implementations but also export patterns
+- Prefer dedicated component/hook files over multi-purpose files to avoid circular dependencies
+
+## Voting System And Auth State Fixes
+- When integrating with Supabase RPC functions, always verify parameter order carefully
+- Include fallback logic when calling external APIs to handle potential parameter order issues
+- Make SQL function definitions flexible to handle slightly different parameter orders
+- Avoid duplicate hook implementations by using consistent export naming
+- Use comprehensive test pages to validate complex interactions like auth + voting
+- Include documentation about fixes in VOTING_SYSTEM_FIX.md for future developers
+- When encountering build errors with "is not a function", consider moving the implementation to a dedicated file
+- Use the `export const functionName = () => {}` pattern instead of `export function functionName() {}` for React hooks to ensure consistent compilation
+
+## Authentication System Fixes
+- Avoid having multiple authentication providers in the same application
+- Ensure consistent auth hook naming and implementation to prevent state inconsistencies
+- When using localStorage for auth state, ensure proper clearing on sign-out
+- Use a consistent method for determining loading states across components 
+- Always check for undefined or null user states before accessing user properties
+- In Next.js applications, be careful with duplicate providers in app layout
+- Prefer a single source of truth for auth state to avoid conflicts
+- Use descriptive variable names for loading states to avoid naming conflicts
+- After refactoring, make sure to update ALL import paths to prevent "is not a function" runtime errors
+- When deprecating components, add comments to guide developers to the new implementation 
+
+## URL Generation and Navigation Fixes
+- Never directly construct URLs using string interpolation (e.g., `/products/${productId}`)
+- Always use dedicated utility functions for URL generation to prevent inconsistencies
+- When creating URLs from user-generated content, always sanitize and validate inputs
+- Implement fallback mechanisms for missing/invalid slugs to prevent broken links
+- Use types and interfaces to ensure proper parameter passing in URL-related functions
+- Add debug logging for URL generation to quickly identify issues
+- When implementing redirects, use a short delay to ensure auth state is settled
+- Track timing information to identify authentication and loading state issues 
+- Use Next.js middleware as a safety net to catch any malformed URLs that might slip through
+- Always validate slugs before using them in URL construction
+- Add comprehensive testing for URL generation and navigation 

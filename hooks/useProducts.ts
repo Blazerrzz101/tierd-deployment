@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/types/supabase'
 import { useToast } from '@/components/ui/use-toast'
 import { Product } from '@/types/product'
+import { createProductUrl, getValidProductSlug } from '@/utils/product-utils'
 
 type ProductRanking = Database['public']['Functions']['get_product_rankings']['Returns'][0]
 
@@ -13,6 +14,15 @@ const calculateScore = (product: any) => {
   const upvotes = typeof product.upvotes === 'number' ? product.upvotes : 0;
   const downvotes = typeof product.downvotes === 'number' ? product.downvotes : 0;
   return upvotes - downvotes;
+};
+
+// Ensure product has a valid URL slug
+const normalizeProductSlug = (product: any) => {
+  if (!product.url_slug || product.url_slug === 'undefined') {
+    // Generate a slug from the product name if missing
+    return getValidProductSlug(product);
+  }
+  return product.url_slug;
 };
 
 export function useProducts() {
@@ -53,7 +63,8 @@ export function useProducts() {
               upvotes: typeof product.upvotes === 'number' ? product.upvotes : 0,
               downvotes: typeof product.downvotes === 'number' ? product.downvotes : 0,
               score: product.score !== undefined ? product.score : calculateScore(product),
-              image_url: product.image_url || '/images/products/placeholder.svg'
+              image_url: product.image_url || '/images/products/placeholder.svg',
+              url_slug: normalizeProductSlug(product) // Ensure valid slug
             }));
             
             // Sort products by score
@@ -116,7 +127,7 @@ export function useProducts() {
         price: product.price || 0,
         image_url: product.image_url || `/images/products/${product.category.toLowerCase()}.png`,
         imageUrl: product.image_url || `/images/products/${product.category.toLowerCase()}.png`,
-        url_slug: product.url_slug,
+        url_slug: normalizeProductSlug(product), // Ensure valid slug
         specifications: product.specifications || {},
         created_at: product.created_at,
         updated_at: product.updated_at,

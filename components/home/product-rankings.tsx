@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button'
 import { ProductRankingCard } from '@/components/rankings/product-ranking-card'
 import { cn } from '@/lib/utils'
 import { Product } from '@/types/product'
+import Link from "next/link"
+import Image from "next/image"
+import { ChevronUp, ChevronDown, ChevronRight } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AnimatePresence, motion } from "framer-motion"
+import { createProductUrl } from "@/utils/product-utils"
 
 export const categories = [
   {

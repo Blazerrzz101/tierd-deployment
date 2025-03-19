@@ -85,7 +85,7 @@
       "downvotes": 0
     }
   },
-  "lastUpdated": "2025-03-03T09:23:05.041Z",
+  "lastUpdated": "2025-03-19T22:12:19.771Z",
   "userVotes": [
     {
       "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
@@ -278,6 +278,66 @@
       "clientId": "6256cpva8yt_1740526035162",
       "voteType": 1,
       "timestamp": "2025-03-03T09:23:05.041Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-19T00:33:45.186Z"
+    },
+    {
+      "productId": "z1x2c3v4-b5n6-m7k8-j9h0-g1f2d3s4a5",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-19T01:11:41.274Z"
+    },
+    {
+      "productId": "z1x2c3v4-b5n6-m7k8-j9h0-g1f2d3s4a5",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-19T01:11:42.683Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-19T01:11:44.346Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-19T02:00:06.131Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-19T02:00:08.805Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-19T03:34:08.330Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-19T03:34:10.487Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-19T22:12:19.073Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-19T22:12:19.771Z"
     }
   ]
 }

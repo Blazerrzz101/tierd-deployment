@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { AuthNav } from "@/components/auth/auth-nav"
 import { UserNav } from "@/components/auth/user-nav"
-import { useAuth } from "@/hooks/use-auth"
+import { useEnhancedAuth } from "@/hooks/enhanced-auth"
 
 export function Header() {
   const pathname = usePathname()
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useEnhancedAuth()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/50 backdrop-blur-xl">
@@ -50,9 +50,18 @@ export function Header() {
           >
             About
           </Link>
+          <Link
+            href="/vote-status"
+            className={cn(
+              "transition-colors hover:text-foreground/80",
+              pathname === "/vote-status" ? "text-foreground" : "text-foreground/60"
+            )}
+          >
+            Vote Status
+          </Link>
         </nav>
         <div className="ml-auto flex items-center space-x-4">
-          {user ? <UserNav /> : <AuthNav />}
+          {isAuthenticated ? <UserNav /> : <AuthNav />}
         </div>
       </div>
     </header>

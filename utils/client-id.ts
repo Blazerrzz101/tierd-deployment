@@ -1,35 +1,37 @@
-// Client ID utilities
-// This file centralizes client ID logic to prevent circular dependencies
+/**
+ * Utilities for managing anonymous client IDs
+ */
 
 // Generate a unique client ID for anonymous users
-export const generateClientId = (): string => {
-  return `${Math.random().toString(36).substring(2)}_${Date.now()}`;
-};
+export function generateClientId(): string {
+  // Use a combination of timestamp and random string
+  const timestamp = Date.now().toString(36);
+  const randomString = Math.random().toString(36).substring(2, 10);
+  return `${timestamp}-${randomString}`;
+}
 
-// Get the client ID from localStorage or create a new one
-export const getClientId = (): string => {
-  if (typeof window === 'undefined') return generateClientId(); // Return a new ID in SSR context
-  
-  try {
-    let clientId = localStorage.getItem('tierd_client_id');
-    if (!clientId) {
-      clientId = generateClientId();
-      localStorage.setItem('tierd_client_id', clientId);
-    }
-    return clientId;
-  } catch (error) {
-    console.error('Error accessing localStorage:', error);
-    return generateClientId(); // Fallback to a temporary ID
+// Get or create a client ID from localStorage
+export function getClientId(): string {
+  if (typeof window === 'undefined') {
+    // Return a placeholder for server-side rendering
+    return 'server-side';
   }
-};
 
-// Clear the client ID (used when signing out)
-export const clearClientId = (): void => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    localStorage.removeItem('tierd_client_id');
-  } catch (error) {
-    console.error('Error clearing client ID:', error);
+  // Try to get existing client ID from localStorage
+  let clientId = localStorage.getItem('clientId');
+
+  // If no client ID exists, create and store one
+  if (!clientId) {
+    clientId = generateClientId();
+    localStorage.setItem('clientId', clientId);
   }
-}; 
+
+  return clientId;
+}
+
+// Clear the client ID (used on sign out)
+export function clearClientId(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('clientId');
+  }
+} 

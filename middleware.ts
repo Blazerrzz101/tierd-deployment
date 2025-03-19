@@ -13,6 +13,12 @@ function logError(error: any, context: string) {
   })
 }
 
+// Check if a string is within the URL path
+const includesInPath = (url: string, check: string): boolean => {
+  const urlObj = new URL(url)
+  return urlObj.pathname.includes(check)
+}
+
 export async function middleware(request: NextRequest) {
   try {
     const startTime = Date.now()
@@ -96,6 +102,53 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next()
     }
 
+    // Redirect any URLs with 'undefined' in them
+    if (includesInPath(request.nextUrl.toString(), '/products/undefined') || 
+        request.nextUrl.pathname === '/products/undefined') {
+      console.log('Intercepted undefined product URL:', request.nextUrl.toString());
+      console.log('Referer:', request.headers.get('referer'));
+      console.log('User-Agent:', request.headers.get('user-agent'));
+      
+      // Redirect to the products page
+      const url = request.nextUrl.clone()
+      url.pathname = '/products'
+      return NextResponse.redirect(url)
+    }
+    
+    // Handle malformed products URL without additional path (when just /products is requested)
+    // This handles the case when the Select component error occurs
+    if (request.nextUrl.pathname === '/products' && request.headers.get('referer')?.includes('/products/')) {
+      console.log('Redirecting from bare /products to home with products section');
+      console.log('Referer:', request.headers.get('referer'));
+      
+      // Redirect to home page with products section
+      return NextResponse.redirect(new URL('/#products', request.url))
+    }
+    
+    // Handle other potentially malformed product URLs
+    if (request.nextUrl.pathname.startsWith('/products/')) {
+      const slugPart = request.nextUrl.pathname.split('/products/')[1]
+      console.log('Processing product URL with slug:', slugPart);
+      
+      // Check for various invalid slug patterns
+      if (
+        !slugPart ||
+        slugPart === 'null' || 
+        slugPart === 'NaN' || 
+        slugPart.includes('undefined') ||
+        slugPart.length < 3
+      ) {
+        console.log('Intercepted invalid product URL:', request.nextUrl.toString());
+        console.log('Slug part:', slugPart);
+        console.log('Referer:', request.headers.get('referer'));
+        
+        // Redirect to products listing
+        const url = request.nextUrl.clone()
+        url.pathname = '/products'
+        return NextResponse.redirect(url)
+      }
+    }
+
     // For all other routes, allow access regardless of authentication status
     return res
 
@@ -123,5 +176,10 @@ export const config = {
      */
     '/((?!_next|_static|_vercel|images|fonts|public|favicon.ico).*)',
     '/api/:path*',
+    // Apply to all product paths
+    '/products/:path*',
+    // And any other potential invalid URL paths
+    '/:path*/undefined/:path*',
+    '/undefined/:path*'
   ],
 } 

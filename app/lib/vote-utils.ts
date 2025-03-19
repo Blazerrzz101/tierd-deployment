@@ -13,8 +13,41 @@ export interface VoteState {
   lastUpdated: string;
 }
 
+// Use a more accessible location for vote data
 const DATA_DIR = path.join(process.cwd(), 'data');
 const VOTES_FILE = path.join(DATA_DIR, 'votes.json');
+
+// In-memory cache of vote state to improve performance
+let voteStateCache: VoteState | null = null;
+
+// Listeners for vote updates
+type VoteUpdateListener = (productId: string, voteCounts: VoteCounts) => void;
+const voteUpdateListeners: VoteUpdateListener[] = [];
+
+// Register a listener for vote updates
+export function onVoteUpdate(listener: VoteUpdateListener): () => void {
+  voteUpdateListeners.push(listener);
+  
+  // Return a function to unregister the listener
+  return () => {
+    const index = voteUpdateListeners.indexOf(listener);
+    if (index !== -1) {
+      voteUpdateListeners.splice(index, 1);
+    }
+  };
+}
+
+// Notify all listeners of a vote update
+function notifyVoteUpdate(productId: string, voteCounts: VoteCounts): void {
+  console.log(`Notifying ${voteUpdateListeners.length} listeners about vote update for ${productId}`);
+  voteUpdateListeners.forEach(listener => {
+    try {
+      listener(productId, voteCounts);
+    } catch (error) {
+      console.error('Error in vote update listener:', error);
+    }
+  });
+}
 
 // Initialize the votes file and directory
 export async function initializeVoteState() {
@@ -34,6 +67,9 @@ export async function initializeVoteState() {
       };
       writeFileSync(VOTES_FILE, JSON.stringify(initialState, null, 2), 'utf8');
       console.log('Created votes file:', VOTES_FILE);
+      
+      // Update cache
+      voteStateCache = initialState;
     }
   } catch (error) {
     console.error('Error initializing vote state:', error);
@@ -44,6 +80,16 @@ export async function initializeVoteState() {
 // Get the current vote state
 export async function getVoteState(): Promise<VoteState> {
   try {
+    // Return cached state if available and not too old (5 seconds)
+    if (voteStateCache) {
+      const lastUpdatedTime = new Date(voteStateCache.lastUpdated).getTime();
+      const currentTime = new Date().getTime();
+      
+      if (currentTime - lastUpdatedTime < 5000) {
+        return voteStateCache;
+      }
+    }
+    
     await initializeVoteState();
     console.log('Reading vote state from:', VOTES_FILE);
     const data = await fs.readFile(VOTES_FILE, 'utf-8');
@@ -82,16 +128,24 @@ export async function getVoteState(): Promise<VoteState> {
       await saveVoteState(state);
     }
     
+    // Update cache
+    voteStateCache = state;
+    
     console.log('Successfully read vote state:', state);
     return state;
   } catch (error) {
     console.error('Error reading vote state:', error);
     // Return a fresh state if there's an error
-    return {
+    const freshState = {
       votes: {},
       voteCounts: {},
       lastUpdated: new Date().toISOString()
     };
+    
+    // Update cache
+    voteStateCache = freshState;
+    
+    return freshState;
   }
 }
 
@@ -124,6 +178,9 @@ export async function saveVoteState(state: VoteState): Promise<void> {
     // Rename temp file to actual file (atomic operation)
     await fs.rename(tempFile, VOTES_FILE);
     console.log('Successfully saved vote state to:', VOTES_FILE);
+    
+    // Update cache
+    voteStateCache = state;
     
     // Verify the final file
     const finalData = await fs.readFile(VOTES_FILE, 'utf8');
@@ -219,6 +276,9 @@ export async function updateVote(
   
   // Save the updated state
   await saveVoteState(state);
+  
+  // Notify listeners
+  notifyVoteUpdate(productId, state.voteCounts[productId]);
   
   return {
     voteCounts: state.voteCounts[productId],

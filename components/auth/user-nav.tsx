@@ -19,24 +19,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/hooks/use-auth"
+import { useEnhancedAuth } from "@/hooks/enhanced-auth"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User } from "@supabase/supabase-js"
 
-interface ExtendedUser extends User {
-  user_metadata: {
-    avatar_url?: string
-    full_name?: string
-  }
-}
-
 export function UserNav() {
-  const { user, signOut } = useAuth()
+  const { user, signOut } = useEnhancedAuth()
 
-  if (!user) return null
+  // If the user is not authenticated, don't render anything
+  if (!user || user.isAnonymous) return null
 
-  const displayName = user?.email?.split('@')[0] || 'User'
-  const avatarUrl = undefined
+  const displayName = user?.name || user?.email?.split('@')[0] || 'User'
+  const avatarUrl = user?.avatar_url || undefined
 
   return (
     <DropdownMenu>
@@ -58,7 +52,7 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/profile">Profile</Link>
+            <Link href="/my-profile">Profile</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/activities">Activities</Link>
@@ -71,7 +65,7 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
+        <DropdownMenuItem onClick={() => signOut()}>
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

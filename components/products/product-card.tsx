@@ -1,123 +1,164 @@
 "use client"
 
-import Link from "next/link"
-import { Card } from "@/components/ui/card"
+import { useState } from "react"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { ProductLink } from "@/components/products/product-link"
 import { VoteButtons } from "@/components/products/vote-buttons"
-import { ProductImage } from "@/components/ui/product-image-fixed"
-import { Product } from "@/types/product"
-import { Star, ExternalLink, ArrowUpRight, Zap } from "lucide-react"
+import { ArrowUpRight, Tag, ExternalLink, Zap } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
+import Image from "next/image"
+import { isValidProduct, createProductUrl } from "@/utils/product-utils"
+import { useRouter } from "next/navigation"
 
 interface ProductCardProps {
-  product: Product
-  size?: "sm" | "md" | "lg"
+  product: any
+  showVotes?: boolean
+  showPrice?: boolean
+  simpleCard?: boolean
+  onTest?: (product: any) => void
 }
 
-export function ProductCard({ product, size = "md" }: ProductCardProps) {
-  // Size-based styling
-  const cardStyles = {
-    sm: "max-w-[280px] p-3",
-    md: "max-w-[350px] p-4",
-    lg: "max-w-[400px] p-5",
+export function ProductCard({ 
+  product, 
+  showVotes = true,
+  showPrice = true, 
+  simpleCard = false,
+  onTest
+}: ProductCardProps) {
+  const router = useRouter()
+  const [isHovered, setIsHovered] = useState(false)
+  
+  // Debug product data
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`ProductCard rendering product: id=${product?.id}, name=${product?.name}, slug=${product?.url_slug}`);
+  }
+  
+  // Check if the product is valid before rendering
+  if (!isValidProduct(product)) {
+    return (
+      <Card className="overflow-hidden border border-red-200 bg-red-50">
+        <CardHeader className="p-4">
+          <CardTitle className="text-sm text-red-800">Invalid Product Data</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <p className="text-xs text-red-600">This product has missing or invalid data.</p>
+          {product && (
+            <pre className="mt-2 text-xs bg-white p-2 rounded overflow-auto max-h-20">
+              {JSON.stringify(product, null, 2)}
+            </pre>
+          )}
+        </CardContent>
+      </Card>
+    )
   }
 
-  const imageStyles = {
-    sm: "h-36 w-36",
-    md: "h-44 w-44",
-    lg: "h-52 w-52",
+  const imageSrc = product.image || '/images/product-placeholder.png'
+  const productUrl = createProductUrl(product)
+
+  // Ensure we have a valid URL, don't use string interpolation directly
+  const handleViewProduct = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    router.push(productUrl)
   }
-
-  const titleStyles = {
-    sm: "text-base",
-    md: "text-lg",
-    lg: "text-xl",
-  }
-
-  // Calculate score
-  const score = (product.upvotes || 0) - (product.downvotes || 0);
-
-  // Ensure price is formatted correctly
-  const formattedPrice = typeof product.price === 'number'
-    ? `$${product.price.toFixed(2)}`
-    : 'Price unavailable'
 
   return (
-    <Card className={`modern-card relative group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:translate-y-[-3px] ${cardStyles[size]}`}>
-      {/* Score badge */}
-      {score > 0 && (
-        <div className="absolute top-2 right-2 z-10 bg-accent/80 text-white text-xs px-2 py-1 rounded-full flex items-center shadow-md">
-          <Zap className="h-3 w-3 mr-1" />
-          {score}
-        </div>
-      )}
-      
-      <Link href={`/products/${product.url_slug}`} className="block h-full">
-        <div className="flex h-full flex-col space-y-4">
-          <div className="relative mx-auto flex items-center justify-center">
-            {/* Spotlight effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/5 rounded-full blur-lg opacity-0 group-hover:opacity-70 transition-opacity duration-500"></div>
-            
-            {/* Image container */}
-            <div className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-2">
-              <ProductImage
-                src={product.image_url || '/images/products/placeholder.png'}
-                alt={product.name}
-                category={product.category}
-                width={size === 'sm' ? 144 : size === 'md' ? 176 : 208}
-                height={size === 'sm' ? 144 : size === 'md' ? 176 : 208}
-                className={`object-contain transition-transform duration-300 group-hover:scale-105 ${imageStyles[size]}`}
-              />
-              
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center p-2">
-                <span className="text-xs text-white px-2 py-1 rounded-full bg-black/40 backdrop-blur-sm flex items-center">
-                  View Details
-                  <ArrowUpRight className="h-3 w-3 ml-1" />
-                </span>
-              </div>
-            </div>
+    <div
+      className={`overflow-hidden ${isHovered ? 'shadow-md' : 'shadow-sm'} transition-all duration-200`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <Card>
+        <ProductLink 
+          product={product}
+          className="block"
+        >
+          <div className="relative h-48 w-full bg-gray-100">
+            <Image
+              src={imageSrc}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover transition-transform duration-300 ease-in-out"
+              style={{ 
+                transform: isHovered ? 'scale(1.03)' : 'scale(1)', 
+                opacity: product.imageUrl ? 1 : 0.5 
+              }}
+            />
           </div>
           
-          <div className="flex flex-col space-y-3 mt-auto">
-            <div className="space-y-1">
-              <h3 className={`font-semibold line-clamp-2 group-hover:text-primary transition-colors ${titleStyles[size]}`}>
-                {product.name}
-              </h3>
-              
-              <div className="text-xs text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-                {product.description}
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 text-xs">
-              <span className="capitalize bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                {product.category.replace('-', ' ')}
-              </span>
-              
-              {product.rating > 0 && (
-                <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-full">
-                  <Star className="h-3 w-3 fill-secondary text-secondary" />
-                  <span className="font-medium">{product.rating.toFixed(1)}</span>
-                </div>
+          <CardHeader className="p-4 pb-0">
+            <div className="flex justify-between items-start">
+              <CardTitle className="text-lg font-medium line-clamp-1">{product.name}</CardTitle>
+              {!simpleCard && showPrice && product.price && (
+                <Badge variant="secondary" className="ml-2 shrink-0">
+                  ${product.price}
+                </Badge>
               )}
             </div>
             
-            <div className="flex items-center justify-between mt-1 pt-3 border-t border-white/5">
-              <span className="text-sm font-semibold text-secondary">{formattedPrice}</span>
-              
-              <div className="flex items-center gap-2">
-                <div className="bg-card-background backdrop-blur-sm rounded-lg p-1 border border-white/5 shadow-inner">
-                  <VoteButtons 
-                    product={{ id: product.id, name: product.name }}
-                    initialUpvotes={product.upvotes || 0}
-                    initialDownvotes={product.downvotes || 0}
-                    initialVoteType={typeof product.userVote === 'number' ? product.userVote : null}
-                  />
-                </div>
+            {!simpleCard && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                <Badge variant="outline" className="flex items-center text-xs">
+                  <Tag className="h-3 w-3 mr-1" />
+                  {product.category}
+                </Badge>
               </div>
+            )}
+          </CardHeader>
+        </ProductLink>
+        
+        <CardContent className={`p-4 ${simpleCard ? 'pt-0' : 'pt-2'}`}>
+          {!simpleCard && (
+            <p className="text-muted-foreground text-sm line-clamp-2">
+              {product.description || 'No description available'}
+            </p>
+          )}
+        </CardContent>
+        
+        {!simpleCard && (
+          <CardFooter className="p-4 pt-0 flex justify-between items-center">
+            {showVotes && (
+              <VoteButtons
+                product={{ id: product.id, name: product.name }}
+                initialUpvotes={product.upvotes || 0}
+                initialDownvotes={product.downvotes || 0}
+                initialVoteType={product.userVote || 0}
+              />
+            )}
+            
+            <div className="flex gap-2">
+              {onTest && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2 text-xs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onTest(product);
+                  }}
+                >
+                  <Zap className="h-3 w-3 mr-1" />
+                  Test
+                </Button>
+              )}
+              
+              <Button
+                size="sm"
+                variant="default"
+                className="h-8 px-2 text-xs"
+                onClick={handleViewProduct}
+              >
+                <ArrowUpRight className="h-3 w-3 mr-1" />
+                View
+              </Button>
             </div>
-          </div>
-        </div>
-      </Link>
-    </Card>
+          </CardFooter>
+        )}
+      </Card>
+    </div>
   )
 } 

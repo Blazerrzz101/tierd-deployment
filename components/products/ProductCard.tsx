@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import type { Database } from '@/types/supabase'
 import { cn } from '@/lib/utils'
+import { createProductUrl } from '@/utils/product-utils'
 
 type ProductRanking = Database['public']['Views']['product_rankings']['Row']
 
@@ -28,10 +29,13 @@ export function ProductCard({ product, onVote, userVote }: ProductCardProps) {
     }
   }
 
+  // Generate a valid product URL using our utility function
+  const productUrl = createProductUrl(product)
+
   return (
     <Card className="h-full">
       <CardHeader className="relative aspect-square overflow-hidden p-0">
-        <Link href={`/products/${product.url_slug}`}>
+        <Link href={productUrl}>
           <Image
             src={product.image_url || '/placeholder.png'}
             alt={product.name}
@@ -43,11 +47,12 @@ export function ProductCard({ product, onVote, userVote }: ProductCardProps) {
       </CardHeader>
       <CardContent className="p-4">
         <Link 
-          href={`/products/${product.url_slug}`}
+          href={productUrl}
           className="text-lg font-semibold hover:underline"
         >
           {product.name}
         </Link>
+        
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
           {product.description}
         </p>

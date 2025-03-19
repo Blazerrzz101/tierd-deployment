@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useVote } from "@/hooks/use-vote"
 import { VoteButtons } from "@/components/products/vote-buttons"
-import { useEnhancedAuth } from "@/components/auth/auth-provider"
+import { useEnhancedAuth } from "@/hooks/enhanced-auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Loader2 } from "lucide-react"
 
 export default function TestVotePage() {
-  const { user, isLoading, signIn, signUp, signOut, isAuthenticated, remainingAnonymousVotes } = useEnhancedAuth()
+  const { user, isLoading, signIn, signUp, signOut, isAuthenticated } = useEnhancedAuth()
   const { getVoteStatus, vote, getClientId, remainingVotes } = useVote()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -172,7 +172,7 @@ export default function TestVotePage() {
               <div>
                 <p className="text-sm text-muted-foreground">
                   {user?.isAnonymous 
-                    ? `Anonymous user (${remainingAnonymousVotes ?? remainingVotes ?? '?'} votes remaining)`
+                    ? `Anonymous user (${remainingVotes ?? '?'} votes remaining)`
                     : `Signed in as ${user?.name || user?.email || 'Unknown User'}`}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">

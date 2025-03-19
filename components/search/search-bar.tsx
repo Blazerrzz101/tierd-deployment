@@ -11,6 +11,7 @@ import { fuzzySearch, highlightMatches } from "@/lib/search/fuzzy-search"
 import { CATEGORY_IDS } from "@/lib/constants"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { createProductUrl } from "@/utils/product-utils"
 
 interface SearchSuggestion {
   id: string
@@ -142,7 +143,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
         e.preventDefault()
         if (selectedIndex >= 0) {
           const selected = suggestions[selectedIndex]
-          router.push(`/products/${selected.id}`)
+          router.push(createProductUrl({ id: selected.id, name: selected.name }))
         }
         break
       case 'Escape':
@@ -248,7 +249,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                onClick={() => router.push(`/products/${suggestion.id}`)}
+                onClick={() => router.push(createProductUrl({ id: suggestion.id, name: suggestion.name }))}
                 className={cn(
                   "w-full px-4 py-3 flex items-center gap-4 transition-colors",
                   index === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5'
