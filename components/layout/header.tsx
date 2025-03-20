@@ -8,6 +8,7 @@ import { AuthNav } from "@/components/auth/auth-nav"
 import { UserNav } from "@/components/auth/user-nav"
 import { useEnhancedAuth } from "@/hooks/enhanced-auth"
 import { Search } from "lucide-react"
+import { AnimatedLogo } from "@/components/ui/animated-logo"
 
 export function Header() {
   const pathname = usePathname()
@@ -18,9 +19,7 @@ export function Header() {
       <div className="container flex h-16 items-center">
         <div className="mr-8">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              Tier'd
-            </span>
+            <AnimatedLogo />
           </Link>
         </div>
         <nav className="flex flex-1 items-center space-x-6 text-sm">
