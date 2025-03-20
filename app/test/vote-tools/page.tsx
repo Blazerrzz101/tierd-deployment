@@ -14,8 +14,13 @@ export default function VoteToolsPage() {
   const checkSystemStatus = async () => {
     try {
       setLoading(true);
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      const response = await fetch(`${baseUrl}/api/vote-system-fix`);
+      const baseUrl = typeof window !== 'undefined' 
+        ? window.location.origin 
+        : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      
+      const apiUrl = new URL('/api/vote-system-fix', baseUrl).toString();
+      
+      const response = await fetch(apiUrl);
       const data = await response.json();
       setSystemStatus(data);
     } catch (error) {
