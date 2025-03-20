@@ -178,30 +178,48 @@ export function CreateThreadDialog({
       console.log("Creating thread with values:", values);
       
       // Create the thread object
-      const newThread: ExtendedThread = {
+      const threadData = {
+        title: values.title,
+        content: values.content,
+        category: values.category,
+        user_id: user.id,
+        user: {
+          id: user.id,
+          username: user.name || "Anonymous User",
+          avatar_url: user?.avatar_url || '/placeholders/user.svg',
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        upvotes: 0,
+        downvotes: 0,
+        mentioned_products: selectedProducts.map(p => p.id),
+        is_pinned: false,
+        is_locked: false,
+        taggedProducts: selectedProducts
+      };
+
+      console.log("New thread created:", threadData);
+      
+      // Call callback with the new thread as ExtendedThread
+      onThreadCreated({
         id: generateUniqueId(),
         title: values.title,
         content: values.content,
         category: values.category,
         author: {
           id: user.id,
-          name: user.name,
-          avatar_url: user.avatar_url || '/placeholders/user.svg',
+          name: user.name || "Anonymous User",
+          avatar_url: user?.avatar_url || '/placeholders/user.svg',
         },
         created_at: new Date().toISOString(),
         upvotes: 0,
         downvotes: 0,
         comments: [],
         taggedProducts: selectedProducts
-      };
-
-      console.log("New thread created:", newThread);
+      });
       
-      // Call callback with the new thread
-      onThreadCreated(newThread);
-      
-      // Store the thread locally
-      threadStore.addThread(newThread);
+      // Store the thread locally with type assertion
+      threadStore.addThread(threadData as any);
       
       // Show success message
       toast({

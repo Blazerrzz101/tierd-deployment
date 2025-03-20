@@ -17,16 +17,29 @@ export function BetaBanner() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
   const { toast } = useToast()
 
+  // Check localStorage on initial load
   useEffect(() => {
-    const dismissed = localStorage.getItem("beta-banner-dismissed")
-    if (dismissed) {
-      setIsVisible(false)
+    try {
+      const dismissed = localStorage.getItem("beta-banner-dismissed")
+      if (dismissed === "true") {
+        setIsVisible(false)
+      }
+    } catch (err) {
+      console.error("Error accessing localStorage:", err)
     }
   }, [])
 
+  // Improved dismiss handler with error handling
   const handleDismiss = () => {
-    localStorage.setItem("beta-banner-dismissed", "true")
-    setIsVisible(false)
+    try {
+      localStorage.setItem("beta-banner-dismissed", "true")
+      setIsVisible(false)
+      console.log("Beta banner dismissed and saved to localStorage")
+    } catch (err) {
+      console.error("Error saving to localStorage:", err)
+      // Still hide the banner even if localStorage fails
+      setIsVisible(false)
+    }
   }
   
   const handleFeedbackSubmit = () => {

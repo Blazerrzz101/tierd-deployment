@@ -25,11 +25,16 @@ export function AnimatedLogo({ className }: AnimatedLogoProps) {
     })
   }, [controls])
   
-  if (!mounted) return <div className={cn("text-2xl font-bold", className)}>Tier'd</div>
+  // Simple fallback if not mounted or any issues
+  if (!mounted) return (
+    <div className={cn("text-2xl font-bold", className)}>
+      Tier'd
+    </div>
+  )
   
   return (
     <div
-      className={cn("relative overflow-hidden", className)}
+      className={cn("relative overflow-hidden h-10", className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
