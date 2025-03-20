@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { AuthNav } from "@/components/auth/auth-nav"
 import { UserNav } from "@/components/auth/user-nav"
 import { useEnhancedAuth } from "@/hooks/enhanced-auth"
+import { Search } from "lucide-react"
 
 export function Header() {
   const pathname = usePathname()
@@ -33,10 +34,10 @@ export function Header() {
             Rankings
           </Link>
           <Link
-            href="/threads"
+            href="/community"
             className={cn(
               "transition-colors hover:text-foreground/80",
-              pathname === "/threads" ? "text-foreground" : "text-foreground/60"
+              pathname === "/community" || pathname.startsWith("/community/") ? "text-foreground" : "text-foreground/60"
             )}
           >
             Discussions
@@ -50,17 +51,16 @@ export function Header() {
           >
             About
           </Link>
-          <Link
-            href="/vote-status"
-            className={cn(
-              "transition-colors hover:text-foreground/80",
-              pathname === "/vote-status" ? "text-foreground" : "text-foreground/60"
-            )}
-          >
-            Vote Status
-          </Link>
         </nav>
         <div className="ml-auto flex items-center space-x-4">
+          {/* Search button */}
+          <button 
+            className="p-2 rounded-full hover:bg-gray-800/50"
+            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+          >
+            <Search className="h-5 w-5" />
+          </button>
+          
           {isAuthenticated ? <UserNav /> : <AuthNav />}
         </div>
       </div>
