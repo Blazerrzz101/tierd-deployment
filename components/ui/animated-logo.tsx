@@ -9,11 +9,15 @@ interface AnimatedLogoProps {
 }
 
 export function AnimatedLogo({ className }: AnimatedLogoProps) {
+  console.log("AnimatedLogo component rendering - v2")
+  
   const controls = useAnimation()
   const [hovered, setHovered] = useState(false)
   const [mounted, setMounted] = useState(false)
   
   useEffect(() => {
+    // Debug if component mounts
+    console.log("AnimatedLogo component mounted - v2")
     setMounted(true)
     
     // Initial animation
@@ -27,8 +31,8 @@ export function AnimatedLogo({ className }: AnimatedLogoProps) {
   
   // Simple fallback if not mounted or any issues
   if (!mounted) return (
-    <div className={cn("text-2xl font-bold", className)}>
-      Tier'd
+    <div className={cn("text-2xl font-bold text-white", className)}>
+      Tier'd - v2
     </div>
   )
   
@@ -50,9 +54,9 @@ export function AnimatedLogo({ className }: AnimatedLogoProps) {
         }}
       />
       
-      {/* Main text */}
+      {/* Main text with enhanced visibility */}
       <motion.div
-        className="relative text-2xl font-bold bg-gradient-to-r from-primary via-white to-accent bg-clip-text text-transparent"
+        className="relative text-2xl font-bold bg-gradient-to-r from-[#ff2200] via-[#ffffff] to-[#ff8800] bg-clip-text text-transparent"
         initial={{ opacity: 0, scale: 0.8, y: 10 }}
         animate={controls}
         whileHover={{ scale: 1.05 }}
@@ -65,21 +69,21 @@ export function AnimatedLogo({ className }: AnimatedLogoProps) {
               {hovered && (
                 <>
                   <motion.div
-                    className="absolute rounded-full w-1.5 h-1.5 bg-primary"
+                    className="absolute rounded-full w-1.5 h-1.5 bg-[#ff2200]"
                     initial={{ opacity: 0, x: 0, y: 0 }}
                     animate={{ opacity: [0, 1, 0], x: -15, y: -15 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 1.5 }}
                   />
                   <motion.div
-                    className="absolute rounded-full w-1 h-1 bg-accent"
+                    className="absolute rounded-full w-1 h-1 bg-[#ff8800]"
                     initial={{ opacity: 0, x: 0, y: 0 }}
                     animate={{ opacity: [0, 1, 0], x: 10, y: -10 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 1.2, delay: 0.1 }}
                   />
                   <motion.div
-                    className="absolute rounded-full w-1 h-1 bg-secondary"
+                    className="absolute rounded-full w-1 h-1 bg-white"
                     initial={{ opacity: 0, x: 0, y: 0 }}
                     animate={{ opacity: [0, 1, 0], x: -8, y: 8 }}
                     exit={{ opacity: 0 }}
@@ -93,7 +97,7 @@ export function AnimatedLogo({ className }: AnimatedLogoProps) {
             
             {/* Animated apostrophe */}
             <motion.span
-              className="absolute top-0 right-[-2px] text-primary"
+              className="absolute top-0 right-[-2px] text-[#ff2200]"
               animate={hovered ? { 
                 y: [0, -3, 0],
                 scale: [1, 1.2, 1],
@@ -108,9 +112,9 @@ export function AnimatedLogo({ className }: AnimatedLogoProps) {
           <span className="ml-1">d</span>
         </div>
         
-        {/* Animated underline */}
+        {/* Animated underline with more visibility */}
         <motion.div
-          className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-primary to-accent"
+          className="absolute bottom-0 left-0 h-[3px] bg-gradient-to-r from-[#ff2200] to-[#ff8800]"
           initial={{ width: "0%" }}
           animate={hovered ? { width: "100%" } : { width: "0%" }}
           transition={{ duration: 0.3 }}
@@ -121,7 +125,7 @@ export function AnimatedLogo({ className }: AnimatedLogoProps) {
       <AnimatePresence>
         {hovered && (
           <motion.div
-            className="absolute -top-5 right-0 text-xs bg-black/60 backdrop-blur-sm text-primary px-1.5 py-0.5 rounded-full border border-primary/30"
+            className="absolute -top-5 right-0 text-xs bg-black/60 backdrop-blur-sm text-[#ff2200] px-1.5 py-0.5 rounded-full border border-[#ff2200]/30"
             initial={{ opacity: 0, y: 10, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.9 }}

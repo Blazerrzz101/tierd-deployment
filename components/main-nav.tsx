@@ -42,6 +42,13 @@ export function MainNav() {
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
+            <Link href="/expanded-catalog" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Expanded Catalog
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
             <NavigationMenuTrigger>Categories</NavigationMenuTrigger>
             <NavigationMenuContent>
               <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
@@ -77,6 +84,13 @@ export function MainNav() {
             <Link href="/deals" legacyBehavior passHref>
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 Deals
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Link href="/community" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Discussions
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>

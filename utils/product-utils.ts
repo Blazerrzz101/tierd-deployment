@@ -1,4 +1,5 @@
 import slugify from 'slugify'
+import { products as allProducts } from "@/lib/data";
 
 /**
  * Product interface definition
@@ -268,4 +269,50 @@ export function slugifyString(str: string): string {
     strict: true,
     remove: /[*+~.()'"!:@]/g
   })
+}
+
+/**
+ * Search for products by search term, with optional category filter
+ */
+export function getProductsBySearchTerm(
+  query: string, 
+  category?: string | null, 
+  limit: number = 10
+): any[] {
+  // Normalize the search query
+  const normalizedQuery = query.toLowerCase().trim();
+  
+  if (!normalizedQuery || normalizedQuery.length < 2) {
+    return [];
+  }
+  
+  // First, try to find products with exact name match
+  const exactMatches = allProducts.filter(product => 
+    product.name.toLowerCase().includes(normalizedQuery) &&
+    (!category || product.category === category)
+  );
+  
+  // Then, find products with description match
+  const descriptionMatches = allProducts.filter(product =>
+    product.description?.toLowerCase().includes(normalizedQuery) &&
+    (!category || product.category === category) &&
+    !exactMatches.some(p => p.id === product.id) // Exclude exact matches
+  );
+  
+  // Combine results, prioritizing exact matches
+  const results = [...exactMatches, ...descriptionMatches].slice(0, limit);
+  
+  // Enhance with additional metadata for search results display
+  return results.map(product => {
+    // Find where the match occurs in the name for highlighting
+    const nameIndex = product.name.toLowerCase().indexOf(normalizedQuery);
+    
+    return {
+      ...product,
+      highlight: nameIndex >= 0 ? {
+        start: nameIndex,
+        end: nameIndex + normalizedQuery.length
+      } : undefined
+    };
+  });
 } 

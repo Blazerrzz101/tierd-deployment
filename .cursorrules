@@ -108,6 +108,28 @@
 - [X] Updated import references across multiple files
 - [X] Ensured proper hook export to prevent "is not a function" errors
 
+## Product Detail Page Enhancements (2024-05) - COMPLETED
+
+[X] Added affiliate marketing links to product detail pages
+- Created a robust utility to map product names to Amazon ASINs in `affiliate-utils.ts`
+- Implemented the `createAmazonAffiliateLink` function for generating affiliate URLs
+- Added Shop on Amazon button with the `ExternalLink` icon
+
+[X] Integrated Best Buy high-quality images
+- Added a mapping of product names to high-quality Best Buy image URLs
+- Implemented the `getBestBuyImage` function for retrieving images
+- Added a "Image: Best Buy" badge when displaying Best Buy images
+
+[X] Enhanced product details UI
+- Redesigned the product actions section with dedicated Shop and Share buttons
+- Added a separate voting section with clear instructions
+- Created a key highlights section showing price, category, rating, and votes
+- Improved the layout to be more user-friendly and mobile-responsive
+
+[X] Documentation updates
+- Updated UI_IMPROVEMENTS.md with details on Product Detail Page Enhancements
+- Added testing instructions for the new affiliate links and image features
+
 ## User Action Flow and Error Points
 
 ### User Authentication Flow:

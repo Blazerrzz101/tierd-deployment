@@ -42,6 +42,13 @@ const defaultItems: NavItem[] = [
     icon: "logo",
   },
   {
+    title: "All Hardware",
+    href: "/products",
+    description: "Browse our complete collection of gaming hardware",
+    icon: "logo",
+    badge: "New"
+  },
+  {
     title: "Showcase",
     href: "/showcase",
     description: "Featured products and builds",

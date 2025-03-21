@@ -16,7 +16,7 @@ export default function ProfilePage() {
     console.log("Profile page auth state:", {
       isLoading,
       isAuthenticated,
-      timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString()
     })
     
     // Add a short delay before redirecting to ensure auth state is settled
@@ -26,29 +26,29 @@ export default function ProfilePage() {
     
     return () => clearTimeout(redirectTimer)
   }, [isLoading, isAuthenticated, router])
-  
+
   return (
     <div className="container max-w-4xl py-8 mx-auto">
-      <Card>
+          <Card>
         <CardHeader>
           <CardTitle>Profile Page Moved</CardTitle>
-          <CardDescription>
+              <CardDescription>
             We've improved the profile page and moved it to a new location
-          </CardDescription>
-        </CardHeader>
+              </CardDescription>
+            </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
           <Loader2 className="w-8 h-8 mb-4 text-primary animate-spin" />
           <p className="text-center">
             Redirecting you to the new and improved profile page...
-          </p>
-          <Button 
+                  </p>
+                  <Button 
             onClick={() => router.push("/my-profile")}
-            className="mt-4"
-          >
+                    className="mt-4"
+                  >
             Go to new profile page
-          </Button>
-        </CardContent>
-      </Card>
+                      </Button>
+            </CardContent>
+          </Card>
     </div>
   )
 }

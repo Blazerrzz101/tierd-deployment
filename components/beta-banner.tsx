@@ -8,8 +8,13 @@ import Link from "next/link"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
+import { useSearchParams } from "next/navigation"
 
 export function BetaBanner() {
+  // Debug why changes aren't persisting
+  console.log("BetaBanner component rendering - v3")
+  
+  const searchParams = useSearchParams()
   const [isVisible, setIsVisible] = useState(true)
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false)
   const [feedbackText, setFeedbackText] = useState("")
@@ -17,27 +22,66 @@ export function BetaBanner() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
   const { toast } = useToast()
 
-  // Check localStorage on initial load
+  // Check URL parameter for dismiss state - this will work even if localStorage fails
   useEffect(() => {
-    try {
-      const dismissed = localStorage.getItem("beta-banner-dismissed")
-      if (dismissed === "true") {
-        setIsVisible(false)
-      }
-    } catch (err) {
-      console.error("Error accessing localStorage:", err)
+    if (searchParams.get("hideBanner") === "true") {
+      console.log("Hiding banner due to URL parameter")
+      setIsVisible(false)
     }
+  }, [searchParams])
+
+  // Check localStorage AND sessionStorage on initial load
+  useEffect(() => {
+    const checkStorageForDismissal = () => {
+      try {
+        // First try localStorage
+        const dismissedLocalStorage = localStorage.getItem("beta-banner-dismissed")
+        if (dismissedLocalStorage === "true") {
+          setIsVisible(false)
+          return true
+        }
+        
+        // Fallback to sessionStorage if localStorage didn't have the value
+        const dismissedSessionStorage = sessionStorage.getItem("beta-banner-dismissed")
+        if (dismissedSessionStorage === "true") {
+          setIsVisible(false)
+          return true
+        }
+        
+        return false
+      } catch (err) {
+        console.error("Error accessing storage:", err)
+        return false
+      }
+    }
+    
+    // Set a small timeout to ensure the component is fully mounted
+    const timeoutId = setTimeout(() => {
+      console.log("Running checkStorageForDismissal")
+      checkStorageForDismissal()
+    }, 300) // Increased timeout
+    
+    return () => clearTimeout(timeoutId)
   }, [])
 
-  // Improved dismiss handler with error handling
+  // Enhanced dismiss handler with multiple storage options and forced state update
   const handleDismiss = () => {
+    console.log("Dismissing beta banner")
     try {
+      // Try to use both localStorage and sessionStorage for redundancy
       localStorage.setItem("beta-banner-dismissed", "true")
-      setIsVisible(false)
-      console.log("Beta banner dismissed and saved to localStorage")
+      sessionStorage.setItem("beta-banner-dismissed", "true")
+      console.log("Beta banner dismissed and saved to storage")
     } catch (err) {
-      console.error("Error saving to localStorage:", err)
-      // Still hide the banner even if localStorage fails
+      console.error("Error saving to storage:", err)
+      try {
+        // If localStorage fails, try sessionStorage as fallback
+        sessionStorage.setItem("beta-banner-dismissed", "true")
+      } catch (sessionErr) {
+        console.error("Error saving to sessionStorage:", sessionErr)
+      }
+    } finally {
+      // Always hide the banner regardless of storage success
       setIsVisible(false)
     }
   }
@@ -89,7 +133,7 @@ export function BetaBanner() {
             
             <div>
               <p className="text-base font-medium mb-1">
-                🎮 Welcome to the Tier'd Beta!
+                🎮 Welcome to the Tier'd Beta! (v3)
               </p>
               <p className="text-sm text-white/80">
                 We're actively improving the platform. Your feedback matters!
@@ -106,6 +150,15 @@ export function BetaBanner() {
             >
               <MessageCircle className="h-4 w-4 mr-2" />
               Send Feedback
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 bg-white/10 hover:bg-white/20 border-white/10 text-white"
+              onClick={() => window.location.href = window.location.pathname + '?hideBanner=true'}
+            >
+              Try URL Param
             </Button>
             
             <Button

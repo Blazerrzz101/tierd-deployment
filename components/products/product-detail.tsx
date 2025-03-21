@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Product } from "@/utils/product-utils"
 import { createProductUrl } from "@/utils/product-utils"
+import { getProductAffiliateLinkAndImage } from "@/utils/affiliate-utils"
+import { getEnhancedProductImage, getAlternateProductImages } from "@/utils/enhanced-images"
 import { VoteButtons } from "@/components/products/vote-buttons"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -23,7 +25,10 @@ import {
   ChevronRight,
   Zap,
   Award,
-  ThumbsUp
+  ThumbsUp,
+  ExternalLink,
+  Share,
+  DollarSign
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { mockProducts } from "@/app/api/products/route"
@@ -35,16 +40,58 @@ interface ProductDetailProps {
 export default function ProductDetail({ product }: ProductDetailProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
+  const [affiliateLink, setAffiliateLink] = useState("")
+  const [enhancedImage, setEnhancedImage] = useState<string | undefined>(undefined)
+  const [alternateImages, setAlternateImages] = useState<string[] | undefined>(undefined)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   // Format price if available
   const formattedPrice = product.price 
     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(product.price)
     : "Price not available"
 
+  // Get affiliate link and enhanced images on component mount
+  useEffect(() => {
+    // Get affiliate link
+    const { affiliateLink } = getProductAffiliateLinkAndImage(product.name)
+    setAffiliateLink(affiliateLink)
+    
+    // Get enhanced images
+    const enhancedImg = getEnhancedProductImage(product.name, product.category)
+    setEnhancedImage(enhancedImg)
+    
+    // Get alternate images if available
+    const alternateImgs = getAlternateProductImages(product.name)
+    setAlternateImages(alternateImgs)
+  }, [product.name, product.category])
+
+  // Handle image navigation
+  const nextImage = () => {
+    if (alternateImages && alternateImages.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % alternateImages.length)
+    }
+  }
+
+  const prevImage = () => {
+    if (alternateImages && alternateImages.length > 0) {
+      setCurrentImageIndex((prev) => (prev - 1 + alternateImages.length) % alternateImages.length)
+    }
+  }
+
+  // Get current image to display
+  const currentImage = alternateImages && alternateImages.length > 0 
+    ? alternateImages[currentImageIndex] 
+    : (product.image || enhancedImage || '')
+
   // Find related products (same category, excluding current product)
   const relatedProducts = mockProducts
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
+
+  // Handle Shop Now button click
+  const handleShopNow = () => {
+    window.open(affiliateLink, "_blank")
+  }
 
   return (
     <div className="container mx-auto pb-16">
@@ -82,37 +129,95 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             {/* Product image with gallery effect */}
             <div className="relative">
               <div className="relative aspect-square overflow-hidden rounded-xl border shadow-lg shadow-black/5 bg-gradient-to-br from-white/10 to-white/5 p-2">
-                {product.image ? (
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-cover rounded-lg"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    priority
-                  />
+                {currentImage ? (
+                  <>
+                    <Image
+                      src={currentImage}
+                      alt={product.name}
+                      fill
+                      className="object-cover rounded-lg"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      priority
+                    />
+                    
+                    {/* Image navigation controls */}
+                    {alternateImages && alternateImages.length > 1 && (
+                      <>
+                        <button 
+                          onClick={prevImage} 
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full p-2 backdrop-blur-sm transition-colors"
+                          aria-label="Previous image"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                            <path d="m15 18-6-6 6-6"/>
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={nextImage} 
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full p-2 backdrop-blur-sm transition-colors"
+                          aria-label="Next image"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                            <path d="m9 18 6-6-6-6"/>
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-muted">
                     <FileText className="h-16 w-16 text-muted-foreground/40" />
                   </div>
                 )}
                 
+                {/* Enhanced image badge if using enhanced image */}
+                {enhancedImage && !product.image && currentImage === enhancedImage && (
+                  <div className="absolute bottom-3 right-3 bg-gradient-to-r from-primary to-primary/80 text-white text-xs px-2 py-1 rounded font-medium">
+                    Enhanced Image
+                  </div>
+                )}
+                
                 {/* Image gallery indicators */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
-                  <div className="w-2 h-2 rounded-full bg-white shadow-sm"></div>
-                  <div className="w-2 h-2 rounded-full bg-white/40 shadow-sm"></div>
-                  <div className="w-2 h-2 rounded-full bg-white/40 shadow-sm"></div>
-                </div>
+                {alternateImages && alternateImages.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
+                    {alternateImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          currentImageIndex === index ? 'bg-white' : 'bg-white/40'
+                        }`}
+                        aria-label={`View image ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
               
               {/* Small image thumbnails */}
-              <div className="hidden md:flex justify-center mt-4 space-x-2">
-                <div className="w-20 h-20 rounded-md bg-muted border border-muted-foreground/10 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-black/5"></div>
+              {alternateImages && alternateImages.length > 1 && (
+                <div className="hidden md:flex justify-center mt-4 space-x-2">
+                  {alternateImages.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`w-20 h-20 rounded-md overflow-hidden relative border-2 transition-colors ${
+                        currentImageIndex === index ? 'border-primary' : 'border-transparent'
+                      }`}
+                    >
+                      <Image 
+                        src={img} 
+                        alt={`${product.name} - view ${index + 1}`} 
+                        fill 
+                        className="object-cover"
+                      />
+                      <div className={`absolute inset-0 ${
+                        currentImageIndex === index ? 'bg-black/0' : 'bg-black/20'
+                      } transition-colors`}></div>
+                    </button>
+                  ))}
                 </div>
-                <div className="w-20 h-20 rounded-md bg-muted border border-muted-foreground/10 overflow-hidden"></div>
-                <div className="w-20 h-20 rounded-md bg-muted border border-muted-foreground/10 overflow-hidden"></div>
-              </div>
+              )}
             </div>
 
             {/* Product info */}
@@ -153,53 +258,111 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                 )}
               </div>
               
-              {/* Vote buttons */}
-              <div className="mt-4 bg-card rounded-lg p-4 border flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">Is this product worth it?</div>
-                  <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                    <ThumbsUp className="h-3 w-3 mr-1" />
-                    User Review
-                  </Badge>
+              {/* Product actions */}
+              <div className="flex flex-col gap-4 mt-6">
+                {affiliateLink && (
+                  <Button 
+                    onClick={handleShopNow} 
+                    className="w-full bg-gradient-to-br from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white"
+                  >
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Shop on Amazon
+                    <ExternalLink className="ml-2 h-3 w-3" />
+                  </Button>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" className="flex-1">
+                    <Share className="mr-2 h-4 w-4" />
+                    Share
+                  </Button>
                 </div>
-                <div className="flex items-center justify-center">
-                  <VoteButtons
-                    product={{ id: product.id, name: product.name }}
-                    initialUpvotes={product.votes?.upvotes || 0}
-                    initialDownvotes={product.votes?.downvotes || 0}
-                    initialVoteType={product.userVote || null}
-                  />
+                
+                {/* Vote section */}
+                <div className="bg-card rounded-lg p-4 border flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">Is this product worth it?</div>
+                    <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                      <ThumbsUp className="h-3 w-3 mr-1" />
+                      User Review
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <VoteButtons
+                      product={{ id: product.id, name: product.name }}
+                      initialUpvotes={product.votes?.upvotes || 0}
+                      initialDownvotes={product.votes?.downvotes || 0}
+                      initialVoteType={product.userVote || null}
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              {/* Action buttons */}
-              <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                <Button size="lg" className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
-                  <ShoppingCart className="mr-2 h-5 w-5" />
-                  Shop Now
-                </Button>
-                <Button size="lg" variant="outline" className="flex-1 h-12">
-                  <ShareIcon className="mr-2 h-5 w-5" />
-                  Share
-                </Button>
               </div>
               
               {/* Key highlights */}
-              {product.specs && Object.keys(product.specs).length > 0 && (
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {Object.entries(product.specs)
-                    .slice(0, 4)
-                    .map(([key, value]) => (
-                      <div key={key} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <div>
-                          <span className="font-medium">{formatSpecKey(key)}: </span>
-                          <span className="text-muted-foreground">{value as string}</span>
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-4">Key Highlights</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Price comparison */}
+                  {formattedPrice && (
+                    <div className="flex gap-3 items-start p-3 rounded-lg border bg-card">
+                      <div className="rounded-full bg-primary/10 p-2">
+                        <DollarSign className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">Current Price</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formattedPrice}
+                          {affiliateLink && (
+                            <span className="ml-1 text-xs text-primary">
+                              (Amazon)
+                            </span>
+                          )}
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  )}
+                  
+                  {/* Category */}
+                  <div className="flex gap-3 items-start p-3 rounded-lg border bg-card">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Tag className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Category</div>
+                      <div className="text-sm text-muted-foreground capitalize">
+                        {product.category?.replace(/-/g, ' ') || 'General'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Rating */}
+                  <div className="flex gap-3 items-start p-3 rounded-lg border bg-card">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Award className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Rating</div>
+                      <div className="text-sm text-muted-foreground">
+                        {product.rating ? `${product.rating}/5` : 'Not rated yet'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* User votes */}
+                  <div className="flex gap-3 items-start p-3 rounded-lg border bg-card">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <ThumbsUp className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">User Votes</div>
+                      <div className="text-sm text-muted-foreground">
+                        {(product.votes?.upvotes || 0) + (product.votes?.downvotes || 0)} votes
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
               
             </div>
           </div>
@@ -348,9 +511,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
               >
                 <Card className="overflow-hidden h-full transition-all hover:shadow-md group-hover:-translate-y-1">
                   <div className="aspect-square relative overflow-hidden bg-muted">
-                    {relatedProduct.image_url ? (
+                    {relatedProduct.image_url || getEnhancedProductImage(relatedProduct.name, relatedProduct.category) ? (
                       <Image 
-                        src={relatedProduct.image_url} 
+                        src={relatedProduct.image_url || getEnhancedProductImage(relatedProduct.name, relatedProduct.category) || ''} 
                         alt={relatedProduct.name}
                         fill
                         className="object-cover transition-transform group-hover:scale-105"

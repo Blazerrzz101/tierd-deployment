@@ -58,7 +58,7 @@ export function UserNav() {
             <Link href="/activities">Activities</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/threads">My Threads</Link>
+            <Link href="/community">My Discussions</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/settings">Settings</Link>
