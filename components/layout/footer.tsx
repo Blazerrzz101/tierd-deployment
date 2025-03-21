@@ -21,7 +21,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/threads" className="text-muted-foreground hover:text-foreground">
+                <Link href="/community" className="text-muted-foreground hover:text-foreground">
                   Discussions
                 </Link>
               </li>
@@ -38,22 +38,22 @@ export function Footer() {
             <h3 className="mb-4 text-lg font-semibold">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/blog" className="text-muted-foreground hover:text-foreground">
+                <Link href="/about#blog" className="text-muted-foreground hover:text-foreground">
                   Blog
                 </Link>
               </li>
               <li>
-                <Link href="/guides" className="text-muted-foreground hover:text-foreground">
+                <Link href="/about#guides" className="text-muted-foreground hover:text-foreground">
                   Guides
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="text-muted-foreground hover:text-foreground">
+                <Link href="/about#faq" className="text-muted-foreground hover:text-foreground">
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link href="/support" className="text-muted-foreground hover:text-foreground">
+                <Link href="/about#support" className="text-muted-foreground hover:text-foreground">
                   Support
                 </Link>
               </li>
@@ -70,7 +70,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/careers" className="text-muted-foreground hover:text-foreground">
+                <Link href="/about#careers" className="text-muted-foreground hover:text-foreground">
                   Careers
                 </Link>
               </li>
@@ -92,26 +92,29 @@ export function Footer() {
             <h3 className="mb-4 text-lg font-semibold">Connect</h3>
             <div className="flex space-x-4">
               <a
-                href="https://github.com/tierd"
+                href="https://github.com/Blazerrzz101/tierd-deployment"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
+                aria-label="GitHub"
               >
                 <Github className="h-6 w-6" />
               </a>
               <a
-                href="https://twitter.com/tierd"
+                href="https://twitter.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
+                aria-label="Twitter"
               >
                 <Twitter className="h-6 w-6" />
               </a>
               <a
-                href="https://twitch.tv/tierd"
+                href="https://twitch.tv"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground"
+                aria-label="Twitch"
               >
                 <Twitch className="h-6 w-6" />
               </a>
@@ -134,7 +137,7 @@ export function Footer() {
               <Link href="/terms" className="hover:text-foreground">
                 Terms of Service
               </Link>
-              <Link href="/cookies" className="hover:text-foreground">
+              <Link href="/privacy#cookies" className="hover:text-foreground">
                 Cookie Policy
               </Link>
             </div>
