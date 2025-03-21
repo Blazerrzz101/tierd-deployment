@@ -198,6 +198,14 @@ export const EnhancedAuthProvider = ({ children }: { children: React.ReactNode }
         description: `Welcome, ${mockUser.name || mockUser.email}!`,
       })
       
+      // If Supabase signup was successful, show success message and redirect
+      toast({
+        title: 'Verification email sent',
+        description: 'Please check your email to verify your account',
+      })
+      
+      // Redirect to verify email page with email parameter
+      window.location.href = `/auth/verify-email?email=${encodeURIComponent(email)}`
       return true
     } catch (error) {
       console.error('Sign up error:', error)

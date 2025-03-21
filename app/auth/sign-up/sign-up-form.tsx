@@ -19,6 +19,7 @@ import { Icons } from "@/components/icons"
 import { OAuthButtons } from "@/components/auth/oauth-buttons"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
 
 const signUpSchema = z.object({
   username: z.string()
@@ -40,6 +41,7 @@ const signUpSchema = z.object({
 export function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false)
   const { signUp } = useAuth()
+  const router = useRouter()
 
   const form = useForm({
     resolver: zodResolver(signUpSchema),
@@ -54,8 +56,19 @@ export function SignUpForm() {
   async function onSubmit(values: z.infer<typeof signUpSchema>) {
     try {
       setIsLoading(true)
+      
+      // Call signUp and catch any errors
       await signUp(values.email, values.password, values.username)
-      // Toast is handled in the auth hook
+      
+      // If we get here, signup was successful (no exception thrown)
+      toast.success("Verification email sent", {
+        description: "Please check your email to verify your account."
+      })
+      
+      // Use a slight delay to ensure the toast is shown before redirect
+      setTimeout(() => {
+        router.push(`/auth/verify-email?email=${encodeURIComponent(values.email)}`)
+      }, 1000)
     } catch (error) {
       // Error toast is handled in the auth hook
       console.error("Sign up error:", error)

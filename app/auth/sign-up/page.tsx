@@ -33,7 +33,7 @@ export default function SignUpPage() {
       const clientId = getClientId()
       const metadata = clientId ? { client_id: clientId } : {}
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -49,10 +49,24 @@ export default function SignUpPage() {
         return
       }
 
-      toast.success("Verification email sent", {
-        description: "Please check your email to verify your account."
-      })
-      router.push("/auth/verify-email")
+      // Check if the user needs to confirm their email
+      const isConfirmationSent = data.user && data.session === null;
+
+      if (isConfirmationSent) {
+        toast.success("Verification email sent", {
+          description: "Please check your email to verify your account."
+        })
+        
+        // Redirect to verify-email page with email parameter
+        router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`)
+      } else {
+        // If email confirmation is not required (unlikely with Supabase default settings)
+        toast.success("Account created successfully", {
+          description: "You are now signed in."
+        })
+        
+        router.push("/")
+      }
     } catch (error) {
       console.error("Sign up error:", error)
       toast.error("Failed to sign up", {

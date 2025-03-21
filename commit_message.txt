@@ -1,0 +1,1 @@
+[Cursor] Complete expanded product catalog implementation with 80+ products across 4 categories. Fix auth, URL and voting systems
