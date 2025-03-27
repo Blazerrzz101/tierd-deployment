@@ -1,16 +1,31 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProductLink } from "@/components/products/product-link"
-import { VoteButtons } from "@/components/products/vote-buttons"
+import { GlobalVoteButtons } from "@/components/products/global-vote-buttons"
+import { ProductVoteWrapper } from "@/components/products/product-vote-wrapper"
 import { ArrowUpRight, Tag, ExternalLink, Zap } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import Image from "next/image"
 import { isValidProduct, createProductUrl } from "@/utils/product-utils"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+
+// Cooldown period between votes (ms)
+const VOTE_COOLDOWN = 1000;
+
+// Funny messages for spam clicks
+const SPAM_CLICK_MESSAGES = [
+  "Whoa there, eager voter! Your clicks are faster than our servers! ⚡",
+  "Easy on the clicks, champ! Even pro gamers need a cooldown. 🎮",
+  "Our vote counter needs a breather! Try again in a second. ⏱️",
+  "Vote throttled! You're too enthusiastic for our servers! 🚀",
+  "Save your APM for StarCraft! Voting has a cooldown. 🌟",
+  "Click... wait... click... That's the rhythm we're looking for! 🎵",
+];
 
 interface ProductCardProps {
   product: any
@@ -29,6 +44,20 @@ export function ProductCard({
 }: ProductCardProps) {
   const router = useRouter()
   const [isHovered, setIsHovered] = useState(false)
+  
+  // Add state for vote rate limiting
+  const [lastVoteTime, setLastVoteTime] = useState(0)
+  const [spamClickCount, setSpamClickCount] = useState(0)
+  const spamTimerRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Clear spam timer on unmount
+  useEffect(() => {
+    return () => {
+      if (spamTimerRef.current) {
+        clearTimeout(spamTimerRef.current)
+      }
+    }
+  }, [])
   
   // Debug product data
   if (process.env.NODE_ENV !== 'production') {
@@ -121,12 +150,11 @@ export function ProductCard({
         {!simpleCard && (
           <CardFooter className="p-4 pt-0 flex justify-between items-center">
             {showVotes && (
-              <VoteButtons
-                product={{ id: product.id, name: product.name }}
-                initialUpvotes={product.upvotes || 0}
-                initialDownvotes={product.downvotes || 0}
-                initialVoteType={product.userVote || 0}
-              />
+              <ProductVoteWrapper product={{ id: product.id, name: product.name }}>
+                {() => (
+                  <GlobalVoteButtons product={{ id: product.id, name: product.name }} />
+                )}
+              </ProductVoteWrapper>
             )}
             
             <div className="flex gap-2">

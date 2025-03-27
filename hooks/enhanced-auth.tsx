@@ -1,9 +1,15 @@
 "use client"
 
 import { useState, useEffect, createContext, useContext } from 'react'
-import { useToast } from '@/components/ui/use-toast'
+import { toast } from "@/components/ui/use-toast"
 import { getClientId, clearClientId } from '@/utils/client-id'
 import { supabase } from '@/lib/supabase'
+import { useRouter } from "next/navigation";
+import { 
+  User,
+  Session,
+  createClientComponentClient 
+} from "@supabase/auth-helpers-nextjs";
 
 // Define user interface
 export interface AuthUser {
@@ -14,263 +20,362 @@ export interface AuthUser {
   isAnonymous: boolean
 }
 
-// Define context
-interface AuthContextType {
-  user: AuthUser | null
-  isLoading: boolean
-  signIn: (email: string, password: string) => Promise<boolean>
-  signUp: (email: string, password: string, name: string) => Promise<boolean>
-  signOut: () => Promise<void>
-  getAuthStatus: () => Promise<AuthUser | null>
-  isAuthenticated: boolean
-  loading: boolean  // Alias for isLoading for backwards compatibility
+interface AuthState {
+  user: User | null;
+  session: Session | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  lastRefreshed: number;
+  error: Error | null;
+}
+
+interface EnhancedAuthContextType extends AuthState {
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
+  checkSession: () => Promise<boolean>;
 }
 
 // Create context
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const EnhancedAuthContext = createContext<EnhancedAuthContextType | undefined>(undefined)
 
 // Provider component
 export const EnhancedAuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const { toast } = useToast()
+  const router = useRouter();
+  const supabase = createClientComponentClient();
 
-  // Define getAuthStatus as a standalone function to include in the context
-  const getAuthStatus = async (): Promise<AuthUser | null> => {
-    setIsLoading(true)
+  // State with detailed auth information
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    session: null,
+    isLoading: true,
+    isAuthenticated: false,
+    lastRefreshed: 0,
+    error: null
+  });
+
+  // Initialize auth state on component mount
+  useEffect(() => {
+    // Check for cached auth data first for immediate UI response
     try {
-      // Check for stored user in localStorage
-      const storedUser = localStorage.getItem('authUser')
-      const storedAuthStatus = localStorage.getItem('isAuthenticated')
-      
-      if (storedUser && storedAuthStatus === 'true') {
-        console.log("Found stored authenticated user")
-        const userData = JSON.parse(storedUser) as AuthUser
-        setUser(userData)
-        setIsAuthenticated(true)
-        return userData
-      } else {
-        console.log("No stored authenticated user, checking session")
-        // Check for Supabase session as backup
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session?.user) {
-          console.log("Found active Supabase session")
-          const userData: AuthUser = {
-            id: session.user.id,
-            email: session.user.email,
-            name: session.user.user_metadata?.name || 'User',
-            avatar_url: session.user.user_metadata?.avatar_url || '/placeholders/user.svg',
-            isAnonymous: false
+      const cachedAuthState = localStorage.getItem('tierd-auth-state');
+      if (cachedAuthState) {
+        const parsedState = JSON.parse(cachedAuthState);
+        if (parsedState.user && parsedState.timestamp) {
+          const cacheAge = Date.now() - parsedState.timestamp;
+          
+          // Only use cache if it's relatively fresh (less than 5 minutes old)
+          if (cacheAge < 5 * 60 * 1000) {
+            setAuthState(prev => ({
+              ...prev,
+              user: parsedState.user,
+              isAuthenticated: true,
+              isLoading: false
+            }));
           }
-          
-          // Store in localStorage
-          localStorage.setItem('authUser', JSON.stringify(userData))
-          localStorage.setItem('isAuthenticated', 'true')
-          
-          setUser(userData)
-          setIsAuthenticated(true)
-          return userData
-        } else {
-          console.log("No authenticated user found")
-          setUser(null)
-          setIsAuthenticated(false)
-          return null
         }
       }
     } catch (error) {
-      console.error("Auth status error:", error)
-      setUser(null)
-      setIsAuthenticated(false)
-      return null
-    } finally {
-      setIsLoading(false)
+      console.error('Error reading cached auth state:', error);
     }
-  }
-
-  useEffect(() => {
-    getAuthStatus()
-  }, [])
-
-  // Sign in function
-  const signIn = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true)
+    
+    // Check for actual session data
+    async function getSession() {
+      try {
+        // Get session and subscribe to changes
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          throw error;
+        }
+        
+        handleSessionChange(session);
+        
+        // Subscribe to auth changes
+        const { data: { subscription } } = await supabase.auth.onAuthStateChange(
+          (_event, session) => {
+            handleSessionChange(session);
+          }
+        );
+        
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Error getting session:', error);
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error : new Error('Failed to get session')
+        }));
+      }
+    }
+    
+    const unsubscribe = getSession();
+    
+    // Clean up subscription
+    return () => {
+      unsubscribe.then(fn => fn && fn());
+    };
+  }, [supabase]);
+  
+  // Handle session changes
+  const handleSessionChange = (session: Session | null) => {
     try {
-      console.log(`Attempting to sign in user: ${email}`)
+      setAuthState(prev => ({
+        ...prev,
+        session,
+        user: session?.user || null,
+        isAuthenticated: !!session,
+        isLoading: false,
+        lastRefreshed: Date.now(),
+        error: null
+      }));
       
-      // Attempt to sign in with Supabase
+      // Cache auth state for quick loading
+      if (session && typeof window !== 'undefined') {
+        const cacheData = {
+          user: session.user,
+          timestamp: Date.now(),
+          expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+        };
+        
+        localStorage.setItem('tierd-auth-state', JSON.stringify(cacheData));
+        localStorage.setItem('lastAuthCheck', Date.now().toString());
+      }
+    } catch (error) {
+      console.error('Error updating auth state:', error);
+    }
+  };
+  
+  // Sign in with email and password
+  const signIn = async (email: string, password: string) => {
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-      })
+        password
+      });
       
-      if (error) throw error
+      if (error) throw error;
       
-      if (data.user) {
-        const userData = {
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.user_metadata?.name || 'User',
-          avatar_url: data.user.user_metadata?.avatar_url || '/placeholders/user.svg',
-          isAnonymous: false
-        }
-        
-        // Store in localStorage
-        localStorage.setItem('authUser', JSON.stringify(userData))
-        localStorage.setItem('isAuthenticated', 'true')
-        
-        setUser(userData)
-        setIsAuthenticated(true)
-        
-        console.log(`User signed in successfully: ${userData.id} (${userData.name}) at ${new Date().toISOString()}`)
+      handleSessionChange(data.session);
+      
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in."
+      });
+      
+      // Redirect to home page after successful sign in
+      router.push("/");
+    } catch (error) {
+      console.error('Sign in error:', error);
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error : new Error('Failed to sign in')
+      }));
+      
+      toast({
+        title: "Sign in failed",
+        description: error instanceof Error ? error.message : "An error occurred during sign in",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Sign up with email and password
+  const signUp = async (email: string, password: string) => {
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
+      // Handle response
+      if (data.session) {
+        handleSessionChange(data.session);
         
         toast({
-          title: 'Signed in successfully',
-        })
+          title: "Welcome to Tier'd!",
+          description: "Your account has been created successfully."
+        });
         
-        return true
+        // Redirect to home page after successful sign up
+        router.push("/");
+      } else {
+        // Email confirmation required
+        toast({
+          title: "Check your email",
+          description: "A confirmation link has been sent to your email."
+        });
+        
+        // Redirect to confirmation page
+        router.push("/auth/confirm");
       }
-      
-      setUser(null)
-      setIsAuthenticated(false)
-      return false
     } catch (error) {
-      console.error('Sign in error:', error)
-      setUser(null)
-      setIsAuthenticated(false)
+      console.error('Sign up error:', error);
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error : new Error('Failed to sign up')
+      }));
       
       toast({
-        title: 'Sign in failed',
-        description: error instanceof Error ? error.message : 'Invalid email or password',
-        variant: 'destructive',
-      })
-      
-      return false
-    } finally {
-      setIsLoading(false)
+        title: "Sign up failed",
+        description: error instanceof Error ? error.message : "An error occurred during sign up",
+        variant: "destructive"
+      });
     }
-  }
-
-  // Sign up function
-  const signUp = async (email: string, password: string, name: string): Promise<boolean> => {
-    setIsLoading(true)
+  };
+  
+  // Sign out
+  const signOut = async () => {
     try {
-      // This would normally call your auth API
-      if (!email || !password) {
-        throw new Error('Email and password are required')
-      }
+      setAuthState(prev => ({ ...prev, isLoading: true }));
       
-      // Generate a mock user
-      const mockUser: AuthUser = {
-        id: `user_${Math.random().toString(36).substring(2, 10)}`,
-        email,
-        name: name || email.split('@')[0],
-        avatar_url: '/placeholders/user.svg',
-        isAnonymous: false
-      }
+      const { error } = await supabase.auth.signOut();
       
-      // Get the client ID that was used for anonymous voting
-      const clientId = getClientId()
+      if (error) throw error;
       
-      // In a real app, you'd make an API call to create an account
-      await new Promise(resolve => setTimeout(resolve, 800))
+      // Clear cached auth state
+      localStorage.removeItem('tierd-auth-state');
+      localStorage.removeItem('lastAuthCheck');
       
-      // Store the user in localStorage
-      localStorage.setItem('authUser', JSON.stringify(mockUser))
-      
-      // Make an API call to associate this client ID with the new user
-      await fetch('/api/auth/link-anonymous-votes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: mockUser.id,
-          clientId: clientId,
-        }),
-      })
-      
-      setUser(mockUser)
+      setAuthState({
+        user: null,
+        session: null,
+        isLoading: false,
+        isAuthenticated: false,
+        lastRefreshed: Date.now(),
+        error: null
+      });
       
       toast({
-        title: 'Account created successfully',
-        description: `Welcome, ${mockUser.name || mockUser.email}!`,
-      })
+        title: "Signed out",
+        description: "You have been signed out successfully."
+      });
       
-      // If Supabase signup was successful, show success message and redirect
-      toast({
-        title: 'Verification email sent',
-        description: 'Please check your email to verify your account',
-      })
-      
-      // Redirect to verify email page with email parameter
-      window.location.href = `/auth/verify-email?email=${encodeURIComponent(email)}`
-      return true
+      // Redirect to home page after sign out
+      router.push("/");
     } catch (error) {
-      console.error('Sign up error:', error)
+      console.error('Sign out error:', error);
+      
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error : new Error('Failed to sign out')
+      }));
       
       toast({
-        title: 'Sign up failed',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-        variant: 'destructive',
-      })
-      
-      return false
-    } finally {
-      setIsLoading(false)
+        title: "Sign out failed",
+        description: error instanceof Error ? error.message : "An error occurred during sign out",
+        variant: "destructive"
+      });
     }
-  }
-
-  // Sign out function
-  const signOut = async (): Promise<void> => {
-    setIsLoading(true)
+  };
+  
+  // Refresh the session - returns true if successful
+  const refreshSession = async (): Promise<boolean> => {
     try {
-      console.log("Signing out user");
+      setAuthState(prev => ({ ...prev, isLoading: true }));
       
-      // Sign out from Supabase
-      await supabase.auth.signOut()
+      const { data, error } = await supabase.auth.refreshSession();
       
-      // Clear local storage
-      localStorage.removeItem('authUser')
-      localStorage.removeItem('isAuthenticated')
+      if (error) throw error;
       
-      // Update state
-      setUser(null)
-      setIsAuthenticated(false)
+      if (data.session) {
+        handleSessionChange(data.session);
+        return true;
+      }
       
-      console.log("User signed out successfully");
+      return false;
     } catch (error) {
-      console.error("Error signing out:", error)
-    } finally {
-      setIsLoading(false)
+      console.error('Session refresh error:', error);
+      
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error : new Error('Failed to refresh session')
+      }));
+      
+      return false;
     }
-  }
-
+  };
+  
+  // Check if session is still valid - returns true if valid
+  const checkSession = async (): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      if (data.session) {
+        // Update session if the current one isn't the same
+        if (data.session.access_token !== authState.session?.access_token) {
+          handleSessionChange(data.session);
+        }
+        return true;
+      }
+      
+      // No valid session
+      if (authState.isAuthenticated) {
+        // We thought we were authenticated but we're not - update state
+        setAuthState(prev => ({
+          ...prev,
+          user: null,
+          session: null,
+          isAuthenticated: false,
+          lastRefreshed: Date.now()
+        }));
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Session check error:', error);
+      return false;
+    }
+  };
+  
+  // Add periodic session check
+  useEffect(() => {
+    // Skip if not authenticated or still loading
+    if (!authState.isAuthenticated || authState.isLoading) return;
+    
+    // Check for session changes every 5 minutes
+    const interval = setInterval(() => {
+      checkSession();
+    }, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [authState.isAuthenticated, authState.isLoading]);
+  
+  // Context value
+  const value = {
+    ...authState,
+    signIn,
+    signUp,
+    signOut,
+    refreshSession,
+    checkSession
+  };
+  
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        loading: isLoading,
-        signIn,
-        signUp,
-        signOut,
-        getAuthStatus,
-        isAuthenticated,
-      }}
-    >
+    <EnhancedAuthContext.Provider value={value}>
       {children}
-    </AuthContext.Provider>
-  )
+    </EnhancedAuthContext.Provider>
+  );
 }
-
-// Export an alias for backward compatibility
-export const AuthProvider = EnhancedAuthProvider;
 
 // Hook for using the auth context
 export const useEnhancedAuth = () => {
-  const context = useContext(AuthContext)
+  const context = useContext(EnhancedAuthContext)
   if (context === undefined) {
     throw new Error('useEnhancedAuth must be used within an AuthProvider')
   }

@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-03-26T03:38:38.885Z",
+  "baseUrl": "http://localhost:3000",
+  "summary": {
+    "pagesChecked": 55,
+    "brokenLinksFound": 3
+  },
+  "brokenLinks": [
+    {
+      "url": "http://localhost:3000/privacy",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 1370,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/terms",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 1364,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/privacy#cookies",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 1331,
+      "error": null
+    }
+  ]
+}

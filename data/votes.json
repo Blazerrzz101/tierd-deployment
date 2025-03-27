@@ -17,11 +17,28 @@
     "test-client-limit:test-product-3": 1,
     "test-client-limit:test-product-4": 1,
     "test-client-limit:test-product-5": 1,
-    "6256cpva8yt_1740526035162:j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6": 1
+    "6256cpva8yt_1740526035162:j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6": 1,
+    "4dcdx9exwgl_1740346437008:j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6": 1,
+    "4dcdx9exwgl_1740346437008:corsair-k100": 1,
+    "4dcdx9exwgl_1740346437008:beyerdynamic-mmx300": 1,
+    "fallback-v7ye5pg8:beyerdynamic-mmx300": 1,
+    "fallback-pnyse5yh:beyerdynamic-mmx300": 1,
+    "fallback-irt8hz0q:xbox-elite-2": 1,
+    "fallback-ak9re62z:xbox-elite-2": 1,
+    "fallback-dxid0916:xbox-elite-2": 1,
+    "fallback-gfxuq8af:xbox-elite-2": 1,
+    "2f455e6d-d8e9-44d9-8ee3-c3a607f0d5d5:1": -1,
+    "4dcdx9exwgl_1740346437008:xbox-elite-2": 1,
+    "4dcdx9exwgl_1740346437008:alienware-aw3423dw": 1,
+    "a33kgo5ziet:alienware-aw3423dw": 1
   },
   "voteCounts": {
+    "1": {
+      "upvotes": 0,
+      "downvotes": 1
+    },
     "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6": {
-      "upvotes": 4,
+      "upvotes": 5,
       "downvotes": 0
     },
     "c8d9e0f1-2a3b-4c5d-6e7f-8g9h0i1j2k3l": {
@@ -87,9 +104,49 @@
     "msi-optix-mag274qrf-qd": {
       "upvotes": 0,
       "downvotes": 0
+    },
+    "dell-aw3423dw": {
+      "upvotes": 0,
+      "downvotes": 0
+    },
+    "87654321-4321-4321-4321-210987654321": {
+      "upvotes": 0,
+      "downvotes": 0
+    },
+    "herman-miller-embody": {
+      "upvotes": 0,
+      "downvotes": 0
+    },
+    "dualsense-edge": {
+      "upvotes": 0,
+      "downvotes": 0
+    },
+    "acer-predator-x28": {
+      "upvotes": 0,
+      "downvotes": 0
+    },
+    "corsair-k100": {
+      "upvotes": 1,
+      "downvotes": 0
+    },
+    "beyerdynamic-mmx300": {
+      "upvotes": 3,
+      "downvotes": 0
+    },
+    "xbox-elite-2": {
+      "upvotes": 5,
+      "downvotes": 0
+    },
+    "alienware-aw3423dw": {
+      "upvotes": 2,
+      "downvotes": 0
+    },
+    "logitech-g502-x-plus": {
+      "upvotes": 0,
+      "downvotes": 0
     }
   },
-  "lastUpdated": "2025-03-21T03:43:24.449Z",
+  "lastUpdated": "2025-03-26T03:47:55.167Z",
   "userVotes": [
     {
       "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
@@ -432,6 +489,330 @@
       "clientId": "4dcdx9exwgl_1740346437008",
       "voteType": 0,
       "timestamp": "2025-03-21T03:43:24.449Z"
+    },
+    {
+      "productId": "dell-aw3423dw",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T00:48:05.335Z"
+    },
+    {
+      "productId": "dell-aw3423dw",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-24T00:48:06.394Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T00:48:14.178Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-24T00:48:15.485Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T00:48:16.707Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-24T00:48:21.643Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T00:48:22.786Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-24T00:48:24.234Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T00:48:25.291Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-24T00:48:28.601Z"
+    },
+    {
+      "productId": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T00:48:34.312Z"
+    },
+    {
+      "productId": "87654321-4321-4321-4321-210987654321",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T01:22:03.431Z"
+    },
+    {
+      "productId": "87654321-4321-4321-4321-210987654321",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-24T01:22:04.335Z"
+    },
+    {
+      "productId": "herman-miller-embody",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T04:07:35.828Z"
+    },
+    {
+      "productId": "herman-miller-embody",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-24T04:07:38.221Z"
+    },
+    {
+      "productId": "dualsense-edge",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-24T04:07:41.208Z"
+    },
+    {
+      "productId": "dualsense-edge",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-24T04:07:43.025Z"
+    },
+    {
+      "productId": "acer-predator-x28",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-25T01:21:31.729Z"
+    },
+    {
+      "productId": "acer-predator-x28",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-25T01:21:33.360Z"
+    },
+    {
+      "productId": "corsair-k100",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-25T01:55:45.799Z"
+    },
+    {
+      "productId": "beyerdynamic-mmx300",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-25T01:55:48.130Z"
+    },
+    {
+      "productId": "beyerdynamic-mmx300",
+      "clientId": "fallback-v7ye5pg8",
+      "voteType": 1,
+      "timestamp": "2025-03-26T01:49:31.617Z"
+    },
+    {
+      "productId": "beyerdynamic-mmx300",
+      "clientId": "fallback-pnyse5yh",
+      "voteType": 1,
+      "timestamp": "2025-03-26T01:50:02.749Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "fallback-irt8hz0q",
+      "voteType": 1,
+      "timestamp": "2025-03-26T01:50:31.387Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "fallback-ak9re62z",
+      "voteType": 1,
+      "timestamp": "2025-03-26T01:50:32.274Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "fallback-dxid0916",
+      "voteType": 1,
+      "timestamp": "2025-03-26T01:50:32.579Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "fallback-gfxuq8af",
+      "voteType": 1,
+      "timestamp": "2025-03-26T01:50:33.582Z"
+    },
+    {
+      "productId": "1",
+      "clientId": "2f455e6d-d8e9-44d9-8ee3-c3a607f0d5d5",
+      "voteType": 1,
+      "timestamp": "2025-03-26T02:07:27.415Z"
+    },
+    {
+      "productId": "1",
+      "clientId": "2f455e6d-d8e9-44d9-8ee3-c3a607f0d5d5",
+      "voteType": -1,
+      "timestamp": "2025-03-26T02:07:28.082Z"
+    },
+    {
+      "productId": "1",
+      "clientId": "b48e5ccd-510c-4d3a-8cb9-86c4c2a4180d",
+      "voteType": 1,
+      "timestamp": "2025-03-26T02:09:24.588Z"
+    },
+    {
+      "productId": "1",
+      "clientId": "b48e5ccd-510c-4d3a-8cb9-86c4c2a4180d",
+      "voteType": -1,
+      "timestamp": "2025-03-26T02:09:25.396Z"
+    },
+    {
+      "productId": "1",
+      "clientId": "b48e5ccd-510c-4d3a-8cb9-86c4c2a4180d",
+      "voteType": 0,
+      "timestamp": "2025-03-26T02:09:26.254Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-26T02:19:41.885Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": -1,
+      "timestamp": "2025-03-26T02:19:44.500Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-26T02:19:46.012Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": -1,
+      "timestamp": "2025-03-26T02:19:47.469Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-26T02:19:47.804Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-26T02:19:53.859Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": -1,
+      "timestamp": "2025-03-26T02:19:56.426Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-26T02:19:58.024Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": -1,
+      "timestamp": "2025-03-26T02:19:59.362Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-26T02:20:00.695Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 0,
+      "timestamp": "2025-03-26T02:20:09.211Z"
+    },
+    {
+      "productId": "xbox-elite-2",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-26T02:20:11.232Z"
+    },
+    {
+      "productId": "alienware-aw3423dw",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-26T02:20:17.283Z"
+    },
+    {
+      "productId": "alienware-aw3423dw",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": -1,
+      "timestamp": "2025-03-26T02:20:23.934Z"
+    },
+    {
+      "productId": "alienware-aw3423dw",
+      "clientId": "4dcdx9exwgl_1740346437008",
+      "voteType": 1,
+      "timestamp": "2025-03-26T02:20:25.389Z"
+    },
+    {
+      "productId": "logitech-g502-x-plus",
+      "clientId": "test-client-id",
+      "voteType": 1,
+      "timestamp": "2025-03-26T03:33:24.017Z"
+    },
+    {
+      "productId": "logitech-g502-x-plus",
+      "clientId": "test-client-id",
+      "voteType": 0,
+      "timestamp": "2025-03-26T03:38:27.586Z"
+    },
+    {
+      "productId": "logitech-g502-x-plus",
+      "clientId": "test-client-id",
+      "voteType": 1,
+      "timestamp": "2025-03-26T03:40:06.942Z"
+    },
+    {
+      "productId": "logitech-g502-x-plus",
+      "clientId": "test-client-id",
+      "voteType": 0,
+      "timestamp": "2025-03-26T03:41:40.726Z"
+    },
+    {
+      "productId": "logitech-g502-x-plus",
+      "clientId": "test-client-id",
+      "voteType": 1,
+      "timestamp": "2025-03-26T03:43:14.769Z"
+    },
+    {
+      "productId": "logitech-g502-x-plus",
+      "clientId": "test-client-id",
+      "voteType": 0,
+      "timestamp": "2025-03-26T03:46:20.244Z"
+    },
+    {
+      "productId": "alienware-aw3423dw",
+      "clientId": "a33kgo5ziet",
+      "voteType": 1,
+      "timestamp": "2025-03-26T03:47:55.167Z"
     }
   ]
 }

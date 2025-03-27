@@ -1,0 +1,39 @@
+"use client"
+
+import { UnifiedProductDetail } from "@/components/products/unified-product-detail"
+import { Product } from "@/utils/product-utils"
+
+export default function LogitechGProPage() {
+  const product: Product = {
+    id: "logitech-g-pro-superlight",
+    name: "Logitech G PRO Superlight",
+    category: "gaming-mice",
+    description: "Professional-grade wireless gaming mouse designed in collaboration with esports pros. Features LIGHTSPEED wireless technology and HERO 25K sensor.",
+    image_url: "https://source.unsplash.com/random/400x400?gaming-mouse",
+    imageUrl: "https://source.unsplash.com/random/400x400?gaming-mouse",
+    url_slug: "logitech-g-pro-superlight",
+    upvotes: 850,
+    downvotes: 400,
+    score: 450,
+    rank: 1,
+    price: 149.99,
+    rating: 4.5,
+    review_count: 230,
+    reviews: [],
+    threads: [],
+    specifications: {
+      sensor: "HERO 25K",
+      dpi: "100-25,600",
+      buttons: "5 programmable",
+      weight: "63g",
+      battery: "Up to 70 hours",
+      connection: "LIGHTSPEED Wireless"
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    brand: "Logitech",
+    model: "G PRO Superlight"
+  }
+
+  return <UnifiedProductDetail product={product} />
+}

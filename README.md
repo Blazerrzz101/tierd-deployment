@@ -80,6 +80,23 @@ To deploy this application to Vercel, follow these steps:
    - Try voting on a product
    - Verify profile access
 
+## 🧪 Pre-Deployment Testing
+
+Before deploying the application, you should run the comprehensive pre-deployment test suite to ensure everything is working correctly.
+
+```bash
+# Run the full test suite
+npm run precheck
+```
+
+This will run the following tests:
+- **Production Build Test**: Ensures the production build works correctly
+- **Broken Links Check**: Identifies broken links and 404 errors
+- **Vote Integrity Test**: Verifies the vote system's functionality
+- **Schema Markup Validation**: Checks for proper SEO metadata
+
+For detailed information about the test suite, see [PRE_DEPLOYMENT_TESTS.md](./PRE_DEPLOYMENT_TESTS.md).
+
 # Tierd - Product Ranking Application
 
 Tierd is a modern web application for ranking and reviewing products, featuring a robust voting system, user authentication, and real-time activity tracking.

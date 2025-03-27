@@ -4,8 +4,8 @@ import { cn, normalizeProduct } from '@/lib/utils'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Star, ExternalLink, Award, Zap } from 'lucide-react'
-import { VoteButtons } from '@/components/products/vote-buttons'
-import { useVote } from '@/hooks/use-vote'
+import { GlobalVoteButtons } from '@/components/products/global-vote-buttons'
+import { ProductVoteWrapper } from '@/components/products/product-vote-wrapper'
 import type { Database } from '@/types/supabase'
 import { ProductImage } from "@/components/ui/product-image"
 import { Product } from '@/types/product'
@@ -19,8 +19,6 @@ interface ProductRankingCardProps {
 }
 
 export function ProductRankingCard({ product: rawProduct, rank }: ProductRankingCardProps) {
-  const { vote } = useVote()
-  
   // Normalize the product to ensure it has all required fields
   const product = normalizeProduct(rawProduct)
 
@@ -79,7 +77,7 @@ export function ProductRankingCard({ product: rawProduct, rank }: ProductRanking
       <div className="relative aspect-square w-24 overflow-hidden rounded-lg border border-white/5">
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg z-10"></div>
         <ProductImage
-          src={product.imageUrl}
+          src={product.imageUrl || product.image_url}
           alt={product.name}
           category={product.category}
           fill
@@ -118,7 +116,7 @@ export function ProductRankingCard({ product: rawProduct, rank }: ProductRanking
               <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-full">
                 <Star className="h-3 w-3 fill-secondary text-secondary" />
                 <span className="text-xs font-medium">{product.rating.toFixed(1)}</span>
-                <span className="text-xs text-muted-foreground">({product.review_count})</span>
+                <span className="text-xs text-muted-foreground">({product.review_count || 0})</span>
               </div>
             </>
           )}
@@ -136,15 +134,21 @@ export function ProductRankingCard({ product: rawProduct, rank }: ProductRanking
 
       {/* Vote Buttons */}
       <div className="bg-card-background backdrop-blur-sm rounded-lg p-1.5 border border-white/5 shadow-inner">
-        <VoteButtons 
+        <ProductVoteWrapper 
           product={{
             id: product.id,
             name: product.name
           }}
-          initialUpvotes={product.upvotes || 0}
-          initialDownvotes={product.downvotes || 0}
-          initialVoteType={typeof product.userVote === 'number' ? product.userVote : null}
-        />
+        >
+          {(voteData) => (
+            <GlobalVoteButtons 
+              product={{
+                id: product.id,
+                name: product.name
+              }}
+            />
+          )}
+        </ProductVoteWrapper>
       </div>
     </div>
   )

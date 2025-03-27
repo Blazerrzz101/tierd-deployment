@@ -1,5 +1,149 @@
 # Scratchpad
 
+## Fixed Next.js Dynamic Route Conflict (2024-05)
+
+[X] Resolved Next.js dynamic route conflict error
+- [X] Identified root issue: conflicting dynamic routes with different parameter names (`[id]` and `[slug]`)
+- [X] Moved the legacy URL handler to a new route (`/products/legacy/[slug]`) to avoid conflict
+- [X] Updated redirect logic to maintain backward compatibility
+- [X] Removed the conflicting route (`/products/[id]`)
+- [X] Updated documentation to reflect the new route structure
+- [X] Fixed the error: "You cannot use different slug names for the same dynamic path"
+
+## Product Detail Page UI Standardization (2024-05) - COMPLETED
+
+[X] Standardized all product detail pages to use a consistent UI
+- [X] Created a unified product detail component (`UnifiedProductDetail`)
+- [X] Updated wrapper component (`ProductDetailLayout`) to forward to the unified component
+- [X] Modified main product page route to use the standardized component
+- [X] Updated specialized product pages (like Logitech G Pro) to use unified layout
+- [X] Created verification script to check component usage
+- [X] Created documentation in PRODUCT_PAGE_STANDARDIZATION.md
+
+[X] Fixed other UI discrepancies in product detail pages
+- [X] Ensured consistent handling of product data across all pages
+- [X] Standardized image display and gallery functionality
+- [X] Unified product specifications display
+- [X] Standardized affiliate link and shop buttons
+- [X] Ensured consistent vote button placement
+- [X] Added similar products section to all detail pages
+
+[X] Fixed specialized product pages rendering with old UI
+- [X] Identified issue with specialized product pages using old components
+- [X] Created script to automatically update all specialized product pages
+- [X] Ensured products linked from Rankings page use the standardized layout
+- [X] Maintained consistent UI regardless of navigation source (Rankings, Home, direct URL)
+- [X] Updated documentation to reflect the changes
+
+[X] Fixed 404 errors when clicking on product links 
+- [X] Identified issue with product URL generation not accounting for specialized routes
+- [X] Updated `createProductUrl` function to check for specialized route products
+- [X] Added a comprehensive list of all specialized product routes
+- [X] Created a verification script to test all product links
+- [X] Updated documentation with information about the fix
+
+## Product Detail Page UI Consistency Fixes (2024-05)
+
+[X] Fixed inconsistent product detail page UI formats
+- [X] Identified two different UI formats for product detail pages:
+  - Old format (like the Logitech G502 page) using short URL slugs
+  - New format (like the Razer Huntsman Mini page) using full name in URL slugs
+- [X] Standardized URL slugs for all products to use full product names:
+  - Updated "logitech-g502" to "logitech-g502-x-plus"
+  - Updated "razer-viper-v2" to "razer-viper-v2-pro"
+  - Updated "finalmouse-starlight" to "finalmouse-starlight-12"
+  - Updated "zowie-ec2" to "zowie-ec2-c"
+  - Updated "corsair-m65" to "corsair-m65-rgb-elite"
+  - Updated "steelseries-prime" to "steelseries-prime-wireless"
+- [X] Updated product image references to use the new IDs
+
+[X] Fixed missing Gaming Mice on the homepage
+- [X] Identified category ID mismatch in ProductRankings component
+- [X] Updated the category ID from 'mice' to 'gaming-mice' to match data.ts
+- [X] Added 'controllers' and 'chairs' categories to the ProductRankings component
+
+## Product Detail Page Fixes (2024-05)
+
+[X] Fixing product detail page errors and ensuring all products show properly
+- [X] Fixed "Cannot read properties of undefined (reading 'filter')" error
+  - Updated product-detail.tsx to import mockProducts from correct location
+  - Fixed references to mockProducts in the component
+- [X] Resolved type mismatches between different Product interfaces
+  - Updated utils/product-utils.ts to properly extend Product type
+  - Fixed property access to use correct field names (upvotes/downvotes instead of votes)
+  - Added proper brand and model information to products
+- [X] Updated product mapping in lib/data.ts
+  - Added missing properties to all product objects
+  - Ensured consistent property names across all products
+- [X] Improved type handling in API and components
+  - Updated vote-buttons.tsx to handle both old and new userVote formats
+  - Fixed type assertions where needed to prevent TypeScript errors
+- [X] Expanded product catalog from 14 to 30 products
+  - Added 16 new products to the generateProducts function in lib/data.ts
+  - Added new product categories: controllers and chairs
+  - Ensured all new products have complete information with required fields
+- [X] Enhanced product detail page error handling
+  - Improved slug matching with better fallback options
+  - Added more detailed error logging
+  - Added similar product suggestions when an exact match isn't found
+  - Fixed circular import in product API endpoint
+
+[X] Current issues fixed (May 2024):
+- [X] Only 14 products displayed instead of expected 30
+  - Fixed by adding the missing 16 products to the generateProducts function in lib/data.ts
+  - Confirmed the API now returns all 30 products
+- [X] Product detail pages returning 404 or 500 errors
+  - Fixed by ensuring proper imports of mockProducts
+  - Updated API endpoints to use the right imports and avoid circular dependencies
+  - Improved error handling and logging for better debugging
+  - Fixed URL slug generation to ensure valid URLs
+
+[X] Verify all 30 products are showing correctly
+- [X] Test product listings on home page - confirmed API returns 30 products
+- [X] Test product listings on rankings page - confirmed it's loading properly
+- [X] Verify product detail pages load correctly for all products - confirmed for sample products
+
+[X] Fix rankings page links to product detail pages
+- [X] Ensure all links use createProductUrl for consistency
+- [X] Verified links work and load the correct product detail pages
+
+## Rankings Page Implementation (2024-05) - CURRENT TASK
+
+[X] Enhanced RankingList component
+- [X] Added support for grid and list view modes
+- [X] Improved product card UI with badges for rank and price
+- [X] Added ratings display with star icons
+- [X] Integrated affiliate links with Amazon buttons
+- [X] Handled voting for products without affiliate links
+- [X] Added enhanced product images
+- [X] Improved mobile responsiveness
+- [X] Added proper loading and error states
+- [X] Implemented expanded sort options (rank, votes, rating, price low/high, newest)
+
+[X] Created CategoryFilter component for easy category selection
+- [X] Added icons for each category
+- [X] Implemented active state styling
+- [X] Ensured proper handling of category changes
+
+[X] Created utilities for enhanced product presentation
+- [X] Created enhanced-images.ts for high-quality product images
+- [X] Created affiliate-utils.ts for Amazon affiliate links
+- [X] Added Best Buy product image integration
+- [X] Created test module for verifying all functionality
+
+[X] Fixed type conflicts between different Product interfaces
+- [X] Resolved VoteType type mismatch (string vs. number)
+- [X] Created helper function to handle different userVote formats
+- [X] Fixed issues with initialVoteType parameter in VoteButtons component
+- [X] Ensured backward compatibility with existing APIs
+
+[X] Updated RankingsPage component
+- [X] Added view mode controls (grid/list)
+- [X] Implemented expanded sort options in dropdown
+- [X] Created filters dialog for more advanced filtering
+- [X] Added animated category selection with visual indicators
+- [X] Improved header design with gradient and decorative elements
+
 ## URL Standardization (2024-04)
 
 [X] Fixed URL generation across the application
@@ -150,24 +294,6 @@
 2. Load User Data from Supabase → Display Profile
 3. FIXED: User data being correctly fetched/displayed
 
-## Action Plan:
-
-1. Fix Auth Hook Duplication:
-   - [X] Refactor `hooks/use-auth.ts` to remove duplicate implementations
-   - [X] Ensure consistent auth state management
-
-2. Fix Authentication Display:
-   - [X] Update Header component to correctly use auth state
-   - [X] Fix avatar display in UserNav
-
-3. Deploy Vote Function Fix:
-   - [X] Run SQL script on Supabase to update function definitions
-   - [X] Verify vote functionality works in production
-
-4. Testing:
-   - [X] Test complete user flow from signup to voting
-   - [X] Verify auth state persistence across page refreshes 
-
 # Lessons
 
 ## User Specified Lessons
@@ -183,6 +309,26 @@
 - Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
 - When encountering "X is not a function" errors during build, check not only function implementations but also export patterns
 - Prefer dedicated component/hook files over multi-purpose files to avoid circular dependencies
+
+## Pre-Deployment Testing (2024-05)
+- Implement a comprehensive pre-deployment test suite to validate key functionality
+- Test production builds separately from development builds to catch build-specific issues
+- Use scripts to automate checking for broken links and routing issues
+- Validate schema.org markup for SEO benefits on product pages
+- Test vote system integrity to ensure users can't vote multiple times inappropriately
+- Generate detailed reports for each test to track improvements over time
+- Consider some tests (like schema validation) as warnings rather than blockers
+- Include test documentation in PRE_DEPLOYMENT_TESTS.md
+- Run the full suite with `npm run precheck` before deployment
+- Integrated the test suite with npm scripts for easy access
+
+## Authentication Provider Fix (2024-03-25)
+- Always ensure component names in imports match the exact exported name in the source file
+- When dealing with authentication providers, naming is especially critical for proper functionality
+- For Next.js applications, components referenced in providers.tsx must be correctly imported
+- Component naming issues often manifest as "is not a function" or "expected a string/function but got undefined" errors
+- Enhanced error detection by checking the exact error message in the console/browser
+- Middleware enhancements with custom headers help identify authentication state issues more easily
 
 ## Voting System And Auth State Fixes
 - When integrating with Supabase RPC functions, always verify parameter order carefully
@@ -219,7 +365,80 @@
 - Always validate slugs before using them in URL construction
 - Add comprehensive testing for URL generation and navigation
 
-# Instructions During your interaction with the user, if you find anything reusable in this project (e.g. version of a library, model name), especially about a fix to a mistake you made or a correction you received, you should take note in the `Lessons` section in the `.cursorrules` file so you will not make the same mistake again. You should also use the `.cursorrules` file as a Scratchpad to organize your thoughts. Especially when you receive a new task, you should first review the content of the Scratchpad, clear old different task if necessary, first explain the task, and plan the steps you need to take to complete the task. You can use todo markers to indicate the progress, e.g. [X] Task 1 [ ] Task 2 Also update the progress of the task in the Scratchpad when you finish a subtask. Especially when you finished a milestone, it will help to improve your depth of task accomplishment to use the Scratchpad to reflect and plan. The goal is to help you maintain a big picture as well as the progress of the task. Always refer to the Scratchpad when you plan the next step.
+## Product Detail Page Fixes (2024-05)
+- When extending a type, prefer using type intersection (Type1 & Type2) over extends when dealing with potentially conflicting property requirements
+- Import from consistent sources to avoid circular dependencies
+- When handling product data, ensure all products have valid slugs before using them in URLs
+- Add detailed logging to help troubleshoot issues in production
+- Use type assertions carefully and only when necessary to bridge type mismatches
+- When dealing with API responses that might change over time, add backward compatibility handling
+- Avoid multiple instances of Next.js server running simultaneously to prevent port conflicts
+- Test API endpoints with curl before testing frontend pages to isolate issues
+- Ensure consistent property names across mock data and interfaces to prevent type errors
+
+## Product Detail Page UI Consistency Fixes (2024-05)
+- Ensure all product URL slugs follow the same format (preferably based on the complete product name)
+- Keep category IDs consistent between UI components and data files
+- When working with multiple UI implementations, watch for URL pattern differences that might trigger different component rendering
+- Maintain ID consistency across related data structures (e.g., productImages, product objects)
+- Test URL formats directly with curl to diagnose routing and component rendering issues
+- When pages have different appearances for the same type of content, verify URL patterns and slugs first
+
+## Rankings Page Implementation (2024-05)
+- When implementing different view modes (grid vs. list), use conditional classes with the cn utility
+- For affiliate marketing integration, create dedicated utility files to map products to external identifiers
+- When handling image loading, always provide fallback images for products without custom images
+- Use utility functions to handle inconsistent data formats (e.g., getUserVoteType helper)
+- When dealing with multiple interfaces for the same concept (like VoteType), create adapter functions
+- Add user feedback through loading states, badges, and visual indicators
+- Use motion components from framer-motion to add subtle animations to list items
+- For responsive designs, ensure both desktop and mobile views are well-handled
+- When displaying ratings, consider using filled stars for better visual representation
+- Test your implementation with a dedicated test module to verify all aspects work correctly
+
+## Auth Provider Fix (2024-03-25)
+
+[X] Fixed authentication provider issues
+- [X] Identified naming mismatch in app/providers.tsx 
+- [X] Updated import to use EnhancedAuthProvider rather than AuthProvider
+- [X] Confirmed that the fix resolves the error and allows the app to load correctly
+- [X] Tested key authentication-dependent pages (homepage, sign-in, profile)
+
+## Product Detail Page Standardization (2024-05)
+
+[X] Fixed 404 errors for product detail page links
+- [X] Standardized all product detail pages to use a unified component (UnifiedProductDetail)
+- [X] Updated all specialized product routes to use the new standardized component
+- [X] Improved URL generation with robust slug handling
+- [X] Added redirect handling for old URL formats
+- [X] Created documentation in PRODUCT_PAGE_STANDARDIZATION.md
+
+[X] Enhanced product detail pages with more features
+- [X] Added affiliate marketing links to product detail pages
+- [X] Integrated high-quality product images when available
+- [X] Added support for multiple product images with gallery view
+- [X] Added similar products recommendations
+- [X] Improved specifications display with better organization
+
+[X] Improved error handling and user experience
+- [X] Added robust loading states with skeleton UI
+- [X] Created better 404 handling with product suggestions
+- [X] Enhanced API endpoints to handle various slug formats and fallbacks
+- [X] Improved the main products page with categorical browsing
+
+# Lessons
+
+## Product Detail Page Standardization (2024-05)
+- When dealing with multiple implementations of similar UI components, standardize on a single implementation to ensure consistency
+- Use skeleton loading states to improve perceived performance and reduce layout shifts
+- Implement robust URL generation for all dynamic routes to prevent 404 errors
+- Ensure all product pages use the same component for consistent UI regardless of navigation path
+- Add redirect handlers for legacy URL formats to maintain backward compatibility
+- Use the unified component approach to make future maintenance easier by centralizing changes
+- Add fallback mechanisms in slug matching to ensure products can be found even with slightly different URL formats
+- Test thoroughly after standardization to ensure all navigation paths work correctly
+- Consider the user experience of URL structure - descriptive slugs are better than numeric IDs
+- Document improvements to ensure future developers understand the standardization process
 
 # Tools
 
@@ -229,80 +448,56 @@ The screenshot verification workflow allows you to capture screenshots of web pa
 ```bash venv/bin/python tools/screenshot_utils.py URL [--output OUTPUT] [--width WIDTH] [--height HEIGHT] ```
 2. LLM Verification with Images:
 ```bash venv/bin/python tools/llm_api.py --prompt "Your verification question" --provider {openai|anthropic} --image path/to/screenshot.png ```
-Example workflow:
-```python from screenshot_utils import take_screenshot_sync from llm_api import query_llm # Take a screenshot screenshot_path = take_screenshot_sync('https://example.com', 'screenshot.png') # Verify with LLM response = query_llm( "What is the background color and title of this webpage?", provider="openai", # or "anthropic" image_path=screenshot_path ) print(response) ```
 
-## LLM
-You always have an LLM at your side to help you with the task. For simple tasks, you could invoke the LLM by running the following command:
-``` venv/bin/python ./tools/llm_api.py --prompt "What is the capital of France?" --provider "anthropic" ```
-The LLM API supports multiple providers:
-- OpenAI (default, model: gpt-4o)
-- Azure OpenAI (model: configured via AZURE_OPENAI_MODEL_DEPLOYMENT in .env file, defaults to gpt-4o-ms)
-- DeepSeek (model: deepseek-chat)
-- Anthropic (model: claude-3-sonnet-20240229)
-- Gemini (model: gemini-pro)
-- Local LLM (model: Qwen/Qwen2.5-32B-Instruct-AWQ)
-But usually it's a better idea to check the content of the file and use the APIs in the `tools/llm_api.py` file to invoke the LLM if needed.
+## Next.js Dynamic Route Conflicts (2024-05)
+- Next.js does not allow different parameter names for dynamic routes at the same level (`[id]` vs `[slug]`)
+- When encountering "You cannot use different slug names for the same dynamic path" error, options are:
+  - Use the same parameter name in all routes at the same level
+  - Move one of the conflicting routes to a different path level
+  - Use catch-all routes (`[...slug]`) if appropriate
+  - Implement middleware to handle redirection before routes are processed
+- For legacy URL support, prefer creating a dedicated subdirectory (e.g., `legacy/[parameter]`)
+- Document URL structure changes to ensure developers understand the routing hierarchy
+- Test all redirects to ensure backward compatibility with old URLs
 
-## Web browser
-You could use the `tools/web_scraper.py` file to scrape the web.
-``` venv/bin/python ./tools/web_scraper.py --max-concurrent 3 URL1 URL2 URL3 ```
-This will output the content of the web pages.
+## Global Vote System Implementation (2024-05)
 
-## Search engine
-You could use the `tools/search_engine.py` file to search the web.
-``` venv/bin/python ./tools/search_engine.py "your search keywords" ```
-This will output the search results in the following format:
-``` URL: https://example.com Title: This is the title of the search result Snippet: This is a snippet of the search result ```
-If needed, you can further use the `web_scraper.py` file to scrape the web page content.
+[X] Created a consistent global vote system with React Query
+- [X] Created the ProductVoteWrapper component for centralized vote data
+- [X] Updated components to use the new global vote system:
+  - [X] Updated RankingList component in ranking-list.tsx
+  - [X] Updated ProductRankingCard component in product-ranking-card.tsx 
+  - [X] Updated ProductCard component in product-card.tsx
+  - [X] Updated ProductRankings component in product-rankings.tsx
+- [X] Added utilities to make vote status consistent:
+  - [X] Created the useGlobalVotes hook for centralized data access
+  - [X] Implemented global-vote-utils.ts with helper functions
+  - [X] Created GlobalVoteButtons as a reusable UI component
+- [X] Created a test page at /test-global-votes that demonstrates vote synchronization
+- [X] Added a test script in scripts/test-global-vote-consistency.js
+
+[X] Benefits of the global vote system:
+- [X] Votes are now consistent across all components on the site
+- [X] React Query automatically manages data fetching and caching
+- [X] Vote status is synchronized in real-time across all components
+- [X] Improved user experience with immediate UI updates
+- [X] Reduced client ID errors with proper validation
+
+[X] Testing implementation:
+- [X] Created scripts/test-global-vote-consistency.js for CLI testing
+- [X] Created a /test-global-votes page for visual testing
+- [X] Added debugging and error reporting to aid troubleshooting
 
 # Lessons
 
-## User Specified Lessons
-- You have a python venv in ./venv. Use it.
-- Include info useful for debugging in the program output.
-- Read the file before you try to edit it.
-- Due to Cursor's limit, when you use `git` and `gh` and need to submit a multiline commit message, first write the message in a file, and then use `git commit -F <filename>` or similar command to commit. And then remove the file. Include "[Cursor] " in the commit message and PR title.
-
-## Cursor learned
-- For search results, ensure proper handling of different character encodings (UTF-8) for international queries
-- Add debug information to stderr while keeping the main output clean in stdout for better pipeline integration
-- When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
-- Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
-- When encountering "X is not a function" errors during build, check not only function implementations but also export patterns
-- Prefer dedicated component/hook files over multi-purpose files to avoid circular dependencies
-
-## Voting System And Auth State Fixes
-- When integrating with Supabase RPC functions, always verify parameter order carefully
-- Include fallback logic when calling external APIs to handle potential parameter order issues
-- Make SQL function definitions flexible to handle slightly different parameter orders
-- Avoid duplicate hook implementations by using consistent export naming
-- Use comprehensive test pages to validate complex interactions like auth + voting
-- Include documentation about fixes in VOTING_SYSTEM_FIX.md for future developers
-- When encountering build errors with "is not a function", consider moving the implementation to a dedicated file
-- Use the `export const functionName = () => {}` pattern instead of `export function functionName() {}` for React hooks to ensure consistent compilation
-
-## Authentication System Fixes
-- Avoid having multiple authentication providers in the same application
-- Ensure consistent auth hook naming and implementation to prevent state inconsistencies
-- When using localStorage for auth state, ensure proper clearing on sign-out
-- Use a consistent method for determining loading states across components 
-- Always check for undefined or null user states before accessing user properties
-- In Next.js applications, be careful with duplicate providers in app layout
-- Prefer a single source of truth for auth state to avoid conflicts
-- Use descriptive variable names for loading states to avoid naming conflicts
-- After refactoring, make sure to update ALL import paths to prevent "is not a function" runtime errors
-- When deprecating components, add comments to guide developers to the new implementation 
-
-## URL Generation and Navigation Fixes
-- Never directly construct URLs using string interpolation (e.g., `/products/${productId}`)
-- Always use dedicated utility functions for URL generation to prevent inconsistencies
-- When creating URLs from user-generated content, always sanitize and validate inputs
-- Implement fallback mechanisms for missing/invalid slugs to prevent broken links
-- Use types and interfaces to ensure proper parameter passing in URL-related functions
-- Add debug logging for URL generation to quickly identify issues
-- When implementing redirects, use a short delay to ensure auth state is settled
-- Track timing information to identify authentication and loading state issues 
-- Use Next.js middleware as a safety net to catch any malformed URLs that might slip through
-- Always validate slugs before using them in URL construction
-- Add comprehensive testing for URL generation and navigation 
+## Global Vote System Implementation (2024-05)
+- When implementing a feature that appears across multiple components, use a global state management approach like React Query
+- Create wrapper components that handle data fetching to avoid duplicate API calls and inconsistent state
+- Use render props pattern to provide data to child components in a flexible way
+- Implement a centralized hook that handles all interactions with the API
+- Create testable utilities to validate the system works as expected
+- Add a dedicated test page to demonstrate the functionality working correctly
+- Enhance error reporting to quickly identify issues with the system
+- When updating from an old system to a new system, provide backward compatibility
+- Document the architecture and key components for future maintenance
+- Test across different parts of the application to ensure consistency

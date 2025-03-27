@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-03-26T03:46:23.517Z",
+  "results": [
+    {
+      "name": "Production Build Test",
+      "passed": true,
+      "required": true,
+      "duration": "53.14",
+      "exitCode": 0
+    },
+    {
+      "name": "Broken Links Check",
+      "passed": true,
+      "required": false,
+      "duration": "2.69",
+      "exitCode": 0
+    },
+    {
+      "name": "Vote Integrity Test",
+      "passed": false,
+      "required": false,
+      "duration": "0.12",
+      "exitCode": 1
+    },
+    {
+      "name": "Schema Markup Validation",
+      "passed": false,
+      "required": false,
+      "duration": "0.43",
+      "exitCode": 1
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 2,
+    "failed": 2,
+    "requiredFailed": 0,
+    "allRequiredPassed": true
+  }
+}

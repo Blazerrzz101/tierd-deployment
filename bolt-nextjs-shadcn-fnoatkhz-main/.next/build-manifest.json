@@ -1,0 +1,38 @@
+{
+  "polyfillFiles": [
+    "static/chunks/polyfills.js"
+  ],
+  "devFiles": [],
+  "ampDevFiles": [],
+  "lowPriorityFiles": [
+    "static/development/_buildManifest.js",
+    "static/development/_ssgManifest.js"
+  ],
+  "rootMainFiles": [
+    "static/chunks/webpack.js",
+    "static/chunks/main-app-node_modules_next_dist_b.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_ac.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_b.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_i.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_react-dev-overlay_app_R.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_react-dev-overlay_internal_components_C.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_react-dev-overlay_internal_components_O.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_react-dev-overlay_internal_c.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_react-dev-overlay_internal_h.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_react-dev-overlay_internal_styles_B.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_rea.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_re.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_router-reducer_p.js",
+    "static/chunks/main-app-node_modules_next_dist_client_components_s.js",
+    "static/chunks/main-app-node_modules_next_dist_client_d.js",
+    "static/chunks/main-app-node_modules_next_dist_compiled_a.js",
+    "static/chunks/main-app-node_modules_next_dist_compiled_react-dom_cjs_react-dom_development_js-fc985f70.js",
+    "static/chunks/main-app-node_modules_next_dist_compiled_react-.js",
+    "static/chunks/main-app-node_modules_next_dist_compiled_sc.js",
+    "static/chunks/main-app-node_modules_n.js"
+  ],
+  "pages": {
+    "/_app": []
+  },
+  "ampFirstPages": []
+}

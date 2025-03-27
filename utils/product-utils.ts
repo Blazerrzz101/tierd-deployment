@@ -1,63 +1,46 @@
 import slugify from 'slugify'
 import { products as allProducts } from "@/lib/data";
+import { Product as ProductType } from "@/types/product";
 
 /**
- * Product interface definition
+ * Product interface definition - mirrors the one from @/types/product.ts
+ * Extended with additional properties for our application
  */
-export interface Product {
-  id: string
-  name: string
-  description?: string
-  price?: number
-  category?: string
-  image?: string
-  url_slug?: string
-  brand?: string
-  model?: string
-  specs?: Record<string, any>
-  rating?: number
-  votes?: {
-    upvotes: number
-    downvotes: number
-  }
-  userVote?: number | null
-  review_count?: number
-  created_at?: string
-  updated_at?: string
-  alternativeSlugs?: string[]
+export interface Product extends ProductType {
+  brand?: string;
+  model?: string;
+  alternativeSlugs?: string[];
 }
 
-// Mock products for local development and testing
-export const mockProducts: Product[] = [
-  {
-    id: "12345678-1234-1234-1234-123456789012",
-    name: "Samsung Odyssey G7",
-    description: "32-inch WQHD gaming monitor with 240Hz refresh rate",
-    url_slug: "samsung-odyssey-g7",
-    category: "monitors",
-    brand: "Samsung",
-    model: "Odyssey G7",
-    rating: 4.5,
-    votes: {
-      upvotes: 120,
-      downvotes: 15
-    }
-  },
-  {
-    id: "87654321-4321-4321-4321-210987654321",
-    name: "Logitech G Pro X Superlight",
-    description: "Lightweight wireless gaming mouse",
-    url_slug: "logitech-g-pro-x-superlight",
-    category: "mice",
-    brand: "Logitech",
-    model: "G Pro X Superlight",
-    rating: 4.8,
-    votes: {
-      upvotes: 250,
-      downvotes: 20
-    }
-  }
-]
+// Map all products to ensure they match our interface
+export const mockProducts: Product[] = allProducts.map(product => {
+  // Cast the product to 'any' to avoid type errors during mapping
+  const p = product as any;
+  
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description || "",
+    price: p.price || 0,
+    category: p.category || "",
+    image_url: p.imageUrl || "",
+    imageUrl: p.imageUrl || "",
+    url_slug: p.url_slug || "",
+    specifications: p.specs || {},
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    upvotes: p.upvotes || Math.floor((p.votes || 0) * 0.7),
+    downvotes: p.downvotes || Math.floor((p.votes || 0) * 0.3),
+    score: p.score || p.votes || 0,
+    rank: p.rank || 0,
+    rating: p.rating || 4.0,
+    review_count: p.review_count || Math.floor((p.votes || 0) / 2),
+    reviews: p.reviews || [],
+    threads: p.threads || [],
+    brand: p.brand || p.name.split(' ')[0],
+    model: p.model || p.name.split(' ').slice(1).join(' ')
+  };
+});
 
 /**
  * Get a product by ID or slug
@@ -134,28 +117,51 @@ export function findProductById(productId: string) {
 }
 
 /**
- * Find a product by slug
+ * Find a product by slug with robust fallbacks
  */
 export function findProductBySlug(slug: string | null | undefined): Product | null {
   if (!slug || slug === 'undefined') {
     return null
   }
   
-  // Find product by direct slug match
+  // 1. Find product by direct slug match
   let product = mockProducts.find(p => p.url_slug === slug)
   
-  // If not found by direct match, try alternative slugs if available
+  // 2. If not found by direct match, try case-insensitive match
+  if (!product) {
+    product = mockProducts.find(p => 
+      p.url_slug && p.url_slug.toLowerCase() === slug.toLowerCase()
+    )
+  }
+  
+  // 3. Try alternative slugs if available
   if (!product) {
     product = mockProducts.find(p => 
       (p as any).alternativeSlugs && 
       Array.isArray((p as any).alternativeSlugs) && 
-      (p as any).alternativeSlugs.includes(slug)
+      (p as any).alternativeSlugs.some((altSlug: string) => 
+        altSlug.toLowerCase() === slug.toLowerCase()
+      )
     )
   }
   
-  // Last resort: try to find by generated slug
+  // 4. Try matching with a generated slug
   if (!product) {
     product = mockProducts.find(p => getValidProductSlug(p) === slug)
+  }
+  
+  // 5. Try a normalized version of the slug (with improved slugify)
+  if (!product) {
+    const normalizedSlug = slugifyString(slug)
+    product = mockProducts.find(p => 
+      slugifyString(p.name) === normalizedSlug || 
+      getValidProductSlug(p) === normalizedSlug
+    )
+  }
+  
+  // 6. Try by product ID as last resort
+  if (!product) {
+    product = mockProducts.find(p => p.id === slug)
   }
   
   return product
@@ -171,11 +177,9 @@ export function createProductUrl(product: Partial<Product> | null | undefined): 
     return "/products"
   }
   
-  // Get a valid slug - this will never return undefined
-  const slug = getValidProductSlug(product)
-  
-  // Return the URL with the valid slug
-  return `/products/${slug}`
+  // For all products, use the dynamic route with a valid slug
+  const slug = getValidProductSlug(product);
+  return `/products/${slug}`;
 }
 
 /**
@@ -262,13 +266,21 @@ export function isValidProductSlug(slug?: string | null): boolean {
 
 /**
  * Returns a clean slug from a string (name, title, etc.)
+ * Handles special characters and edge cases
  */
 export function slugifyString(str: string): string {
+  if (!str || typeof str !== 'string') {
+    return 'unknown';
+  }
+  
+  // Replace spaces and special characters
   return slugify(str, {
     lower: true,
     strict: true,
-    remove: /[*+~.()'"!:@]/g
-  })
+    remove: /[*+~.()'"!:@#$%^&*=]/g,
+    replacement: '-',
+    trim: true
+  });
 }
 
 /**
@@ -315,4 +327,137 @@ export function getProductsBySearchTerm(
       } : undefined
     };
   });
+}
+
+/**
+ * Creates a URL-safe slug from a product name and ID
+ * Use this when setting up new products or fixing missing slugs
+ */
+export function generateSafeSlug(name: string, id: string): string {
+  if (!name || name === 'undefined') {
+    return `product-${id.substring(0, 8)}`;
+  }
+  
+  // Use slugify to normalize the name
+  return slugify(name, {
+    lower: true,
+    strict: true,
+    remove: /[*+~.()'"!:@]/g
+  });
+}
+
+/**
+ * Get a product by slug
+ * @param slug Product URL slug
+ * @param productList Optional product list to search in (defaults to mockProducts)
+ * @returns The product if found, or null if not found
+ */
+export function getProductBySlug(slug: string, productList: Product[] = mockProducts): Product | null {
+  if (!slug || slug === 'undefined') return null;
+  
+  // First try direct slug match
+  let product = productList.find(p => p.url_slug === slug);
+  
+  // Try case-insensitive match
+  if (!product) {
+    product = productList.find(p => 
+      p.url_slug && p.url_slug.toLowerCase() === slug.toLowerCase()
+    );
+  }
+  
+  // Try matching with the generated slug
+  if (!product) {
+    product = productList.find(p => getValidProductSlug(p) === slug);
+  }
+  
+  // Try by product ID
+  if (!product) {
+    product = productList.find(p => p.id === slug);
+  }
+  
+  return product || null;
+}
+
+/**
+ * Fuzzy match a product by slug or search terms
+ * @param query The search query or slug to match
+ * @param productList Optional product list to search in (defaults to mockProducts)
+ * @param limit Maximum number of matches to return
+ * @returns Array of matching products
+ */
+export function fuzzyMatchProduct(query: string, productList: Product[] = mockProducts, limit: number = 5): Product[] {
+  if (!query || query === 'undefined') return [];
+  
+  // Normalize query
+  const normalizedQuery = query.toLowerCase().replace(/-/g, ' ').trim();
+  const queryTerms = normalizedQuery.split(' ').filter(term => term.length > 2);
+  
+  // Score products based on match quality
+  const scoredProducts = productList.map(product => {
+    let score = 0;
+    
+    // Check name matches
+    const normalizedName = product.name.toLowerCase();
+    if (normalizedName.includes(normalizedQuery)) {
+      score += 10;
+    }
+    
+    // Check brand/model matches
+    const brand = product.brand?.toLowerCase() || '';
+    const model = product.model?.toLowerCase() || '';
+    
+    if (brand && normalizedQuery.includes(brand)) {
+      score += 5;
+    }
+    
+    if (model && normalizedQuery.includes(model)) {
+      score += 5;
+    }
+    
+    // Check term by term
+    queryTerms.forEach(term => {
+      if (normalizedName.includes(term)) {
+        score += 2;
+      }
+      if (brand && brand.includes(term)) {
+        score += 1;
+      }
+      if (model && model.includes(term)) {
+        score += 1;
+      }
+      if (product.category && product.category.toLowerCase().includes(term)) {
+        score += 1;
+      }
+    });
+    
+    return { product, score };
+  });
+  
+  // Filter products with at least some match and sort by score
+  return scoredProducts
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(item => item.product);
+}
+
+/**
+ * For legacy IDs, creates a URL to the legacy redirect handler.
+ * This function should be used when you suspect you have a legacy product ID
+ * that needs special handling.
+ */
+export function createLegacyProductUrl(productId: string): string {
+  if (!productId) {
+    return "/products";
+  }
+  
+  return `/products/legacy/${productId}`;
+}
+
+/**
+ * Determines if a slug is likely a legacy ID instead of a proper slug.
+ * Legacy IDs typically don't contain dashes and are shorter.
+ */
+export function isLikelyLegacyId(slug: string): boolean {
+  return !slug.includes('-') || slug.length < 10;
 } 

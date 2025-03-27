@@ -1,0 +1,47 @@
+{
+  "timestamp": "2025-03-26T03:29:17.239Z",
+  "pageResults": [
+    {
+      "page": "/",
+      "status": 200,
+      "loadTime": 42,
+      "success": true
+    },
+    {
+      "page": "/products/logitech-g502-x-plus",
+      "status": 200,
+      "loadTime": 1380,
+      "success": true
+    },
+    {
+      "page": "/products/razer-viper-v2-pro",
+      "status": 200,
+      "loadTime": 28,
+      "success": true
+    },
+    {
+      "page": "/rankings",
+      "status": 200,
+      "loadTime": 678,
+      "success": true
+    },
+    {
+      "page": "/my-profile",
+      "status": 200,
+      "loadTime": 1000,
+      "success": true
+    },
+    {
+      "page": "/categories/gaming-mice",
+      "status": 404,
+      "loadTime": 302,
+      "success": false
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "successful": 5,
+    "failed": 1,
+    "averageLoadTime": 572
+  }
+}

@@ -10,13 +10,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDistanceToNow } from "date-fns"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, User as UserIcon, ArrowRight, MessageSquare, ThumbsUp, ThumbsDown, Star, Award, Zap } from "lucide-react"
+import { Loader2, User as UserIcon, ArrowRight, MessageSquare, ThumbsUp, ThumbsDown, Star, Award, Zap, Image as ImageIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { getClientId } from "@/utils/client-id"
 import { createProductUrl } from "@/utils/product-utils"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabase"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
+import { uploadUserAvatar } from "@/lib/supabase/storage-utils"
+import { UserService } from "@/lib/supabase/user-service"
+
+// Create a simple Spinner component using Loader2
+const Spinner = ({ className }: { className?: string }) => {
+  return <Loader2 className={cn("animate-spin", className)} />;
+};
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -27,16 +39,29 @@ export default function ProfilePage() {
   const [profileForm, setProfileForm] = useState({
     name: "",
     bio: "",
+    email: "",
+    avatar_url: "",
     emailNotifications: true,
-    darkMode: false
+    darkMode: false,
+    is_public: true
   })
+  const [emailUpdateState, setEmailUpdateState] = useState({
+    processing: false,
+    error: null
+  })
+  const [isSaving, setIsSaving] = useState(false)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
   // Set initial form values when user data loads
   useEffect(() => {
     if (user) {
       setProfileForm(prev => ({
         ...prev,
-        name: user.name || user.email?.split('@')[0] || ""
+        name: user.name || user.email?.split('@')[0] || "",
+        email: user.email || "",
+        avatar_url: user.avatar_url || "",
+        bio: "" // Initialize with empty bio
       }));
     }
   }, [user]);
@@ -58,13 +83,255 @@ export default function ProfilePage() {
     }));
   };
 
+  // Handle avatar file change
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      setAvatarFile(file)
+      
+      // Create a preview URL
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  };
+
+  // Fetch user profile data once auth is resolved
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+    
+    async function fetchUserProfile() {
+      try {
+        const response = await fetch('/api/user');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            // Update profile form with user data
+            setProfileForm(prev => ({
+              ...prev,
+              name: data.user.name || data.user.username || data.user.email?.split('@')[0] || "",
+              email: data.user.email || "",
+              avatar_url: data.user.avatar_url || "",
+              bio: data.user.bio || "",
+              is_public: data.user.is_public ?? true,
+              emailNotifications: data.user.preferences?.notification_settings?.emailNotifications ?? true,
+              darkMode: data.user.preferences?.notification_settings?.darkMode ?? false
+            }));
+          }
+        } else {
+          console.error('Error fetching user profile');
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    }
+    
+    fetchUserProfile();
+  }, [isLoading, isAuthenticated]);
+
+  // Add a new effect to persist and synchronize authentication state
+  useEffect(() => {
+    // Skip if still loading or already authenticated
+    if (isLoading) return;
+
+    // If authenticated, store auth state in localStorage
+    if (isAuthenticated && user) {
+      // Store last authenticated timestamp for session validation
+      localStorage.setItem('lastAuthCheck', Date.now().toString());
+      
+      // Use a more robust auth state caching
+      try {
+        const cachedAuthState = {
+          user,
+          timestamp: Date.now(),
+          expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours cache
+        };
+        localStorage.setItem('tierd-auth-state', JSON.stringify(cachedAuthState));
+      } catch (error) {
+        console.error('Error caching auth state:', error);
+      }
+    }
+  }, [isAuthenticated, user, isLoading]);
+
   // Handle save profile changes
-  const handleSaveChanges = () => {
-    // In a real app, you would save changes to the backend here
-    toast({
-      title: "Changes saved",
-      description: "Your profile has been updated successfully."
-    });
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    
+    try {
+      // Pre-save validation and auth check
+      if (!user?.id) {
+        throw new Error('User ID not available - authentication may have expired');
+      }
+      
+      // Additional safeguard: Verify authentication before proceeding
+      const authCheck = await fetch('/api/auth/verify-session', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (!authCheck.ok) {
+        // Try to refresh authentication if possible
+        toast({
+          title: "Session verification",
+          description: "Refreshing your session..."
+        });
+        
+        // Wait a moment for potential auth refresh
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      // If we have a new avatar file, upload it to Supabase Storage
+      let avatarUrl = profileForm.avatar_url;
+      
+      if (avatarFile && user?.id) {
+        try {
+          avatarUrl = await uploadUserAvatar(user.id, avatarFile);
+        } catch (error) {
+          console.error("Avatar upload error:", error);
+          toast({
+            title: "Avatar upload failed",
+            description: error instanceof Error ? error.message : "Unable to upload avatar",
+            variant: "destructive"
+          });
+          // Continue with the rest of the profile update
+        }
+      }
+      
+      // Add timestamps and request ID for debugging
+      const requestId = Math.random().toString(36).substring(2, 10);
+      const requestStart = Date.now();
+      
+      // Update profile via API with retries
+      let retryCount = 0;
+      const maxRetries = 3;
+      let response;
+      
+      while (retryCount < maxRetries) {
+        try {
+          response = await fetch('/api/user', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Request-Time': requestStart.toString()
+            },
+            body: JSON.stringify({
+              username: profileForm.name,
+              avatar_url: avatarUrl,
+              is_public: profileForm.is_public,
+              bio: profileForm.bio,
+              notification_settings: {
+                emailNotifications: profileForm.emailNotifications,
+                darkMode: profileForm.darkMode,
+              }
+            })
+          });
+          
+          // If successful or not an auth error, break the retry loop
+          if (response.ok || response.status !== 401) {
+            break;
+          }
+          
+          // If it's an auth error, try refreshing the session before retrying
+          if (response.status === 401) {
+            console.log(`Authentication error on attempt ${retryCount + 1}, attempting refresh...`);
+            
+            // Attempt to refresh auth session
+            const refreshResult = await fetch('/api/auth/refresh', { 
+              method: 'POST',
+              headers: { 'X-Request-ID': requestId }
+            });
+            
+            if (refreshResult.ok) {
+              toast({
+                title: "Session refreshed",
+                description: "Retrying save operation..."
+              });
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
+        } catch (error) {
+          console.error(`Error on attempt ${retryCount + 1}:`, error);
+        }
+        
+        retryCount++;
+        
+        // Only retry if we haven't succeeded and haven't hit max retries
+        if (retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+        }
+      }
+      
+      if (!response || !response.ok) {
+        const errorData = response ? await response.json() : null;
+        throw new Error(errorData?.message || 'Failed to update profile');
+      }
+      
+      // Update local user state to reflect changes
+      if (user) {
+        const updatedUser = {
+          ...user,
+          name: profileForm.name,
+          avatar_url: avatarUrl
+        };
+        
+        // Store in localStorage to persist changes
+        localStorage.setItem('authUser', JSON.stringify(updatedUser));
+        
+        // Also apply theme changes directly if darkMode preference changed
+        if (profileForm.darkMode) {
+          document.documentElement.classList.remove('light');
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+          localStorage.setItem('tierd-theme', 'dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+          document.documentElement.style.colorScheme = 'light';
+          localStorage.setItem('tierd-theme', 'light');
+        }
+      }
+      
+      toast({
+        title: "Changes saved",
+        description: "Your profile has been updated successfully."
+      });
+      
+      // Refresh to show updated profile
+      router.refresh();
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast({
+        title: "Error saving profile",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+      
+      // If we got a specific error about authentication
+      if (error instanceof Error && 
+          (error.message.includes('authenticate') || 
+           error.message.includes('auth') || 
+           error.message.includes('session'))) {
+        
+        toast({
+          title: "Authentication issue",
+          description: "You may need to sign in again. Redirecting to login...",
+          variant: "destructive"
+        });
+        
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          router.push('/auth/sign-in?redirect=/my-profile');
+        }, 2000);
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Handle delete account
@@ -80,6 +347,48 @@ export default function ProfilePage() {
       
       // Sign out after account deletion
       signOut();
+    }
+  };
+
+  // Handle email update
+  const handleEmailUpdate = async () => {
+    if (!profileForm.email || profileForm.email === user?.email) return;
+    
+    setEmailUpdateState({
+      processing: true,
+      error: null
+    });
+    
+    try {
+      // Use Supabase Auth to update the email
+      const { error } = await supabase.auth.updateUser({
+        email: profileForm.email
+      });
+      
+      if (error) throw error;
+      
+      // Success message
+      setEmailUpdateState({
+        processing: false,
+        error: null
+      });
+      
+      toast({
+        title: "Verification email sent",
+        description: "Please check your email to verify the new address."
+      });
+    } catch (error) {
+      console.error("Error updating email:", error);
+      setEmailUpdateState({
+        processing: false,
+        error: error instanceof Error ? error.message : "Failed to update email"
+      });
+      
+      toast({
+        title: "Error updating email",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
     }
   };
 
@@ -134,6 +443,183 @@ export default function ProfilePage() {
     
     fetchUserData()
   }, [isLoading, user])
+
+  // Add individual toggle handlers for each preference
+  const handleEmailNotificationsToggle = async (checked: boolean) => {
+    setProfileForm(prev => ({
+      ...prev,
+      emailNotifications: checked
+    }));
+    
+    // Update this preference immediately
+    try {
+      if (!user?.id) return;
+      
+      // Show subtle toast
+      toast({
+        title: checked ? "Email notifications enabled" : "Email notifications disabled",
+        description: "Saving your preference...",
+      });
+      
+      const result = await UserService.updateUserPreferences(user.id, {
+        emailNotifications: checked
+      });
+      
+      if (!result.success) {
+        // Reset to previous state on error
+        setProfileForm(prev => ({
+          ...prev,
+          emailNotifications: !checked
+        }));
+        
+        toast({
+          title: "Error saving preference",
+          description: result.error || "Please try again",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error updating email notifications:", error);
+      
+      // Reset to previous state
+      setProfileForm(prev => ({
+        ...prev,
+        emailNotifications: !checked
+      }));
+      
+      toast({
+        title: "Error saving preference",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDarkModeToggle = async (checked: boolean) => {
+    setProfileForm(prev => ({
+      ...prev,
+      darkMode: checked
+    }));
+    
+    // Update this preference immediately
+    try {
+      if (!user?.id) return;
+      
+      // Apply theme change immediately for better UX
+      if (checked) {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+        document.documentElement.style.colorScheme = 'dark';
+        localStorage.setItem('tierd-theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        document.documentElement.style.colorScheme = 'light';
+        localStorage.setItem('tierd-theme', 'light');
+      }
+      
+      // Show subtle toast
+      toast({
+        title: checked ? "Dark mode enabled" : "Light mode enabled",
+        description: "Saving your preference...",
+      });
+      
+      const result = await UserService.updateUserPreferences(user.id, {
+        darkMode: checked
+      });
+      
+      if (!result.success) {
+        // Reset to previous state on error - both UI and system
+        setProfileForm(prev => ({
+          ...prev,
+          darkMode: !checked
+        }));
+        
+        // Revert theme
+        if (!checked) {
+          document.documentElement.classList.remove('light');
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+          localStorage.setItem('tierd-theme', 'dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+          document.documentElement.style.colorScheme = 'light';
+          localStorage.setItem('tierd-theme', 'light');
+        }
+        
+        toast({
+          title: "Error saving preference",
+          description: result.error || "Please try again",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error updating dark mode:", error);
+      
+      // Reset to previous state
+      setProfileForm(prev => ({
+        ...prev,
+        darkMode: !checked
+      }));
+      
+      toast({
+        title: "Error saving preference",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePublicProfileToggle = async (checked: boolean) => {
+    setProfileForm(prev => ({
+      ...prev,
+      is_public: checked
+    }));
+    
+    // Update this preference immediately
+    try {
+      if (!user?.id) return;
+      
+      // Show subtle toast
+      toast({
+        title: checked ? "Profile set to public" : "Profile set to private",
+        description: "Saving your preference...",
+      });
+      
+      const result = await UserService.updateUserPreferences(user.id, {
+        is_public: checked
+      });
+      
+      if (!result.success) {
+        // Reset to previous state on error
+        setProfileForm(prev => ({
+          ...prev,
+          is_public: !checked
+        }));
+        
+        toast({
+          title: "Error saving preference",
+          description: result.error || "Please try again",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error updating profile visibility:", error);
+      
+      // Reset to previous state
+      setProfileForm(prev => ({
+        ...prev,
+        is_public: !checked
+      }));
+      
+      toast({
+        title: "Error saving preference",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Loading state
   if (isLoading) {
@@ -467,89 +953,169 @@ export default function ProfilePage() {
               <TabsContent value="settings">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-medium">Profile Settings</h3>
-                  <Button size="sm" onClick={handleSaveChanges}>Save Changes</Button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleSaveChanges}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Spinner className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : "Save Changes"}
+                  </Button>
                 </div>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Personal Information</CardTitle>
-                      <CardDescription>Update your personal details</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <label htmlFor="name" className="block text-sm font-medium">Display Name</label>
-                        <input 
-                          id="name"
-                          name="name"
-                          type="text" 
-                          className="w-full px-3 py-2 border rounded-md" 
-                          value={profileForm.name}
-                          onChange={handleProfileChange}
+                
+                {/* Personal Information Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Personal Information</h3>
+                  <div className="space-y-4">
+                    {/* Avatar upload section */}
+                    <div className="flex flex-col items-center md:flex-row md:items-start gap-4">
+                      <div className="relative">
+                        <Avatar className="h-20 w-20">
+                          {avatarPreview ? (
+                            <AvatarImage src={avatarPreview} alt="Avatar preview" />
+                          ) : profileForm.avatar_url ? (
+                            <AvatarImage src={profileForm.avatar_url} alt={profileForm.name || "User"} />
+                          ) : (
+                            <AvatarFallback>
+                              {profileForm.name ? profileForm.name.charAt(0).toUpperCase() : "U"}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <input
+                          type="file"
+                          id="avatar-upload"
+                          accept="image/*"
+                          onChange={handleAvatarChange}
+                          className="hidden"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="email" className="block text-sm font-medium">Email</label>
-                        <input 
-                          id="email"
-                          type="email" 
-                          className="w-full px-3 py-2 border rounded-md bg-muted" 
-                          value={user?.email || ""}
-                          disabled
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="bio" className="block text-sm font-medium">Bio</label>
-                        <textarea 
-                          id="bio"
-                          name="bio"
-                          className="w-full px-3 py-2 border rounded-md min-h-[80px]" 
-                          placeholder="Tell us about yourself..."
-                          value={profileForm.bio}
-                          onChange={handleProfileChange}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Preferences</CardTitle>
-                      <CardDescription>Customize your experience</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Email Notifications</p>
-                          <p className="text-sm text-muted-foreground">Receive product updates via email</p>
-                        </div>
-                        <Switch
-                          checked={profileForm.emailNotifications}
-                          onCheckedChange={(checked) => handleToggleChange('emailNotifications', checked)}
-                        />
-                      </div>
-                      <Separator />
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Dark Mode</p>
-                          <p className="text-sm text-muted-foreground">Switch between light and dark themes</p>
-                        </div>
-                        <Switch
-                          checked={profileForm.darkMode}
-                          onCheckedChange={(checked) => handleToggleChange('darkMode', checked)}
-                        />
-                      </div>
-                      <Separator />
-                      <div className="pt-2">
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={handleDeleteAccount}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                          onClick={() => document.getElementById('avatar-upload')?.click()}
                         >
-                          Delete Account
+                          <ImageIcon className="h-4 w-4" />
+                          <span className="sr-only">Upload avatar</span>
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="space-y-2 flex-1">
+                        <div className="grid gap-2">
+                          <Label htmlFor="name">Display Name</Label>
+                          <Input
+                            id="name"
+                            value={profileForm.name}
+                            onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
+                            placeholder="Your display name"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Email input section */}
+                    <div className="space-y-4">
+                      <Label htmlFor="email">Email</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="email"
+                          type="email"
+                          value={profileForm.email}
+                          onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
+                          placeholder="Email address"
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleEmailUpdate}
+                          disabled={emailUpdateState.processing || profileForm.email === user?.email || !profileForm.email}
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 h-10"
+                        >
+                          {emailUpdateState.processing ? (
+                            <>
+                              <Spinner className="mr-1 h-4 w-4" />
+                              Updating...
+                            </>
+                          ) : (
+                            "Update Email"
+                          )}
+                        </Button>
+                      </div>
+                      {emailUpdateState.error && (
+                        <p className="text-sm text-red-500">{emailUpdateState.error}</p>
+                      )}
+                    </div>
+                    
+                    {/* Bio section */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="bio">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        value={profileForm.bio}
+                        onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
+                        placeholder="Tell us about yourself..."
+                        className="resize-none"
+                        rows={4}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        This information will be displayed on your public profile.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Preferences section */}
+                <div className="mt-8 space-y-4">
+                  <h3 className="text-lg font-medium">Preferences</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Email Notifications</p>
+                        <p className="text-sm text-muted-foreground">Receive product updates via email</p>
+                      </div>
+                      <Switch
+                        checked={profileForm.emailNotifications}
+                        onCheckedChange={handleEmailNotificationsToggle}
+                      />
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Dark Mode</p>
+                        <p className="text-sm text-muted-foreground">Switch between light and dark themes</p>
+                      </div>
+                      <Switch
+                        checked={profileForm.darkMode}
+                        onCheckedChange={handleDarkModeToggle}
+                      />
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Public Profile</p>
+                        <p className="text-sm text-muted-foreground">Allow others to see your profile</p>
+                      </div>
+                      <Switch
+                        checked={profileForm.is_public}
+                        onCheckedChange={handlePublicProfileToggle}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Delete Account */}
+                <div className="pt-8">
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleDeleteAccount}
+                  >
+                    Delete Account
+                  </Button>
                 </div>
               </TabsContent>
             </div>

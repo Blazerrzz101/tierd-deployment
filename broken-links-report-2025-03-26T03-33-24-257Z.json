@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-03-26T03:33:47.415Z",
+  "baseUrl": "http://localhost:3000",
+  "summary": {
+    "pagesChecked": 55,
+    "brokenLinksFound": 4
+  },
+  "brokenLinks": [
+    {
+      "url": "http://localhost:3000/categories/gaming-mice",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 5660,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/privacy",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 71,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/terms",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 71,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/privacy#cookies",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 63,
+      "error": null
+    }
+  ]
+}

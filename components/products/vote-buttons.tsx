@@ -3,21 +3,27 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ArrowBigUp, ArrowBigDown, AlertCircle } from "lucide-react"
+import { ArrowBigUp, ArrowBigDown } from "lucide-react"
 import { useVote } from "@/hooks/use-vote"
 import { useEnhancedAuth } from "@/hooks/enhanced-auth"
-import { Badge } from "@/components/ui/badge"
-import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { InfinityIcon, ChevronRight } from "lucide-react"
-import { Product } from "@/types/product"
-import { getClientId } from "@/utils/client-id"
+import { Product, VoteType } from "@/types/product"
+import { getClientId, generateClientId } from "@/utils/client-id"
+import { toast } from "sonner"
 
 interface VoteButtonsProps {
-  product: Pick<Product, "id" | "name">
+  product: Pick<Product, "id" | "name"> & {
+    upvotes?: number;
+    downvotes?: number;
+    userVote?: {
+      hasVoted: boolean;
+      voteType: VoteType;
+    } | number | null;
+  }
   initialUpvotes?: number
   initialDownvotes?: number
-  initialVoteType?: number | null
+  initialVoteType?: VoteType | number | null
+  className?: string
 }
 
 export function VoteButtons({
@@ -25,49 +31,79 @@ export function VoteButtons({
   initialUpvotes = 5,
   initialDownvotes = 2,
   initialVoteType = null,
+  className,
 }: VoteButtonsProps) {
-  const [upvotes, setUpvotes] = useState(initialUpvotes)
-  const [downvotes, setDownvotes] = useState(initialDownvotes)
-  const [voteType, setVoteType] = useState<number | null>(initialVoteType)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { user } = useEnhancedAuth()
   const { vote, getVoteStatus, isLoading: voteIsLoading } = useVote()
-  const { user, isLoading: authLoading } = useEnhancedAuth()
   
-  // Add a state variable to track remaining votes
-  const [remainingVotes, setRemainingVotes] = useState<number | null>(null)
+  // Safely access upvotes/downvotes with fallbacks
+  const [upvotes, setUpvotes] = useState(
+    product?.upvotes !== undefined ? product.upvotes : initialUpvotes
+  )
+  const [downvotes, setDownvotes] = useState(
+    product?.downvotes !== undefined ? product.downvotes : initialDownvotes
+  )
   
-  // Add an effect to fetch remaining votes
-  useEffect(() => {
-    const fetchRemainingVotes = async () => {
-      try {
-        const response = await fetch(`/api/vote/remaining-votes?clientId=${getClientId()}`)
-        if (response.ok) {
-          const data = await response.json()
-          setRemainingVotes(data.remainingVotes)
-        }
-      } catch (error) {
-        console.error("Error fetching remaining votes:", error)
-      }
+  // Extract vote type from either format
+  const getInitialVoteType = () => {
+    if (!product?.userVote && initialVoteType === null) return null;
+    
+    // Handle object format
+    if (product?.userVote && typeof product.userVote === 'object' && 'voteType' in product.userVote) {
+      return product.userVote.voteType;
     }
     
-    if (!user) {
-      fetchRemainingVotes()
-    } else {
-      // For authenticated users, set a high number
-      setRemainingVotes(999)
+    // Handle number format
+    if (product?.userVote && typeof product.userVote === 'number') {
+      return product.userVote;
     }
-  }, [user])
+    
+    return initialVoteType;
+  };
+  
+  const [voteType, setVoteType] = useState<number | null>(getInitialVoteType())
+  const [isLoading, setIsLoading] = useState(false)
+  const [clientId, setClientId] = useState<string | null>(null)
 
   // Calculate score
   const score = upvotes - downvotes
+
+  // Initialize client ID
+  useEffect(() => {
+    // Ensure client ID is available
+    function ensureClientId() {
+      try {
+        // Try to get existing client ID
+        let id = getClientId();
+        
+        // If no client ID is found, generate a new one
+        if (!id || id === 'server-side') {
+          if (typeof window !== 'undefined') {
+            id = generateClientId();
+            localStorage.setItem('clientId', id);
+            console.log('Generated new client ID:', id);
+          } else {
+            console.error('Cannot generate client ID on server side');
+            return null;
+          }
+        }
+        
+        setClientId(id);
+        return id;
+      } catch (error) {
+        console.error('Error ensuring client ID:', error);
+        return null;
+      }
+    }
+    
+    ensureClientId();
+  }, []);
 
   // Check for vote status on component mount
   useEffect(() => {
     async function checkVoteStatus() {
       if (product?.id) {
         try {
-          setError(null)
           const status = await getVoteStatus(product.id)
           
           if (status && status.success) {
@@ -75,13 +111,9 @@ export function VoteButtons({
             setUpvotes(typeof status.upvotes === 'number' ? status.upvotes : initialUpvotes)
             setDownvotes(typeof status.downvotes === 'number' ? status.downvotes : initialDownvotes)
             setVoteType(status.voteType !== undefined ? status.voteType : null)
-          } else if (status && status.error) {
-            console.error("Error checking vote status:", status.error)
-            setError(status.error)
           }
         } catch (error) {
           console.error("Error checking vote status:", error)
-          setError(error instanceof Error ? error.message : "Unknown error checking vote status")
         }
       }
     }
@@ -98,228 +130,128 @@ export function VoteButtons({
     setVoteType(initialVoteType !== undefined ? initialVoteType : null)
   }, [initialUpvotes, initialDownvotes, initialVoteType])
 
-  // Add a state variable to track if vote is being processed
-  const [isVoting, setIsVoting] = useState(false)
-
-  const handleVote = async (newVoteType: 1 | -1) => {
-    // Don't allow voting if disabled or currently voting
-    if (isLoading || isVoting || !product?.id) return
+  const handleUpvote = async () => {
+    if (isLoading || voteIsLoading || !product?.id) return
     
-    // Start vote processing
-    setIsVoting(true)
-    
-    // Check if user has remaining votes (for anonymous users)
-    if (!user && (remainingVotes !== null && remainingVotes <= 0)) {
-      toast.error("You've used all your votes. Sign in for unlimited voting!", {
-        action: {
-          label: "Sign In",
-          onClick: () => {
-            // Route to sign-in page
-            window.location.href = "/auth/sign-in"
+    // Ensure client ID exists before voting
+    if (!clientId) {
+      const newClientId = typeof window !== 'undefined' ? getClientId() : null;
+      
+      if (!newClientId || newClientId === 'server-side') {
+        toast.error("Unable to vote: Client ID unavailable", {
+          description: "Please go to the debug page to fix this issue: /debug/client-id",
+          action: {
+            label: "Fix Now",
+            onClick: () => window.location.href = "/debug/client-id"
           }
-        }
-      })
-      setIsVoting(false)
-      return
+        });
+        return;
+      }
+      
+      setClientId(newClientId);
     }
     
     try {
-      // Determine if this is toggling a vote
-      const isToggle = newVoteType === voteType
+      setIsLoading(true)
+      const result = await vote(product, 1)
       
-      // Optimistic UI updates
-      const previousVoteType = voteType
-      const previousUpvotes = upvotes
-      const previousDownvotes = downvotes
-      
-      // Update local state (optimistically)
-      if (isToggle) {
-        // Toggling the vote (removing it)
-        setVoteType(null)
-        if (newVoteType === 1) {
-          setUpvotes(prev => Math.max(0, prev - 1))
-        } else {
-          setDownvotes(prev => Math.max(0, prev - 1))
-        }
-      } else {
-        // New vote or changing vote
-        if (voteType === 1) {
-          // Changing from upvote to downvote
-          setUpvotes(prev => Math.max(0, prev - 1))
-          setDownvotes(prev => prev + 1)
-        } else if (voteType === -1) {
-          // Changing from downvote to upvote
-          setDownvotes(prev => Math.max(0, prev - 1))
-          setUpvotes(prev => prev + 1)
-        } else {
-          // New vote
-          if (newVoteType === 1) {
-            setUpvotes(prev => prev + 1)
-          } else {
-            setDownvotes(prev => prev + 1)
-          }
-        }
-        setVoteType(newVoteType)
-      }
-      
-      // Call API to cast vote
-      const response = await vote(product, newVoteType)
-      
-      if (!response || !response.success) {
-        // Handle error response
-        const errorMsg = response?.error || "Failed to cast vote"
-        setError(errorMsg)
-        console.error("Vote error:", errorMsg)
-        
-        toast.error(errorMsg)
-        
-        // Revert optimistic updates
-        setUpvotes(previousUpvotes)
-        setDownvotes(previousDownvotes)
-        setVoteType(previousVoteType)
-      } else {
-        // Handle success
-        // Update with actual server values
-        if (typeof response.upvotes === 'number') {
-          setUpvotes(response.upvotes)
-        }
-        
-        if (typeof response.downvotes === 'number') {
-          setDownvotes(response.downvotes)
-        }
-        
-        // Set the vote type from the response
-        if (response.voteType !== undefined) {
-          setVoteType(response.voteType)
-        }
-        
-        // Show feedback based on the vote action
-        if (isToggle) {
-          toast.success("Vote removed")
-        } else if (previousVoteType !== null) {
-          toast.success("Vote changed")
-        } else {
-          toast.success(newVoteType === 1 ? "Upvoted!" : "Downvoted!")
-        }
-        
-        // Update remaining votes
-        if (response.remainingVotes !== undefined) {
-          setRemainingVotes(response.remainingVotes)
-        }
-        
-        // If authenticated, show different message
-        if (user) {
-          // No remaining votes limit for authenticated users
-        } else {
-          // Show remaining votes for anonymous users
-          const votesLeft = response.remainingVotes || 0
-          if (votesLeft <= 2) {
-            toast.info(`You have ${votesLeft} ${votesLeft === 1 ? 'vote' : 'votes'} left. Sign in for unlimited voting!`, {
-              action: {
-                label: "Sign In",
-                onClick: () => {
-                  window.location.href = "/auth/sign-in"
-                }
-              }
-            })
-          }
-        }
+      if (result && !result.error) {
+        setVoteType(1)
+        setUpvotes(result.upvotes || upvotes)
+        setDownvotes(result.downvotes || downvotes)
       }
     } catch (error) {
-      console.error("Error casting vote:", error)
-      toast.error("Failed to cast vote. Please try again.")
+      console.error("Error upvoting:", error)
+      toast.error("Error submitting your vote. Please try again later.");
     } finally {
-      setIsVoting(false)
+      setIsLoading(false)
+    }
+  }
+  
+  const handleDownvote = async () => {
+    if (isLoading || voteIsLoading || !product?.id) return
+    
+    // Ensure client ID exists before voting
+    if (!clientId) {
+      const newClientId = typeof window !== 'undefined' ? getClientId() : null;
+      
+      if (!newClientId || newClientId === 'server-side') {
+        toast.error("Unable to vote: Client ID unavailable", {
+          description: "Please go to the debug page to fix this issue: /debug/client-id",
+          action: {
+            label: "Fix Now",
+            onClick: () => window.location.href = "/debug/client-id"
+          }
+        });
+        return;
+      }
+      
+      setClientId(newClientId);
+    }
+    
+    try {
+      setIsLoading(true)
+      const result = await vote(product, -1)
+      
+      if (result && !result.error) {
+        setVoteType(-1)
+        setUpvotes(result.upvotes || upvotes)
+        setDownvotes(result.downvotes || downvotes)
+      }
+    } catch (error) {
+      console.error("Error downvoting:", error)
+      toast.error("Error submitting your vote. Please try again later.");
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <TooltipProvider>
-      <div className="flex flex-col items-center gap-1">
+    <TooltipProvider delayDuration={300}>
+      <div className={cn("flex flex-col items-center", className)}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className={`h-8 w-8 ${voteType === 1 ? "text-green-500" : ""} transition-colors duration-200`}
-              onClick={() => handleVote(1)}
-              disabled={isLoading || isVoting}
-              aria-label={voteType === 1 ? "Remove upvote" : "Upvote"}
+              className={cn(
+                "h-10 w-10 rounded-full",
+                voteType === 1 && "text-primary bg-primary/10"
+              )}
+              onClick={handleUpvote}
+              disabled={isLoading}
             >
               <ArrowBigUp className="h-6 w-6" />
+              <span className="sr-only">Upvote</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>{voteType === 1 ? "Remove upvote" : "Upvote"}</p>
+          <TooltipContent side="right">
+            <p>Upvote this product</p>
           </TooltipContent>
         </Tooltip>
         
-        {/* Show score with dynamic styling */}
-        <span className={`text-sm font-medium ${score > 0 ? 'text-green-500' : score < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
-          {score}
-        </span>
+        <span className="text-sm font-medium my-1">{score}</span>
         
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className={`h-8 w-8 ${voteType === -1 ? "text-red-500" : ""} transition-colors duration-200`}
-              onClick={() => handleVote(-1)}
-              disabled={isLoading || isVoting}
-              aria-label={voteType === -1 ? "Remove downvote" : "Downvote"}
+              className={cn(
+                "h-10 w-10 rounded-full",
+                voteType === -1 && "text-destructive bg-destructive/10"
+              )}
+              onClick={handleDownvote}
+              disabled={isLoading}
             >
               <ArrowBigDown className="h-6 w-6" />
+              <span className="sr-only">Downvote</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>
-            <p>{voteType === -1 ? "Remove downvote" : "Downvote"}</p>
+          <TooltipContent side="right">
+            <p>Downvote this product</p>
           </TooltipContent>
         </Tooltip>
-        
-        {/* Display error if present */}
-        {error && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-red-500 mt-1 cursor-help">
-                <AlertCircle className="h-4 w-4" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="max-w-xs text-xs">{error}</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-        
-        {/* Show vote limit for anonymous users */}
-        {user?.isAnonymous && (
-          <div className="mt-1">
-            <Badge variant="outline" className="text-xs">
-              {remainingVotes !== null ? `${remainingVotes} votes left` : 'Limited votes'}
-            </Badge>
-          </div>
-        )}
-        
-        {/* Add visual indication for authenticated users */}
-        {user && (
-          <span className="text-xs text-muted-foreground ml-1 flex items-center">
-            <Badge variant="outline" className="px-1 py-0 h-4 text-[10px]">
-              <InfinityIcon className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">Unlimited</span>
-            </Badge>
-          </span>
-        )}
-        
-        {/* Show sign in prompt for anonymous users with low votes */}
-        {!user && !isLoading && !authLoading && remainingVotes !== null && (remainingVotes <= 3) && (
-          <span className="text-xs text-muted-foreground ml-1 flex items-center">
-            <Badge variant="outline" className="px-1 py-0 h-5 text-[10px]">
-              <span>{remainingVotes}</span>
-              <span className="hidden sm:inline mx-1">votes left</span>
-              <ChevronRight className="h-3 w-3" />
-            </Badge>
-          </span>
-        )}
       </div>
     </TooltipProvider>
   );

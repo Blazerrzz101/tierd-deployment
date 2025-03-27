@@ -1,0 +1,45 @@
+{
+  "timestamp": "2025-03-26T03:40:10.100Z",
+  "baseUrl": "http://localhost:3000",
+  "summary": {
+    "pagesChecked": 18,
+    "brokenLinksFound": 5
+  },
+  "brokenLinks": [
+    {
+      "url": "http://localhost:3000/community",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 2372,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/about",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 2367,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/auth/sign-in",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 2230,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/auth/sign-up",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 2215,
+      "error": null
+    },
+    {
+      "url": "http://localhost:3000/products",
+      "status": 404,
+      "statusText": "Not Found",
+      "loadTime": 2160,
+      "error": null
+    }
+  ]
+}

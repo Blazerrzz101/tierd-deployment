@@ -9,17 +9,90 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { VoteButtons } from "@/components/products/vote-buttons"
 import { useVote } from "@/hooks/use-vote"
+import { createProductUrl } from "@/utils/product-utils"
+import { useState, useEffect, useRef } from "react"
+import { toast } from "sonner"
 
 interface RankingCardProps {
   rank: number
   product: Product
 }
 
-export function RankingCard({ rank, product }: RankingCardProps) {
-  const { vote } = useVote(product)
+// Cooldown period between votes (ms)
+const VOTE_COOLDOWN = 1000;
 
+// Funny messages for when users click too rapidly
+const SPAM_CLICK_MESSAGES = [
+  "Whoa there, eager voter! Your clicks are faster than our servers! ⚡",
+  "Easy on the clicks, champ! Even pro gamers need a cooldown. 🎮",
+  "Our vote counter needs a breather! Try again in a second. ⏱️",
+  "Vote throttled! You're too enthusiastic for our servers! 🚀",
+  "Save your APM for StarCraft! Voting has a cooldown. 🌟",
+  "Click... wait... click... That's the rhythm we're looking for! 🎵",
+];
+
+export function RankingCard({ rank, product }: RankingCardProps) {
+  const { vote } = useVote()
+  
   // Get the image URL, falling back to placeholder
   const imageUrl = product.image_url || "/images/products/placeholder.svg"
+  
+  // Generate a proper product URL using the utility function
+  const productUrl = createProductUrl(product)
+  
+  // Add state for vote rate limiting
+  const [lastVoteTime, setLastVoteTime] = useState(0)
+  const [spamClickCount, setSpamClickCount] = useState(0)
+  const spamTimerRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Clear spam timer on unmount
+  useEffect(() => {
+    return () => {
+      if (spamTimerRef.current) {
+        clearTimeout(spamTimerRef.current)
+      }
+    }
+  }, [])
+  
+  // Handle voting with rate limiting
+  const handleVote = (voteType: number) => {
+    const now = Date.now()
+    const timeSinceLastVote = now - lastVoteTime
+    
+    // If trying to vote too quickly
+    if (timeSinceLastVote < VOTE_COOLDOWN) {
+      // Increment spam counter
+      const newSpamCount = spamClickCount + 1
+      setSpamClickCount(newSpamCount)
+      
+      // Show toast for repeated rapid clicks
+      if (newSpamCount >= 3) {
+        // Get a random message from our list
+        const randomMessage = SPAM_CLICK_MESSAGES[Math.floor(Math.random() * SPAM_CLICK_MESSAGES.length)]
+        toast(randomMessage)
+        
+        // Reset spam counter after a delay
+        if (spamTimerRef.current) {
+          clearTimeout(spamTimerRef.current)
+        }
+        
+        spamTimerRef.current = setTimeout(() => {
+          setSpamClickCount(0)
+        }, 3000)
+      }
+      
+      return
+    }
+    
+    // Update last vote time
+    setLastVoteTime(now)
+    
+    // Make the vote API call
+    vote({
+      id: product.id,
+      name: product.name
+    }, voteType)
+  }
 
   return (
     <motion.div
@@ -85,7 +158,7 @@ export function RankingCard({ rank, product }: RankingCardProps) {
               product={product}
               onVote={vote}
             />
-            <Link href={`/products/${product.url_slug || product.id}`}>
+            <Link href={productUrl}>
               <Button 
                 variant="ghost" 
                 size="sm"

@@ -67,7 +67,7 @@ const convertMockThread = (mockThread): ExtendedThread => {
     user: {
       id: mockThread.author?.id || "mock-user",
       username: mockThread.author?.name || "Anonymous",
-      avatar_url: mockThread.author?.image || null
+      avatar_url: mockThread.author?.image || "/placeholders/user.svg"
     },
     taggedProducts: [],
     category: mockThread.category
@@ -141,13 +141,29 @@ export default function CommunityPage() {
   }
   
   // Handle adding a new thread
-  const handleThreadCreated = (newThread: ExtendedThread) => {
-    setThreads(prev => [newThread, ...prev])
+  const handleThreadCreated = (thread: any): void => {
+    // Ensure the thread has all required ExtendedThread properties
+    const extendedThread: ExtendedThread = {
+      ...thread,
+      user_id: thread.author?.id || user?.id || "user_" + Date.now(),
+      updated_at: thread.created_at || new Date().toISOString(),
+      mentioned_products: thread.taggedProducts?.map(p => p.id) || [],
+      is_pinned: false,
+      is_locked: false,
+      user: {
+        id: thread.author?.id || user?.id || "user_" + Date.now(),
+        username: thread.author?.name || user?.name || "Anonymous",
+        avatar_url: thread.author?.avatar_url || user?.avatar_url || "/placeholders/user.svg"
+      },
+      category: thread.category || 'General'
+    };
+    
+    setThreads(prev => [extendedThread, ...prev]);
     toast({
       title: "Thread created",
       description: "Your discussion has been posted successfully",
-    })
-  }
+    });
+  };
 
   // Format category name for display
   const formatCategoryName = (category: string) => {
@@ -378,8 +394,8 @@ export default function CommunityPage() {
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
                           <Avatar className="hidden sm:flex h-10 w-10 ring-2 ring-white/10">
-                            <AvatarImage src={thread.user.avatar_url || undefined} />
-                            <AvatarFallback>{thread.user.username?.[0] || 'U'}</AvatarFallback>
+                            <AvatarImage src={thread.user?.avatar_url || "/placeholders/user.svg"} alt={thread.user?.username || "User"} />
+                            <AvatarFallback>{(thread.user?.username?.[0] || 'U').toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center flex-wrap gap-2 mb-1">
@@ -388,14 +404,14 @@ export default function CommunityPage() {
                               </h3>
                               <Badge 
                                 variant="outline" 
-                                className={`text-xs ${getCategoryColor(thread.category || '')}`}
+                                className={`text-xs ${getCategoryColor(thread.category || 'default')}`}
                               >
-                                {formatCategoryName(thread.category || '')}
+                                {formatCategoryName(thread.category || 'General')}
                               </Badge>
                             </div>
                             
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span className="font-medium">{thread.user.username}</span>
+                              <span className="font-medium">{thread.user?.username || "Anonymous"}</span>
                               <span>·</span>
                               <span className="flex items-center">
                                 <Clock className="h-3 w-3 mr-1" />

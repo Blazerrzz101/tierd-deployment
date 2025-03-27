@@ -1,113 +1,78 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useProducts } from '@/hooks/useProducts'
-import { ProductGrid } from '@/components/products/ProductGrid'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import type { Database } from '@/types/supabase'
-
-type ProductRanking = Database['public']['Views']['product_rankings']['Row']
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Skeleton } from "@/components/ui/skeleton"
+import { mockProducts, getValidProductSlug } from "@/utils/product-utils"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { ChevronRight, ExternalLink } from "lucide-react"
 
 export default function ProductsPage() {
-  const { products, loading, error, fetchProducts, vote } = useProducts()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'rank' | 'rating' | 'price'>('rank')
-
-  // Get unique categories
-  const categories = Array.from(new Set(products.map((p) => p.category))).sort()
-
-  // Filter and sort products
-  const filteredProducts = products
-    .filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === 'all' || !selectedCategory || product.category === selectedCategory
-      return matchesSearch && matchesCategory
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'rating':
-          return (b.rating || 0) - (a.rating || 0)
-        case 'price':
-          return ((a.price || 0) - (b.price || 0))
-        default:
-          return a.rank - b.rank
-      }
-    })
-
+  const router = useRouter()
+  
+  // Products by category for easy browsing
+  const productsByCategory = mockProducts.reduce((acc, product) => {
+    const category = product.category || "uncategorized"
+    if (!acc[category]) {
+      acc[category] = []
+    }
+    acc[category].push(product)
+    return acc
+  }, {} as Record<string, typeof mockProducts>)
+  
+  // Sort categories by number of products
+  const sortedCategories = Object.keys(productsByCategory).sort((a, b) => 
+    productsByCategory[b].length - productsByCategory[a].length
+  )
+  
   return (
-    <div className="container mx-auto max-w-7xl py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Gaming Mice</h1>
-        <p className="mt-2 text-muted-foreground">
-          Find and compare the best gaming mice, ranked by the community
-        </p>
+    <div className="container mx-auto max-w-6xl px-4 py-12">
+      <h1 className="text-3xl font-bold mb-8">Browse All Products</h1>
+      
+      <div className="space-y-16">
+        {sortedCategories.map(category => (
+          <div key={category} className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold capitalize">{category.replace(/-/g, ' ')}</h2>
+              <Link href={`/rankings?category=${category}`}>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  View Rankings
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {productsByCategory[category].map(product => {
+                const productUrl = `/products/${getValidProductSlug(product)}`
+                
+                return (
+                  <Card key={product.id} className="hover:shadow-md transition-all">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="line-clamp-1">
+                        <Link href={productUrl} className="hover:text-primary flex items-center gap-2">
+                          {product.name}
+                          <ExternalLink className="h-4 w-4 opacity-50" />
+                        </Link>
+                      </CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {product.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                      <Link href={productUrl}>
+                        <Button>View Details</Button>
+                      </Link>
+                    </CardFooter>
+                  </Card>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
-
-      <div className="mb-8 space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="space-y-2">
-            <Label>Search</Label>
-            <Input
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Sort by</Label>
-            <Select
-              value={sortBy}
-              onValueChange={(value) => setSortBy(value as typeof sortBy)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="rank">Rank</SelectItem>
-                <SelectItem value="rating">Rating</SelectItem>
-                <SelectItem value="price">Price: Low to High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {error && (
-          <div className="rounded-lg bg-destructive/10 p-4 text-destructive">
-            {error}
-          </div>
-        )}
-      </div>
-
-      <ProductGrid
-        products={filteredProducts as any[]}
-        onVote={vote}
-        isLoading={loading}
-      />
     </div>
   )
 } 

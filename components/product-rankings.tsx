@@ -1,8 +1,10 @@
 import { Card } from "@/components/ui/card";
-import { VoteButtons } from "@/components/vote-buttons";
 import { Product } from "@/types/product";
 import Image from "next/image";
 import Link from "next/link";
+import { createProductUrl } from "@/utils/product-utils";
+import { ProductVoteWrapper } from "@/components/products/product-vote-wrapper";
+import { GlobalVoteButtons } from "@/components/products/global-vote-buttons";
 
 interface ProductRankingCardProps {
   product: Product;
@@ -16,19 +18,16 @@ function ProductRankingCard({ product, rank }: ProductRankingCardProps) {
         <span className="text-2xl font-bold text-muted-foreground">
           {rank}
         </span>
-        <VoteButtons
-          product={{
-            id: product.id,
-            userVote: product.userVote,
-            upvotes: product.upvotes,
-            downvotes: product.downvotes,
-          }}
-        />
+        <ProductVoteWrapper product={product}>
+          {() => (
+            <GlobalVoteButtons product={product} />
+          )}
+        </ProductVoteWrapper>
       </div>
       <div className="flex flex-1 items-center gap-4">
         <div className="relative h-24 w-24 overflow-hidden rounded-lg">
           <Image
-            src={product.imageUrl}
+            src={product.imageUrl || product.image_url || "/images/product-placeholder.png"}
             alt={product.name}
             fill
             className="object-cover"
@@ -36,7 +35,7 @@ function ProductRankingCard({ product, rank }: ProductRankingCardProps) {
         </div>
         <div className="flex-1">
           <Link
-            href={`/products/${product.url_slug}`}
+            href={createProductUrl(product)}
             className="text-lg font-semibold hover:underline"
           >
             {product.name}

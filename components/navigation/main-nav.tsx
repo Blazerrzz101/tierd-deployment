@@ -54,6 +54,13 @@ const defaultItems: NavItem[] = [
     description: "Featured products and builds",
     icon: "logo",
   },
+  {
+    title: "Images",
+    href: "/product-images",
+    description: "Find and preview real product images",
+    icon: "logo",
+    badge: "New"
+  },
 ]
 
 export function MainNav({ items = defaultItems }: MainNavProps) {

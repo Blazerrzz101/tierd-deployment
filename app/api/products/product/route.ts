@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProductVoteCounts, getUserVote, updateVote } from '../../../lib/vote-utils';
+import { mockProducts, findProductBySlug, getValidProductSlug, slugifyString } from '@/utils/product-utils'; // Add additional imports
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
-// Import mockProducts from the products route
-import { mockProducts } from '../route';
 
 // Vote validation schema
 type VoteRequest = {
@@ -32,22 +30,49 @@ export async function GET(request: NextRequest) {
     if (id) {
       product = mockProducts.find(p => p.id === id);
     } else if (slug) {
-      // First try direct slug match
-      product = mockProducts.find(p => p.url_slug === slug);
+      // Use the findProductBySlug function for more robust slug matching
+      product = findProductBySlug(slug);
       
-      // If not found, try alternative slugs
+      // If still not found, try normalizing the slug
+      if (!product) {
+        const normalizedSlug = slugifyString(slug);
+        product = mockProducts.find(p => 
+          slugifyString(p.name) === normalizedSlug || 
+          getValidProductSlug(p) === normalizedSlug
+        );
+      }
+      
+      // Last attempt: try partial match
       if (!product) {
         product = mockProducts.find(p => 
-          p.alternativeSlugs && 
-          Array.isArray(p.alternativeSlugs) && 
-          p.alternativeSlugs.includes(slug)
+          p.name.toLowerCase().includes(slug.toLowerCase()) ||
+          (p.url_slug && p.url_slug.toLowerCase().includes(slug.toLowerCase()))
         );
       }
     }
 
     if (!product) {
       console.log(`Product not found: ${id || slug}`);
-      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
+      
+      // Find similar products as suggestions
+      const similarProducts = mockProducts
+        .filter(p => 
+          p.name.toLowerCase().includes((slug || id || '').toLowerCase()) ||
+          (p.url_slug && p.url_slug.toLowerCase().includes((slug || id || '').toLowerCase()))
+        )
+        .slice(0, 3)
+        .map(p => ({ id: p.id, name: p.name, url_slug: getValidProductSlug(p) }));
+      
+      return NextResponse.json({ 
+        success: false, 
+        error: "Product not found",
+        suggestedProducts: similarProducts.length > 0 ? similarProducts : undefined
+      }, { status: 404 });
+    }
+
+    // Ensure the product has a valid slug
+    if (!product.url_slug || product.url_slug === 'undefined') {
+      product.url_slug = getValidProductSlug(product);
     }
 
     // Get vote data from the vote utils

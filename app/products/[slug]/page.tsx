@@ -1,158 +1,102 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Product } from "@/utils/product-utils"
-import { getProductByIdOrSlug, getValidProductSlug, findProductBySlug, isValidProductSlug, createProductUrl } from "@/utils/product-utils"
+import { UnifiedProductDetail } from "@/components/products/unified-product-detail"
+import { Product, findProductBySlug, getValidProductSlug } from "@/utils/product-utils"
+import { products } from "@/lib/data"
+import { notFound, useParams } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, AlertTriangle } from "lucide-react"
-import ProductDetail from "@/components/products/product-detail"
 
-interface ProductPageProps {
-  params: {
-    slug: string
-  }
-}
-
-export default function ProductPage({ params }: ProductPageProps) {
-  const router = useRouter()
+export default function ProductPage() {
+  const params = useParams()
+  const slug = params?.slug as string
   const [product, setProduct] = useState<Product | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [validSlug, setValidSlug] = useState<string | null>(null)
-  const [invalidSlugDetected, setInvalidSlugDetected] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  // Debug: Log the incoming slug parameter
   useEffect(() => {
-    console.log("Product page mounted with slug:", params.slug);
-    
-    // Check if the slug is valid
-    if (!isValidProductSlug(params.slug)) {
-      console.error(`Invalid slug detected: ${params.slug}`);
-      setInvalidSlugDetected(true);
+    const findProduct = async () => {
+      setLoading(true)
       
-      // Try to find a product that might match despite the invalid slug
-      const possibleProduct = findProductBySlug(params.slug);
-      if (possibleProduct) {
-        // We found a product that matches, get its valid slug
-        const validProductSlug = getValidProductSlug(possibleProduct);
-        console.log(`Found matching product with valid slug: ${validProductSlug}`);
-        setValidSlug(validProductSlug);
-        
-        // Redirect to the correct URL after a short delay
-        setTimeout(() => {
-          router.replace(createProductUrl(possibleProduct));
-        }, 100);
+      // Try to find the product by slug
+      const foundProduct = findProductBySlug(slug)
+      
+      if (foundProduct) {
+        setProduct(foundProduct)
       } else {
-        setError("Invalid product URL. This product could not be found.");
-        setIsLoading(false);
+        // If product not found, try to fetch from API
+        try {
+          const response = await fetch(`/api/products/product?slug=${slug}`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.product) {
+              setProduct(data.product)
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching product with slug ${slug}:`, error)
+        }
       }
-      return;
+      
+      setLoading(false)
     }
     
-    // Fetch product data
-    async function fetchProduct() {
-      try {
-        setIsLoading(true);
-        
-        // First try to find the product in our local data
-        const foundProduct = findProductBySlug(params.slug);
-        if (foundProduct) {
-          setProduct(foundProduct);
-          setIsLoading(false);
-          return;
-        }
-        
-        // If not found locally, try the API
-        const result = await getProductByIdOrSlug(params.slug);
-        
-        if (result) {
-          setProduct(result);
-        } else {
-          setError("Product not found. It may have been removed or the URL is incorrect.");
-        }
-      } catch (err) {
-        console.error("Error loading product:", err);
-        setError("Error loading product data. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
+    if (slug) {
+      findProduct()
     }
-    
-    fetchProduct();
-  }, [params.slug, router]);
-
-  // Render appropriate content based on state
-  if (invalidSlugDetected && validSlug) {
+  }, [slug])
+  
+  // Show loading state
+  if (loading) {
     return (
-      <div className="container py-8">
-        <Alert className="mb-6 bg-yellow-50 border-yellow-200">
-          <AlertTriangle className="h-4 w-4 text-yellow-600" />
-          <AlertTitle>Redirecting to correct product page</AlertTitle>
-          <AlertDescription>
-            The URL contains an invalid product identifier. You're being redirected to the correct page.
-          </AlertDescription>
-        </Alert>
-        <div className="flex justify-center">
-          <Skeleton className="h-96 w-full max-w-3xl rounded-lg" />
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="container py-8">
-        <Skeleton className="h-12 w-64 mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Skeleton className="h-96 rounded-lg col-span-2" />
-          <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-10 w-full" />
+      <div className="container mx-auto max-w-6xl px-4 py-12">
+        <Skeleton className="w-full h-8 mb-4" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-5">
+            <Skeleton className="w-full aspect-square rounded-xl" />
+          </div>
+          <div className="lg:col-span-7">
+            <Skeleton className="w-full h-10 mb-4" />
+            <Skeleton className="w-3/4 h-4 mb-2" />
+            <Skeleton className="w-1/2 h-4 mb-6" />
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <Skeleton className="w-full h-20" />
+              <Skeleton className="w-full h-20" />
+            </div>
+            <Skeleton className="w-full h-40" />
           </div>
         </div>
       </div>
-    );
+    )
   }
 
-  if (error || !product) {
-    return (
-      <div className="container py-8">
-        <Card className="max-w-3xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-xl font-medium">Product Not Found</CardTitle>
-            <CardDescription>
-              {error || "This product could not be found or no longer exists."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
-              The product you're looking for might:
-            </p>
-            <ul className="list-disc pl-6 space-y-1 text-muted-foreground">
-              <li>Have been removed or renamed</li>
-              <li>Have a URL that has changed</li>
-              <li>Be temporarily unavailable</li>
-            </ul>
-            <div className="pt-4 flex gap-4">
-              <Button onClick={() => router.push('/products')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Browse All Products
-              </Button>
-              <Button variant="outline" onClick={() => router.back()}>
-                Go Back
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // If product not found even after API check, show 404 page
+  if (!product) {
+    return notFound()
+  }
+  
+  // Ensure all required properties exist on the product
+  const standardizedProduct: Product = {
+    ...product,
+    id: product.id,
+    name: product.name,
+    category: product.category || "",
+    description: product.description || "",
+    image_url: product.imageUrl || product.image_url || "/images/product-placeholder.png",
+    imageUrl: product.imageUrl || product.image_url || "/images/product-placeholder.png",
+    url_slug: product.url_slug || getValidProductSlug(product),
+    upvotes: product.upvotes || 0,
+    downvotes: product.downvotes || 0,
+    score: (product.upvotes || 0) - (product.downvotes || 0),
+    rank: product.rank || 0,
+    price: product.price || 0,
+    rating: product.rating || 0,
+    review_count: product.review_count || 0,
+    reviews: product.reviews || [],
+    threads: product.threads || [],
+    specifications: product.specifications || (product as any).specs || {},
+    created_at: product.created_at || new Date().toISOString(),
+    updated_at: product.updated_at || new Date().toISOString()
   }
 
-  // Normal render of product
-  return <ProductDetail product={product} />;
-} 
+  return <UnifiedProductDetail product={standardizedProduct} />
+}

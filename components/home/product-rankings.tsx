@@ -24,7 +24,7 @@ export const categories = [
     color: 'bg-primary/10 hover:bg-primary/20 text-primary',
   },
   {
-    id: 'mice',
+    id: 'gaming-mice',
     name: 'Gaming Mice',
     description: 'High-performance gaming mice',
     icon: '🖱️',
@@ -50,6 +50,20 @@ export const categories = [
     description: 'Gaming monitors and displays',
     icon: '🖥️',
     color: 'bg-secondary/10 hover:bg-secondary/20 text-secondary',
+  },
+  {
+    id: 'controllers',
+    name: 'Controllers',
+    description: 'Gaming controllers',
+    icon: '🎮',
+    color: 'bg-accent/10 hover:bg-accent/20 text-accent',
+  },
+  {
+    id: 'chairs',
+    name: 'Gaming Chairs',
+    description: 'Ergonomic gaming chairs',
+    icon: '🪑',
+    color: 'bg-primary/10 hover:bg-primary/20 text-primary',
   },
 ]
 

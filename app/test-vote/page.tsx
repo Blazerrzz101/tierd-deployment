@@ -13,8 +13,8 @@ import { Separator } from "@/components/ui/separator"
 import { Loader2 } from "lucide-react"
 
 export default function TestVotePage() {
-  const { user, isLoading, signIn, signUp, signOut, isAuthenticated } = useEnhancedAuth()
-  const { getVoteStatus, vote, getClientId, remainingVotes } = useVote()
+  const { user, isLoading, signIn, signUp, signOut, isAuthenticated, clientId } = useEnhancedAuth()
+  const { getVoteStatus, vote } = useVote()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
@@ -22,6 +22,7 @@ export default function TestVotePage() {
   const [apiResponse, setApiResponse] = useState<any>(null)
   const [apiError, setApiError] = useState<string | null>(null)
   const [isTestingApi, setIsTestingApi] = useState(false)
+  const [remainingVotes, setRemainingVotes] = useState<number | null>(null)
 
   // Test products
   const testProducts = [
@@ -36,8 +37,7 @@ export default function TestVotePage() {
     setApiError(null)
     
     try {
-      const clientId = getClientId()
-      const response = await fetch(`/api/vote?productId=${productId}&clientId=${clientId}`);
+      const response = await fetch(`/api/vote?productId=${productId}${clientId ? `&clientId=${clientId}` : ''}`);
       
       if (!response.ok) {
         throw new Error(`API Error: ${response.status}`);
@@ -46,7 +46,7 @@ export default function TestVotePage() {
       const data = await response.json();
       setVoteStatus(data);
       setApiResponse({
-        endpoint: `/api/vote?productId=${productId}&clientId=${clientId}`,
+        endpoint: `/api/vote?productId=${productId}${clientId ? `&clientId=${clientId}` : ''}`,
         method: 'GET',
         response: data
       });
@@ -64,7 +64,6 @@ export default function TestVotePage() {
     setApiError(null)
     
     try {
-      const clientId = getClientId()
       const response = await fetch('/api/vote', {
         method: 'POST',
         headers: {
@@ -73,7 +72,8 @@ export default function TestVotePage() {
         body: JSON.stringify({
           productId,
           voteType,
-          clientId
+          clientId,
+          userId: user?.id
         })
       });
       
@@ -89,7 +89,7 @@ export default function TestVotePage() {
       setApiResponse({
         endpoint: '/api/vote',
         method: 'POST',
-        body: { productId, voteType, clientId },
+        body: { productId, voteType, clientId, userId: user?.id },
         response: data
       });
     } catch (error) {
@@ -106,7 +106,10 @@ export default function TestVotePage() {
     setApiError(null)
     
     try {
-      const clientId = getClientId()
+      if (!clientId) {
+        throw new Error("No client ID available");
+      }
+      
       const response = await fetch(`/api/vote/remaining-votes?clientId=${clientId}`);
       
       if (!response.ok) {
@@ -114,6 +117,7 @@ export default function TestVotePage() {
       }
       
       const data = await response.json();
+      setRemainingVotes(data.remainingVotes || null);
       
       setApiResponse({
         endpoint: `/api/vote/remaining-votes?clientId=${clientId}`,
@@ -132,7 +136,12 @@ export default function TestVotePage() {
     if (testProducts.length > 0) {
       testVoteAPI(testProducts[0].id);
     }
-  }, []);
+    
+    // Get remaining votes if client ID is available
+    if (clientId) {
+      testRemainingVotes();
+    }
+  }, [clientId]);
 
   return (
     <div className="container max-w-4xl py-10">
@@ -176,7 +185,7 @@ export default function TestVotePage() {
                     : `Signed in as ${user?.name || user?.email || 'Unknown User'}`}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Client ID: {getClientId() || 'Not available'}
+                  Client ID: {clientId || 'Not available'}
                 </p>
               </div>
               <Button

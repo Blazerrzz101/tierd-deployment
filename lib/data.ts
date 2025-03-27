@@ -1,18 +1,22 @@
 import { Product } from "@/types"
 
 // Generate a large catalog of products
-function generateProducts(): Product[] {
-  const products: Product[] = [
+function generateProducts(): Partial<Product>[] {
+  const products = [
     // Gaming Mice
-    {
-      id: "logitech-g502",
-      name: "Logitech G502 X PLUS",
+    { id: "logitech-g502", name: "Logitech G502 X PLUS",
       category: "gaming-mice",
       description: "LIGHTFORCE hybrid optical-mechanical switches and LIGHTSPEED wireless technology combine in our most advanced gaming mouse ever.",
       imageUrl: "https://source.unsplash.com/random/400x400?gaming-mouse",
+      image_url: "https://source.unsplash.com/random/400x400?gaming-mouse",
       votes: 1250,
+      upvotes: 875,
+      downvotes: 375,
+      score: 500,
       rank: 1,
       price: 149.99,
+      rating: 4.7,
+      review_count: 625,
       specs: {
         sensor: "HERO 25K",
         dpi: "100-25,600",
@@ -20,18 +24,37 @@ function generateProducts(): Product[] {
         weight: "89g",
         battery: "Up to 60 hours",
         connection: "LIGHTSPEED Wireless"
+      ,
+  url_slug: "logitech-g502-x-plus" },
+      specifications: {
+        sensor: "HERO 25K",
+        dpi: "100-25,600",
+        buttons: "13 programmable",
+        weight: "89g",
+        battery: "Up to 60 hours",
+        connection: "LIGHTSPEED Wireless"  
       },
-      url_slug: "logitech-g502"
+      url_slug: "logitech-g502-x-plus",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Logitech",
+      model: "G502 X PLUS"
     },
-    {
-      id: "razer-viper-v2",
-      name: "Razer Viper V2 Pro",
+    { id: "razer-viper-v2-pro", name: "Razer Viper V2 Pro",
       category: "gaming-mice",
       description: "Ultra-lightweight wireless gaming mouse with next-gen optical switches and Focus Pro 30K optical sensor.",
       imageUrl: "https://source.unsplash.com/random/400x400?razer-mouse",
+      image_url: "https://source.unsplash.com/random/400x400?razer-mouse",
       votes: 980,
+      upvotes: 686,
+      downvotes: 294,
+      score: 392,
       rank: 2,
       price: 149.99,
+      rating: 4.6,
+      review_count: 490,
       specs: {
         sensor: "Focus Pro 30K",
         dpi: "100-30,000",
@@ -39,12 +62,25 @@ function generateProducts(): Product[] {
         weight: "58g",
         battery: "Up to 80 hours",
         connection: "HyperSpeed Wireless"
+      ,
+  url_slug: "razer-viper-v2-pro" },
+      specifications: {
+        sensor: "Focus Pro 30K",
+        dpi: "100-30,000",
+        buttons: "5 programmable",
+        weight: "58g",
+        battery: "Up to 80 hours",
+        connection: "HyperSpeed Wireless"
       },
-      url_slug: "razer-viper-v2"
+      url_slug: "razer-viper-v2-pro",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Razer",
+      model: "Viper V2 Pro"
     },
-    {
-      id: "glorious-model-o",
-      name: "Glorious Model O",
+    { id: "glorious-model-o", name: "Glorious Model O",
       category: "gaming-mice",
       description: "Ultra-lightweight gaming mouse with honeycomb shell design.",
       imageUrl: "https://source.unsplash.com/random/400x400?glorious-mouse",
@@ -58,12 +94,13 @@ function generateProducts(): Product[] {
         weight: "67g",
         battery: "N/A (Wired)",
         connection: "Ascended Cord"
-      },
-      url_slug: "glorious-model-o"
+      ,
+  url_slug: "glorious-model-o" },
+      url_slug: "glorious-model-o",
+      brand: "Glorious",
+      model: "Model O"
     },
-    {
-      id: "finalmouse-starlight",
-      name: "Finalmouse Starlight-12",
+    { id: "finalmouse-starlight-12", name: "Finalmouse Starlight-12",
       category: "gaming-mice",
       description: "Ultra-lightweight magnesium alloy wireless gaming mouse.",
       imageUrl: "https://source.unsplash.com/random/400x400?finalmouse",
@@ -77,12 +114,13 @@ function generateProducts(): Product[] {
         weight: "42g",
         battery: "Up to 160 hours",
         connection: "Wireless"
-      },
-      url_slug: "finalmouse-starlight"
+      ,
+  url_slug: "finalmouse-starlight-12" },
+      url_slug: "finalmouse-starlight-12",
+      brand: "Finalmouse",
+      model: "Starlight-12"
     },
-    {
-      id: "zowie-ec2",
-      name: "ZOWIE EC2-C",
+    { id: "zowie-ec2-c", name: "ZOWIE EC2-C",
       category: "gaming-mice",
       description: "Professional gaming mouse designed for competitive FPS gaming.",
       imageUrl: "https://source.unsplash.com/random/400x400?zowie-mouse",
@@ -96,13 +134,14 @@ function generateProducts(): Product[] {
         weight: "73g",
         battery: "N/A (Wired)",
         connection: "Wired"
-      },
-      url_slug: "zowie-ec2"
+      ,
+  url_slug: "zowie-ec2-c" },
+      url_slug: "zowie-ec2-c",
+      brand: "ZOWIE",
+      model: "EC2-C"
     },
     // Keyboards
-    {
-      id: "ducky-one-3",
-      name: "Ducky One 3",
+    { id: "ducky-one-3", name: "Ducky One 3",
       category: "keyboards",
       description: "Premium mechanical keyboard with hot-swappable switches.",
       imageUrl: "https://source.unsplash.com/random/400x400?mechanical-keyboard",
@@ -116,12 +155,13 @@ function generateProducts(): Product[] {
         lighting: "RGB",
         connection: "USB-C",
         features: "Hot-swappable"
-      },
-      url_slug: "ducky-one-3"
+      ,
+  url_slug: "ducky-one-3" },
+      url_slug: "ducky-one-3",
+      brand: "Ducky",
+      model: "One 3"
     },
-    {
-      id: "keychron-q1",
-      name: "Keychron Q1",
+    { id: "keychron-q1", name: "Keychron Q1",
       category: "keyboards",
       description: "Customizable mechanical keyboard with aluminum case.",
       imageUrl: "https://source.unsplash.com/random/400x400?keychron",
@@ -135,12 +175,13 @@ function generateProducts(): Product[] {
         lighting: "RGB",
         connection: "USB-C",
         features: "QMK/VIA"
-      },
-      url_slug: "keychron-q1"
+      ,
+  url_slug: "keychron-q1" },
+      url_slug: "keychron-q1",
+      brand: "Keychron",
+      model: "Q1"
     },
-    {
-      id: "gmmk-pro",
-      name: "GMMK Pro",
+    { id: "gmmk-pro", name: "GMMK Pro",
       category: "keyboards",
       description: "Premium 75% mechanical keyboard with rotary knob.",
       imageUrl: "https://source.unsplash.com/random/400x400?gmmk",
@@ -154,13 +195,14 @@ function generateProducts(): Product[] {
         lighting: "RGB",
         connection: "USB-C",
         features: "Aluminum case"
-      },
-      url_slug: "gmmk-pro"
+      ,
+  url_slug: "gmmk-pro" },
+      url_slug: "gmmk-pro",
+      brand: "GMMK",
+      model: "Pro"
     },
     // Monitors
-    {
-      id: "asus-pg279qm",
-      name: "ASUS ROG Swift PG279QM",
+    { id: "asus-pg279qm", name: "ASUS ROG Swift PG279QM",
       category: "monitors",
       description: "27-inch 1440p 240Hz Gaming Monitor with G-SYNC.",
       imageUrl: "https://source.unsplash.com/random/400x400?gaming-monitor",
@@ -174,12 +216,13 @@ function generateProducts(): Product[] {
         response: "1ms GTG",
         hdr: "HDR400",
         size: "27 inch"
-      },
-      url_slug: "asus-pg279qm"
+      ,
+  url_slug: "asus-rog-swift-pg279qm" },
+      url_slug: "asus-pg279qm",
+      brand: "ASUS",
+      model: "ROG Swift PG279QM"
     },
-    {
-      id: "lg-27gp950",
-      name: "LG 27GP950-B",
+    { id: "lg-27gp950", name: "LG 27GP950-B",
       category: "monitors",
       description: "27-inch 4K 144Hz Gaming Monitor with HDMI 2.1.",
       imageUrl: "https://source.unsplash.com/random/400x400?lg-monitor",
@@ -193,12 +236,13 @@ function generateProducts(): Product[] {
         response: "1ms GTG",
         hdr: "HDR600",
         size: "27 inch"
-      },
-      url_slug: "lg-27gp950"
+      ,
+  url_slug: "lg-27gp950-b" },
+      url_slug: "lg-27gp950",
+      brand: "LG",
+      model: "27GP950-B"
     },
-    {
-      id: "samsung-g7",
-      name: "Samsung Odyssey G7",
+    { id: "samsung-g7", name: "Samsung Odyssey G7",
       category: "monitors",
       description: "32-inch curved gaming monitor with 240Hz refresh rate.",
       imageUrl: "https://source.unsplash.com/random/400x400?samsung-monitor",
@@ -212,13 +256,14 @@ function generateProducts(): Product[] {
         response: "1ms GTG",
         hdr: "HDR600",
         size: "32 inch"
-      },
-      url_slug: "samsung-g7"
+      ,
+  url_slug: "samsung-odyssey-g7" },
+      url_slug: "samsung-g7",
+      brand: "Samsung",
+      model: "Odyssey G7"
     },
     // Headsets
-    {
-      id: "hyperx-cloud-alpha",
-      name: "HyperX Cloud Alpha",
+    { id: "hyperx-cloud-alpha", name: "HyperX Cloud Alpha",
       category: "headsets",
       description: "Premium gaming headset with dual chamber drivers.",
       imageUrl: "https://source.unsplash.com/random/400x400?gaming-headset",
@@ -232,12 +277,13 @@ function generateProducts(): Product[] {
         weight: "336g",
         connection: "3.5mm",
         microphone: "Detachable"
-      },
-      url_slug: "hyperx-cloud-alpha"
+      ,
+  url_slug: "hyperx-cloud-alpha" },
+      url_slug: "hyperx-cloud-alpha",
+      brand: "HyperX",
+      model: "Cloud Alpha"
     },
-    {
-      id: "steelseries-arctis-7",
-      name: "SteelSeries Arctis 7+",
+    { id: "steelseries-arctis-7", name: "SteelSeries Arctis 7+",
       category: "headsets",
       description: "Wireless gaming headset with low-latency connection.",
       imageUrl: "https://source.unsplash.com/random/400x400?steelseries",
@@ -251,12 +297,13 @@ function generateProducts(): Product[] {
         weight: "354g",
         connection: "2.4GHz Wireless",
         microphone: "Retractable"
-      },
-      url_slug: "steelseries-arctis-7"
+      ,
+  url_slug: "steelseries-arctis-7" },
+      url_slug: "steelseries-arctis-7",
+      brand: "SteelSeries",
+      model: "Arctis 7+"
     },
-    {
-      id: "sennheiser-pc38x",
-      name: "Sennheiser PC38X",
+    { id: "sennheiser-pc38x", name: "Sennheiser PC38X",
       category: "headsets",
       description: "Audiophile-grade gaming headset with open-back design.",
       imageUrl: "https://source.unsplash.com/random/400x400?sennheiser",
@@ -270,8 +317,626 @@ function generateProducts(): Product[] {
         weight: "253g",
         connection: "3.5mm",
         microphone: "Noise-cancelling"
+      ,
+  url_slug: "sennheiser-pc38x" },
+      url_slug: "sennheiser-pc38x",
+      brand: "Sennheiser",
+      model: "PC38X"
+    },
+    // Additional Products (15-30)
+    // Additional Gaming Mice
+    { id: "corsair-m65-rgb-elite", name: "Corsair M65 RGB Elite",
+      category: "gaming-mice",
+      description: "Premium FPS gaming mouse with tunable weights and precision 18,000 DPI optical sensor.",
+      imageUrl: "https://source.unsplash.com/random/400x400?corsair-mouse",
+      image_url: "https://source.unsplash.com/random/400x400?corsair-mouse",
+      votes: 620,
+      upvotes: 434,
+      downvotes: 186,
+      score: 248,
+      rank: 6,
+      price: 69.99,
+      rating: 4.5,
+      review_count: 310,
+      specs: {
+        sensor: "PMW3391",
+        dpi: "100-18,000",
+        buttons: "8 programmable",
+        weight: "97g (adjustable)",
+        battery: "N/A (Wired)",
+        connection: "Wired USB"
+      ,
+  url_slug: "corsair-m65-rgb-elite" },
+      specifications: {
+        sensor: "PMW3391",
+        dpi: "100-18,000",
+        buttons: "8 programmable",
+        weight: "97g (adjustable)",
+        battery: "N/A (Wired)",
+        connection: "Wired USB"
       },
-      url_slug: "sennheiser-pc38x"
+      url_slug: "corsair-m65-rgb-elite",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Corsair",
+      model: "M65 RGB Elite"
+    },
+    { id: "steelseries-prime-wireless", name: "SteelSeries Prime Wireless",
+      category: "gaming-mice",
+      description: "Performance-focused gaming mouse designed with esports professionals.",
+      imageUrl: "https://source.unsplash.com/random/400x400?steelseries-mouse",
+      image_url: "https://source.unsplash.com/random/400x400?steelseries-mouse",
+      votes: 530,
+      upvotes: 371,
+      downvotes: 159,
+      score: 212,
+      rank: 7,
+      price: 129.99,
+      rating: 4.3,
+      review_count: 265,
+      specs: {
+        sensor: "TrueMove Pro",
+        dpi: "100-18,000",
+        buttons: "5 programmable",
+        weight: "80g",
+        battery: "Up to 100 hours",
+        connection: "Quantum 2.0 Wireless"
+      ,
+  url_slug: "steelseries-prime-wireless" },
+      specifications: {
+        sensor: "TrueMove Pro",
+        dpi: "100-18,000",
+        buttons: "5 programmable",
+        weight: "80g",
+        battery: "Up to 100 hours",
+        connection: "Quantum 2.0 Wireless"
+      },
+      url_slug: "steelseries-prime-wireless",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "SteelSeries",
+      model: "Prime Wireless"
+    },
+    { id: "endgame-xm1r", name: "Endgame Gear XM1r",
+      category: "gaming-mice",
+      description: "Ultra-responsive gaming mouse with 8,000Hz polling rate and sub-1ms click response time.",
+      imageUrl: "https://source.unsplash.com/random/400x400?gaming-mouse-black",
+      image_url: "https://source.unsplash.com/random/400x400?gaming-mouse-black",
+      votes: 470,
+      upvotes: 329,
+      downvotes: 141,
+      score: 188,
+      rank: 8,
+      price: 59.99,
+      rating: 4.6,
+      review_count: 235,
+      specs: {
+        sensor: "PixArt PAW3370",
+        dpi: "50-19,000",
+        buttons: "5",
+        weight: "70g",
+        battery: "N/A (Wired)",
+        connection: "Wired (Flex Cord)"
+      ,
+  url_slug: "endgame-gear-xm1r" },
+      specifications: {
+        sensor: "PixArt PAW3370",
+        dpi: "50-19,000",
+        buttons: "5",
+        weight: "70g",
+        battery: "N/A (Wired)",
+        connection: "Wired (Flex Cord)"
+      },
+      url_slug: "endgame-xm1r",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Endgame Gear",
+      model: "XM1r"
+    },
+    // Additional Keyboards
+    { id: "corsair-k100", name: "Corsair K100 RGB",
+      category: "keyboards",
+      description: "Premium mechanical gaming keyboard with optical-mechanical switches and iCUE control wheel.",
+      imageUrl: "https://source.unsplash.com/random/400x400?corsair-keyboard",
+      image_url: "https://source.unsplash.com/random/400x400?corsair-keyboard",
+      votes: 710,
+      upvotes: 497,
+      downvotes: 213,
+      score: 284,
+      rank: 4,
+      price: 229.99,
+      rating: 4.8,
+      review_count: 355,
+      specs: {
+        switches: "OPX Optical-Mechanical",
+        layout: "Full-size",
+        keycaps: "PBT Double-shot",
+        lighting: "Per-key RGB",
+        connection: "USB-C",
+        features: "iCUE Control Wheel"
+      ,
+  url_slug: "corsair-k100-rgb" },
+      specifications: {
+        switches: "OPX Optical-Mechanical",
+        layout: "Full-size",
+        keycaps: "PBT Double-shot",
+        lighting: "Per-key RGB",
+        connection: "USB-C",
+        features: "iCUE Control Wheel"
+      },
+      url_slug: "corsair-k100",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Corsair",
+      model: "K100 RGB"
+    },
+    { id: "razer-huntsman-mini", name: "Razer Huntsman Mini",
+      category: "keyboards",
+      description: "60% form factor mechanical keyboard with optical switches for faster actuation.",
+      imageUrl: "https://source.unsplash.com/random/400x400?razer-keyboard",
+      image_url: "https://source.unsplash.com/random/400x400?razer-keyboard",
+      votes: 650,
+      upvotes: 455,
+      downvotes: 195,
+      score: 260,
+      rank: 5,
+      price: 119.99,
+      rating: 4.5,
+      review_count: 325,
+      specs: {
+        switches: "Razer Optical",
+        layout: "60%",
+        keycaps: "PBT Double-shot",
+        lighting: "Chroma RGB",
+        connection: "USB-C",
+        features: "Onboard Memory"
+      ,
+  url_slug: "razer-huntsman-mini" },
+      specifications: {
+        switches: "Razer Optical",
+        layout: "60%",
+        keycaps: "PBT Double-shot",
+        lighting: "Chroma RGB",
+        connection: "USB-C",
+        features: "Onboard Memory"
+      },
+      url_slug: "razer-huntsman-mini",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Razer",
+      model: "Huntsman Mini"
+    },
+    { id: "drop-ctrl", name: "Drop CTRL Mechanical Keyboard",
+      category: "keyboards",
+      description: "TKL mechanical keyboard with hot-swappable switches and aluminum frame.",
+      imageUrl: "https://source.unsplash.com/random/400x400?tkl-keyboard",
+      image_url: "https://source.unsplash.com/random/400x400?tkl-keyboard",
+      votes: 590,
+      upvotes: 413,
+      downvotes: 177,
+      score: 236,
+      rank: 6,
+      price: 249.99,
+      rating: 4.6,
+      review_count: 295,
+      specs: {
+        switches: "Hot-swappable",
+        layout: "TKL",
+        keycaps: "Doubleshot PBT",
+        lighting: "Per-key RGB",
+        connection: "USB-C",
+        features: "Aluminum Frame"
+      ,
+  url_slug: "drop-ctrl-mechanical-keyboard" },
+      specifications: {
+        switches: "Hot-swappable",
+        layout: "TKL",
+        keycaps: "Doubleshot PBT",
+        lighting: "Per-key RGB",
+        connection: "USB-C",
+        features: "Aluminum Frame"
+      },
+      url_slug: "drop-ctrl",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Drop",
+      model: "CTRL"
+    },
+    // Additional Monitors
+    { id: "alienware-aw3423dw", name: "Alienware AW3423DW",
+      category: "monitors",
+      description: "34-inch QD-OLED ultrawide gaming monitor with G-SYNC Ultimate.",
+      imageUrl: "https://source.unsplash.com/random/400x400?ultrawide-monitor",
+      image_url: "https://source.unsplash.com/random/400x400?ultrawide-monitor",
+      votes: 510,
+      upvotes: 357,
+      downvotes: 153,
+      score: 204,
+      rank: 4,
+      price: 1299.99,
+      rating: 4.8,
+      review_count: 255,
+      specs: {
+        panel: "QD-OLED",
+        resolution: "3440x1440",
+        refresh: "175Hz",
+        response: "0.1ms",
+        hdr: "True Black HDR 400",
+        size: "34 inch"
+      ,
+  url_slug: "alienware-aw3423dw" },
+      specifications: {
+        panel: "QD-OLED",
+        resolution: "3440x1440",
+        refresh: "175Hz",
+        response: "0.1ms",
+        hdr: "True Black HDR 400",
+        size: "34 inch"
+      },
+      url_slug: "alienware-aw3423dw",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Alienware",
+      model: "AW3423DW"
+    },
+    { id: "acer-predator-x28", name: "Acer Predator X28",
+      category: "monitors",
+      description: "28-inch 4K UHD gaming monitor with 152Hz refresh rate and NVIDIA G-SYNC.",
+      imageUrl: "https://source.unsplash.com/random/400x400?acer-monitor",
+      image_url: "https://source.unsplash.com/random/400x400?acer-monitor",
+      votes: 450,
+      upvotes: 315,
+      downvotes: 135,
+      score: 180,
+      rank: 5,
+      price: 899.99,
+      rating: 4.3,
+      review_count: 225,
+      specs: {
+        panel: "IPS",
+        resolution: "3840x2160",
+        refresh: "152Hz",
+        response: "1ms GTG",
+        hdr: "DisplayHDR 400",
+        size: "28 inch"
+      ,
+  url_slug: "acer-predator-x28" },
+      specifications: {
+        panel: "IPS",
+        resolution: "3840x2160",
+        refresh: "152Hz",
+        response: "1ms GTG",
+        hdr: "DisplayHDR 400",
+        size: "28 inch"
+      },
+      url_slug: "acer-predator-x28",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Acer",
+      model: "Predator X28"
+    },
+    { id: "gigabyte-m32u", name: "Gigabyte M32U",
+      category: "monitors",
+      description: "32-inch 4K gaming monitor with HDMI 2.1 for next-gen consoles.",
+      imageUrl: "https://source.unsplash.com/random/400x400?gigabyte-monitor",
+      image_url: "https://source.unsplash.com/random/400x400?gigabyte-monitor",
+      votes: 420,
+      upvotes: 294,
+      downvotes: 126,
+      score: 168,
+      rank: 6,
+      price: 649.99,
+      rating: 4.4,
+      review_count: 210,
+      specs: {
+        panel: "SS IPS",
+        resolution: "3840x2160",
+        refresh: "144Hz",
+        response: "1ms MPRT",
+        hdr: "HDR400",
+        size: "32 inch"
+      ,
+  url_slug: "gigabyte-m32u" },
+      specifications: {
+        panel: "SS IPS",
+        resolution: "3840x2160",
+        refresh: "144Hz",
+        response: "1ms MPRT",
+        hdr: "HDR400",
+        size: "32 inch"
+      },
+      url_slug: "gigabyte-m32u",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Gigabyte",
+      model: "M32U"
+    },
+    // Additional Headsets
+    { id: "logitech-g-pro-x", name: "Logitech G Pro X Wireless",
+      category: "headsets",
+      description: "Pro-grade wireless gaming headset with Blue VO!CE microphone technology.",
+      imageUrl: "https://source.unsplash.com/random/400x400?logitech-headset",
+      image_url: "https://source.unsplash.com/random/400x400?logitech-headset",
+      votes: 710,
+      upvotes: 497,
+      downvotes: 213,
+      score: 284,
+      rank: 4,
+      price: 199.99,
+      rating: 4.7,
+      review_count: 355,
+      specs: {
+        drivers: "50mm PRO-G",
+        frequency: "20Hz-20kHz",
+        impedance: "32 ohm",
+        weight: "370g",
+        connection: "LIGHTSPEED Wireless",
+        microphone: "Detachable"
+      ,
+  url_slug: "logitech-g-pro-x-wireless" },
+      specifications: {
+        drivers: "50mm PRO-G",
+        frequency: "20Hz-20kHz",
+        impedance: "32 ohm",
+        weight: "370g",
+        connection: "LIGHTSPEED Wireless",
+        microphone: "Detachable"
+      },
+      url_slug: "logitech-g-pro-x",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Logitech",
+      model: "G Pro X Wireless"
+    },
+    { id: "razer-blackshark-v2", name: "Razer BlackShark V2 Pro",
+      category: "headsets",
+      description: "THX Spatial Audio gaming headset with titanium-coated drivers.",
+      imageUrl: "https://source.unsplash.com/random/400x400?razer-headset",
+      image_url: "https://source.unsplash.com/random/400x400?razer-headset",
+      votes: 680,
+      upvotes: 476,
+      downvotes: 204,
+      score: 272,
+      rank: 5,
+      price: 179.99,
+      rating: 4.6,
+      review_count: 340,
+      specs: {
+        drivers: "50mm TriForce Titanium",
+        frequency: "12Hz-28kHz",
+        impedance: "32 ohm",
+        weight: "320g",
+        connection: "HyperSpeed Wireless",
+        microphone: "HyperClear Supercardioid"
+      ,
+  url_slug: "razer-blackshark-v2-pro" },
+      specifications: {
+        drivers: "50mm TriForce Titanium",
+        frequency: "12Hz-28kHz",
+        impedance: "32 ohm",
+        weight: "320g",
+        connection: "HyperSpeed Wireless",
+        microphone: "HyperClear Supercardioid"
+      },
+      url_slug: "razer-blackshark-v2",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Razer",
+      model: "BlackShark V2 Pro"
+    },
+    { id: "beyerdynamic-mmx300", name: "Beyerdynamic MMX 300",
+      category: "headsets",
+      description: "Premium audiophile-grade gaming headset with studio-quality sound.",
+      imageUrl: "https://source.unsplash.com/random/400x400?beyerdynamic-headset",
+      image_url: "https://source.unsplash.com/random/400x400?beyerdynamic-headset",
+      votes: 590,
+      upvotes: 413,
+      downvotes: 177,
+      score: 236,
+      rank: 6,
+      price: 299.99,
+      rating: 4.8,
+      review_count: 295,
+      specs: {
+        drivers: "Dynamic",
+        frequency: "5Hz-35kHz",
+        impedance: "32 ohm",
+        weight: "332g",
+        connection: "Wired",
+        microphone: "Cardioid"
+      ,
+  url_slug: "beyerdynamic-mmx-300" },
+      specifications: {
+        drivers: "Dynamic",
+        frequency: "5Hz-35kHz",
+        impedance: "32 ohm",
+        weight: "332g",
+        connection: "Wired",
+        microphone: "Cardioid"
+      },
+      url_slug: "beyerdynamic-mmx300",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Beyerdynamic",
+      model: "MMX 300"
+    },
+    // Gaming Controllers
+    { id: "xbox-elite-2", name: "Xbox Elite Controller Series 2",
+      category: "controllers",
+      description: "Premium Xbox controller with adjustable-tension thumbsticks and wrap-around rubberized grip.",
+      imageUrl: "https://source.unsplash.com/random/400x400?xbox-controller",
+      image_url: "https://source.unsplash.com/random/400x400?xbox-controller",
+      votes: 820,
+      upvotes: 574,
+      downvotes: 246,
+      score: 328,
+      rank: 1,
+      price: 179.99,
+      rating: 4.7,
+      review_count: 410,
+      specs: {
+        battery: "40+ hours",
+        connectivity: "Bluetooth, USB-C",
+        weight: "345g",
+        features: "Adjustable thumbsticks, paddles",
+        platform: "Xbox, PC, Mobile",
+        customization: "Button mapping, sensitivity"
+      ,
+  url_slug: "xbox-elite-controller-series-2" },
+      specifications: {
+        battery: "40+ hours",
+        connectivity: "Bluetooth, USB-C",
+        weight: "345g",
+        features: "Adjustable thumbsticks, paddles",
+        platform: "Xbox, PC, Mobile",
+        customization: "Button mapping, sensitivity"
+      },
+      url_slug: "xbox-elite-2",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Microsoft",
+      model: "Xbox Elite Controller Series 2"
+    },
+    { id: "dualsense-edge", name: "Sony DualSense Edge",
+      category: "controllers",
+      description: "PlayStation 5 pro controller with customizable buttons, trigger stops, and replaceable stick modules.",
+      imageUrl: "https://source.unsplash.com/random/400x400?ps5-controller",
+      image_url: "https://source.unsplash.com/random/400x400?ps5-controller",
+      votes: 780,
+      upvotes: 546,
+      downvotes: 234,
+      score: 312,
+      rank: 2,
+      price: 199.99,
+      rating: 4.6,
+      review_count: 390,
+      specs: {
+        battery: "Up to 10 hours",
+        connectivity: "Bluetooth, USB-C",
+        weight: "325g",
+        features: "Haptic feedback, adaptive triggers",
+        platform: "PS5, PC",
+        customization: "Swappable stick caps, back buttons"
+      ,
+  url_slug: "sony-dualsense-edge" },
+      specifications: {
+        battery: "Up to 10 hours",
+        connectivity: "Bluetooth, USB-C",
+        weight: "325g",
+        features: "Haptic feedback, adaptive triggers",
+        platform: "PS5, PC",
+        customization: "Swappable stick caps, back buttons"
+      },
+      url_slug: "dualsense-edge",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Sony",
+      model: "DualSense Edge"
+    },
+    // Gaming Chairs
+    { id: "secretlab-titan-evo", name: "Secretlab Titan Evo 2022",
+      category: "chairs",
+      description: "Premium gaming chair with 4-way L-ADAPT lumbar support and magnetic memory foam pillows.",
+      imageUrl: "https://source.unsplash.com/random/400x400?gaming-chair",
+      image_url: "https://source.unsplash.com/random/400x400?gaming-chair",
+      votes: 750,
+      upvotes: 525,
+      downvotes: 225,
+      score: 300,
+      rank: 1,
+      price: 499.99,
+      rating: 4.8,
+      review_count: 375,
+      specs: {
+        material: "NEO Hybrid Leatherette",
+        recline: "165 degrees",
+        weight: "37.5kg",
+        capacity: "180kg",
+        armrests: "4D",
+        features: "Magnetic pillow, 4-way lumbar"
+      ,
+  url_slug: "secretlab-titan-evo-2022" },
+      specifications: {
+        material: "NEO Hybrid Leatherette",
+        recline: "165 degrees",
+        weight: "37.5kg",
+        capacity: "180kg",
+        armrests: "4D",
+        features: "Magnetic pillow, 4-way lumbar"
+      },
+      url_slug: "secretlab-titan-evo",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Secretlab",
+      model: "Titan Evo 2022"
+    },
+    { id: "herman-miller-embody", name: "Herman Miller x Logitech G Embody",
+      category: "chairs",
+      description: "Ergonomic gaming chair designed for long sessions with cooling foam technology.",
+      imageUrl: "https://source.unsplash.com/random/400x400?ergonomic-chair",
+      image_url: "https://source.unsplash.com/random/400x400?ergonomic-chair",
+      votes: 680,
+      upvotes: 476,
+      downvotes: 204,
+      score: 272,
+      rank: 2,
+      price: 1495.00,
+      rating: 4.9,
+      review_count: 340,
+      specs: {
+        material: "Sync Fabric",
+        recline: "Dynamic tilt",
+        weight: "23kg",
+        capacity: "136kg",
+        armrests: "Fully adjustable",
+        features: "Pixelated support, BackFit adjustment"
+      ,
+  url_slug: "herman-miller-x-logitech-g-embody" },
+      specifications: {
+        material: "Sync Fabric",
+        recline: "Dynamic tilt",
+        weight: "23kg",
+        capacity: "136kg",
+        armrests: "Fully adjustable",
+        features: "Pixelated support, BackFit adjustment"
+      },
+      url_slug: "herman-miller-embody",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reviews: [],
+      threads: [],
+      brand: "Herman Miller",
+      model: "Embody Gaming Chair"
     }
   ]
 
@@ -290,57 +955,105 @@ export interface Category {
 }
 
 export const categories = [
-  {
-    id: 'gaming-mice',
-    name: 'Gaming Mice',
+  { id: "gaming-mice", name: "Gaming Mice",
     description: 'High-performance gaming mice with precision sensors',
     icon: '🖱️',
     count: 156
-  },
-  {
-    id: 'keyboards',
-    name: 'Keyboards',
+  ,
+  url_slug: "gaming-mice" },
+  { id: "keyboards", name: "Keyboards",
     description: 'Mechanical and gaming keyboards for every style',
     icon: '⌨️',
     count: 203
-  },
-  {
-    id: 'headsets',
-    name: 'Headsets',
+  ,
+  url_slug: "keyboards" },
+  { id: "headsets", name: "Headsets",
     description: 'Gaming headsets with immersive audio',
     icon: '🎧',
     count: 178
-  },
-  {
-    id: 'monitors',
-    name: 'Monitors',
+  ,
+  url_slug: "headsets" },
+  { id: "monitors", name: "Monitors",
     description: 'High refresh rate gaming monitors',
     icon: '🖥️',
     count: 142
-  }
+  ,
+  url_slug: "monitors" },
+  { id: "controllers", name: "Controllers",
+    description: 'Premium gaming controllers for console and PC',
+    icon: '🎮',
+    count: 87
+  ,
+  url_slug: "controllers" },
+  { id: "chairs", name: "Gaming Chairs",
+    description: 'Ergonomic chairs designed for long gaming sessions',
+    icon: '🪑',
+    count: 64
+  ,
+  url_slug: "gaming-chairs" }
 ]
 
 // Update product images to use real product images
-export const productImages = {
-  'gaming-mice': {
-    'logitech-g502': 'https://assets3.razerzone.com/GNqauRJJqyCVgxJqxvBYXCGX_bQ=/1500x1000/https%3A%2F%2Fhybrismediaprod.blob.core.windows.net%2Fsys-master-phoenix-images-container%2Fh78%2Fh24%2F9419340873758%2Fg502x-plus-black-1500x1000-1.jpg',
-    'razer-viper-v2': 'https://assets2.razerzone.com/images/pnx.assets/d3c009aecbd4ab7e404d91f253178c54/razer-viper-v2-pro-white-500x500.png',
-    'glorious-model-o': 'https://cdn.shopify.com/s/files/1/0549/2681/products/glorious_model_o_matte_black_01_1800x1800.png',
-    'finalmouse-starlight': 'https://finalmouse.com/cdn/shop/products/25_1024x.png'
-  },
-  'keyboards': {
-    'ducky-one-3': 'https://mechanicalkeyboards.com/shop/images/products/large_DKON2087ST-USPDZZT1_10.jpg',
-    'keychron-q1': 'https://cdn.shopify.com/s/files/1/0059/0630/1017/products/Keychron-Q1-QMK-custom-mechanical-keyboard-fully-assembled-version-navy-blue-with-knob-angle-view_1800x1800.jpg',
-    'gmmk-pro': 'https://cdn.shopify.com/s/files/1/0549/2681/products/gmmk_pro_black_01_1800x1800.png'
-  },
-  'monitors': {
-    'asus-pg279qm': 'https://dlcdnwebimgs.asus.com/gain/36e05589-1dd4-4d8d-8fc9-36a34797d895/',
-    'lg-27gp950': 'https://www.lg.com/us/images/monitors/md07529604/gallery/desktop-01.jpg',
-    'samsung-g7': 'https://images.samsung.com/is/image/samsung/p6pim/uk/lc32g75tqsrxxu/gallery/uk-odyssey-g7-lc32g75tqsrxxu-359315134'
-  },
-  'headsets': {
-    'hyperx-cloud-alpha': 'https://media.kingston.com/hyperx/features/hx-features-headset-cloud-alpha-black-1.jpg',
-    'steelseries-arctis-7': 'https://media.steelseriescdn.com/thumbs/catalogue/products/01115-arctis-7-plus-wireless/f2208d1f05d24dc69e5e3fbc5d05d4c7.png.500x400_q100_crop-fit_optimize.png',
-    'sennheiser-pc38x': 'https://assets2.sennheiser.com/wp-content/uploads/2020/09/08111632/PC38X_1.jpg'
-  }
-}
+export const productImages: Record<string, string> = {
+  // Gaming Mice
+  "logitech-g502-x-plus": "/images/products/mice/logitech-g502-x-plus.png",
+  "razer-viper-v2-pro": "/images/products/mice/razer-viper-v2-pro.png",
+  "finalmouse-starlight-12": "/images/products/mice/finalmouse-starlight-12.png",
+  "zowie-ec2-c": "/images/products/mice/zowie-ec2-c.png",
+  "corsair-m65-rgb-elite": "/images/products/mice/corsair-m65-rgb-elite.png",
+  "steelseries-prime-wireless": "/images/products/mice/steelseries-prime-wireless.png",
+  "glorious-model-o": "/images/products/mice/glorious-model-o.png",
+  "logitech-g-pro-x-superlight": "/images/products/mice/logitech-g-pro-x-superlight.png",
+  "razer-deathadder-v3-pro": "/images/products/mice/razer-deathadder-v3-pro.png",
+  "logitech-g303-shroud-edition": "/images/products/mice/logitech-g303-shroud-edition.png",
+  
+  // Gaming Keyboards
+  "razer-huntsman-mini": "/images/products/keyboards/razer-huntsman-mini.png",
+  "logitech-g915-tkl": "/images/products/keyboards/logitech-g915-tkl.png",
+  "ducky-one-3": "/images/products/keyboards/ducky-one-3.png",
+  "keychron-q1": "/images/products/keyboards/keychron-q1.png",
+  "steelseries-apex-pro": "/images/products/keyboards/steelseries-apex-pro.png",
+  "corsair-k70-rgb-mk2": "/images/products/keyboards/corsair-k70-rgb-mk2.png",
+  "gmmk-pro": "/images/products/keyboards/gmmk-pro.png",
+  "royal-kludge-rk84": "/images/products/keyboards/royal-kludge-rk84.png",
+  "drop-alt": "/images/products/keyboards/drop-alt.png",
+  "wooting-60he": "/images/products/keyboards/wooting-60he.png",
+  
+  // Gaming Monitors
+  "lg-27gp950-b": "/images/products/monitors/lg-27gp950-b.png",
+  "samsung-odyssey-g7": "/images/products/monitors/samsung-odyssey-g7.png",
+  "alienware-aw3423dw": "/images/products/monitors/alienware-aw3423dw.png",
+  "asus-rog-swift-pg279qm": "/images/products/monitors/asus-rog-swift-pg279qm.png",
+  "dell-s2721dgf": "/images/products/monitors/dell-s2721dgf.png",
+  "msi-mpg-artymis-343cqr": "/images/products/monitors/msi-mpg-artymis-343cqr.png",
+  "gigabyte-m28u": "/images/products/monitors/gigabyte-m28u.png",
+  "benq-zowie-xl2546k": "/images/products/monitors/benq-zowie-xl2546k.png",
+  "aoc-24g2": "/images/products/monitors/aoc-24g2.png",
+  "eve-spectrum-4k-144hz": "/images/products/monitors/eve-spectrum-4k-144hz.png",
+  
+  // Gaming Headsets
+  "steelseries-arctis-nova-pro": "/images/products/headsets/steelseries-arctis-nova-pro.png",
+  "hyperx-cloud-alpha": "/images/products/headsets/hyperx-cloud-alpha.png",
+  "logitech-g-pro-x": "/images/products/headsets/logitech-g-pro-x.png",
+  "razer-blackshark-v2-pro": "/images/products/headsets/razer-blackshark-v2-pro.png",
+  "corsair-hs70-pro": "/images/products/headsets/corsair-hs70-pro.png",
+  "sennheiser-gsp-370": "/images/products/headsets/sennheiser-gsp-370.png",
+  "astro-a50": "/images/products/headsets/astro-a50.png",
+  "beyerdynamic-mmx-300": "/images/products/headsets/beyerdynamic-mmx-300.png",
+  "epos-h3pro-hybrid": "/images/products/headsets/epos-h3pro-hybrid.png",
+  "asus-rog-delta-s": "/images/products/headsets/asus-rog-delta-s.png",
+  
+  // Controllers
+  "xbox-elite-wireless-controller-series-2": "/images/products/controllers/xbox-elite-wireless-controller-series-2.png",
+  "dualsense-edge": "/images/products/controllers/dualsense-edge.png",
+  "scuf-instinct-pro": "/images/products/controllers/scuf-instinct-pro.png",
+  "razer-wolverine-v2-chroma": "/images/products/controllers/razer-wolverine-v2-chroma.png",
+  "8bitdo-ultimate-controller": "/images/products/controllers/8bitdo-ultimate-controller.png",
+  
+  // Chairs
+  "secretlab-titan-evo": "/images/products/chairs/secretlab-titan-evo.png",
+  "herman-miller-embody": "/images/products/chairs/herman-miller-embody.png",
+  "corsair-tc100-relaxed": "/images/products/chairs/corsair-tc100-relaxed.png",
+  "noblechairs-hero": "/images/products/chairs/noblechairs-hero.png",
+  "razer-iskur": "/images/products/chairs/razer-iskur.png",
+};

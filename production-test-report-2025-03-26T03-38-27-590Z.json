@@ -1,0 +1,47 @@
+{
+  "timestamp": "2025-03-26T03:38:27.590Z",
+  "pageResults": [
+    {
+      "page": "/",
+      "status": 200,
+      "loadTime": 146,
+      "success": true
+    },
+    {
+      "page": "/products/logitech-g502-x-plus",
+      "status": 200,
+      "loadTime": 1969,
+      "success": true
+    },
+    {
+      "page": "/products/razer-viper-v2-pro",
+      "status": 200,
+      "loadTime": 44,
+      "success": true
+    },
+    {
+      "page": "/rankings",
+      "status": 200,
+      "loadTime": 939,
+      "success": true
+    },
+    {
+      "page": "/my-profile",
+      "status": 200,
+      "loadTime": 1254,
+      "success": true
+    },
+    {
+      "page": "/categories",
+      "status": 200,
+      "loadTime": 1059,
+      "success": true
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "successful": 6,
+    "failed": 0,
+    "averageLoadTime": 902
+  }
+}

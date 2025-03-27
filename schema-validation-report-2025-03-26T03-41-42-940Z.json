@@ -1,0 +1,54 @@
+{
+  "timestamp": "2025-03-26T03:41:42.954Z",
+  "baseUrl": "http://localhost:3000",
+  "results": [
+    {
+      "url": "http://localhost:3000/products/logitech-g502-x-plus",
+      "hasProductSchema": false,
+      "productSchemaValid": false,
+      "aggregateRatingValid": false,
+      "metaTagsValid": false,
+      "missingMetaTags": [
+        "og:title",
+        "og:description",
+        "og:image",
+        "og:url",
+        "og:type"
+      ]
+    },
+    {
+      "url": "http://localhost:3000/products/razer-viper-v2-pro",
+      "hasProductSchema": false,
+      "productSchemaValid": false,
+      "aggregateRatingValid": false,
+      "metaTagsValid": false,
+      "missingMetaTags": [
+        "og:title",
+        "og:description",
+        "og:image",
+        "og:url",
+        "og:type"
+      ]
+    },
+    {
+      "url": "http://localhost:3000/products/corsair-m65-rgb-elite",
+      "hasProductSchema": false,
+      "productSchemaValid": false,
+      "aggregateRatingValid": false,
+      "metaTagsValid": false,
+      "missingMetaTags": [
+        "og:title",
+        "og:description",
+        "og:image",
+        "og:url",
+        "og:type"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "validProducts": 0,
+    "validRatings": 0,
+    "validMeta": 0
+  }
+}

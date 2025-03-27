@@ -1,73 +1,95 @@
 "use client"
 
-import { MainLayout } from "@/components/home/main-layout"
-import { ProductImage } from "@/components/products/product-image"
-import { ProductDetails } from "@/components/products/product-details"
-import { ProductReviews } from "@/components/products/product-reviews"
+import { useState, useEffect } from "react"
+import { UnifiedProductDetail } from "@/components/products/unified-product-detail"
+import { Product } from "@/utils/product-utils"
 import { products } from "@/lib/data"
+import { notFound } from "next/navigation"
+import { Skeleton } from "@/components/ui/skeleton"
 
-export default function LogitechGProPage() {
-  const product = {
-    id: "logitech-g-pro-superlight",
-    name: "Logitech G PRO Superlight",
-    category: "gaming-mice",
-    description: "Professional-grade wireless gaming mouse designed in collaboration with esports pros. Features LIGHTSPEED wireless technology and HERO 25K sensor.",
-    imageUrl: "https://source.unsplash.com/random/400x400?gaming-mouse",
-    votes: 1250,
-    rank: 1,
-    price: 149.99,
-    specs: {
-      sensor: "HERO 25K",
-      dpi: "100-25,600",
-      buttons: "5 programmable",
-      weight: "63g",
-      battery: "Up to 70 hours",
-      connection: "LIGHTSPEED Wireless"
+export default function ProductPage() {
+  const productId = "logitech-g-pro-superlight"
+  const [product, setProduct] = useState<Product | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadProduct = async () => {
+      // Try to find the product in the local data first
+      let foundProduct = products.find(p => p.id === productId)
+      
+      // If not found locally, try to fetch from API
+      if (!foundProduct) {
+        try {
+          const response = await fetch(`/api/products/product?id=${productId}`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.product) {
+              foundProduct = data.product
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching product with ID ${productId}:`, error)
+        }
+      }
+      
+      if (foundProduct) {
+        // Cast to Product type to satisfy TypeScript
+        setProduct(foundProduct as unknown as Product)
+      }
+      
+      setLoading(false)
     }
+    
+    loadProduct()
+  }, [])
+  
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto max-w-6xl px-4 py-12">
+        <Skeleton className="w-full h-8 mb-4" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-5">
+            <Skeleton className="w-full aspect-square rounded-xl" />
+          </div>
+          <div className="lg:col-span-7">
+            <Skeleton className="w-full h-10 mb-4" />
+            <Skeleton className="w-3/4 h-4 mb-2" />
+            <Skeleton className="w-1/2 h-4 mb-6" />
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <Skeleton className="w-full h-20" />
+              <Skeleton className="w-full h-20" />
+            </div>
+            <Skeleton className="w-full h-40" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  return (
-    <div className="container mx-auto max-w-6xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold">{product.name}</h1>
-      
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div>
-          <ProductImage product={product} />
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <button className="vote-button">
-              <span className="sr-only">Downvote</span>
-              👎
-            </button>
-            <button className="vote-button active">
-              <span className="sr-only">Upvote</span>
-              👍
-            </button>
-          </div>
-        </div>
+  // If product not found, show 404 page
+  if (!product) {
+    return notFound()
+  }
+  
+  // Ensure all required properties exist on the product
+  const standardizedProduct: Product = {
+    ...product,
+    id: product.id,
+    name: product.name,
+    category: product.category || "",
+    description: product.description || "",
+    imageUrl: product.imageUrl || product.image_url || "/images/product-placeholder.png",
+    url_slug: product.url_slug || "logitech-g-pro-superlight", // Use full product name for URL
+    upvotes: product.upvotes || 0,
+    downvotes: product.downvotes || 0,
+    score: (product.upvotes || 0) - (product.downvotes || 0),
+    rank: product.rank || 0,
+    price: product.price || 0,
+    specifications: product.specifications || (product as any).specs || {},
+    created_at: product.created_at || new Date().toISOString(),
+    updated_at: product.updated_at || new Date().toISOString()
+  }
 
-        <div>
-          <div className="mb-6">
-            <h2 className="mb-2 text-lg font-semibold">Description</h2>
-            <p className="text-muted-foreground">{product.description}</p>
-            <div className="mt-4 flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Overall Rating:</span>
-              <div className="flex">
-                {"★★★★☆".split("").map((star, i) => (
-                  <span key={i} className="text-primary">
-                    {star}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <ProductDetails product={product} />
-        </div>
-      </div>
-
-      <div className="mt-12">
-        <ProductReviews productId={product.id} />
-      </div>
-    </div>
-  )
+  return <UnifiedProductDetail product={standardizedProduct} />
 }
